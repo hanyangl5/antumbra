@@ -1,10 +1,3 @@
-/*****************************************************************/ /**
-                                                                     * \file   units.h
-                                                                     * \brief  user defined literals for physical unit
-                                                                     *
-                                                                     * \author hylu
-                                                                     * \date   November 2022
-                                                                     *********************************************************************/
 
 #pragma once
 

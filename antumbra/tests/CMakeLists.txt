@@ -108,15 +108,16 @@
 
 project(tests)
 
-add_executable()
-add_executable(tests test.cpp)
+file(GLOB_RECURSE SOURCE_FILES "*.cpp")
+
+add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 configure_compile_options(tests)
 
 # include directories
 target_include_directories(${PROJECT_NAME} PRIVATE
-    ../framework
-    ../third_party/Catch2/src)
+    framework
+    ../third_party/Catch2)
 
 # link libraries
 target_link_libraries(${PROJECT_NAME} PUBLIC

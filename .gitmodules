@@ -50,3 +50,6 @@
 	path = antumbra/third_party/D3D12MemoryAllocator
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator
 
+[submodule "antumbra/third_party/tracy"]
+	path = antumbra/third_party/tracy
+	url = https://github.com/wolfpld/tracy.git
