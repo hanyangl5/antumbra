@@ -2,60 +2,59 @@
 
 #include <spdlog/spdlog.h>
 
-#include <framework/01core/singleton/public_singleton.h>
+#include <framework/01core/utils/utils.h>
 #include <framework/01core/memory/memory.h>
-#include <windows.h>
+#include <framework/01core/singleton/public_singleton.h>
 
 enum VkResult;
 
-namespace ant
+namespace ant {
+inline ant::str HrToString(long hr)
 {
-    inline ant::str HrToString(HRESULT hr)
+    char s_str[64] = {};
+    sprintf_s(s_str, "HRESULT of 0x%08X", static_cast<u32>(hr));
+    return ant::str(s_str);
+}
+
+class Log : public Singleton<Log>
+{
+  public:
+    enum loglevel : u8 { debug, info, warn, error, fatal };
+
+  public:
+    Log() noexcept;
+    ~Log() noexcept;
+
+    template<typename... args> inline void Debug(args &&..._args) const noexcept
     {
-        char s_str[64] = {};
-        sprintf_s(s_str, "HRESULT of 0x%08X", static_cast<UINT>(hr));
-        return ant::str(s_str);
+        m_logger->debug(std::forward<args>(_args)...);
     }
 
-    class Log : public Singleton<Log>
+    template<typename... args> inline void Info(args &&..._args) const noexcept
     {
-      public:
-        enum loglevel : u8 { debug, info, warn, error, fatal };
+        m_logger->info(std::forward<args>(_args)...);
+    }
 
-      public:
-        Log() noexcept;
-        ~Log() noexcept;
+    template<typename... args> inline void Warn(args &&..._args) const noexcept
+    {
+        m_logger->warn(std::forward<args>(_args)...);
+    }
 
-        template<typename... args> inline void Debug(args &&..._args) const noexcept
-        {
-            m_logger->debug(std::forward<args>(_args)...);
-        }
+    template<typename... args> inline void Error(args &&..._args) const noexcept
+    {
+        m_logger->error(std::forward<args>(_args)...);
+    }
+    template<typename... args> inline void Fatal(args &&..._args) const noexcept
+    {
+        // m_logger->fatal(std::forward<args>(_args)...);
+    }
+    void CheckVulkanResult(VkResult _res, const char *func_name, int line) const noexcept;
 
-        template<typename... args> inline void Info(args &&..._args) const noexcept
-        {
-            m_logger->info(std::forward<args>(_args)...);
-        }
+    void CheckDXResult(long hr, const char *func_name, int line) const noexcept;
 
-        template<typename... args> inline void Warn(args &&..._args) const noexcept
-        {
-            m_logger->warn(std::forward<args>(_args)...);
-        }
-
-        template<typename... args> inline void Error(args &&..._args) const noexcept
-        {
-            m_logger->error(std::forward<args>(_args)...);
-        }
-        template<typename... args> inline void Fatal(args &&..._args) const noexcept
-        {
-            // m_logger->fatal(std::forward<args>(_args)...);
-        }
-        void CheckVulkanResult(VkResult _res, const char *func_name, int line) const noexcept;
-
-        void CheckDXResult(HRESULT hr, const char *func_name, int line) const noexcept;
-
-      private:
-        std::shared_ptr<spdlog::logger> m_logger;
-    };
+  private:
+    std::shared_ptr<spdlog::logger> m_logger;
+};
 
 #define LOG_DEBUG(...) ant::Log::get().Debug("[" + ant::str(__FUNCTION__) + "] " + __VA_ARGS__);
 

@@ -1,0 +1,1 @@
+stateless gal interface

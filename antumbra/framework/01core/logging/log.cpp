@@ -3,8 +3,13 @@
 // standard libraries
 
 // third party libraries
-#include <vulkan/vulkan.h>
+#ifdef WIN32
+
+#include <Windows.h>
+#endif// WIN32
+
 #include <spdlog/sinks/stdout_color_sinks.h>// or "../stdout_sinks.h" if no colors needed
+#include <vulkan/vulkan.h>
 
 // project headers
 
@@ -35,7 +40,7 @@ void Log::CheckVulkanResult(VkResult _res, const char *func_name, int line) cons
     assert(_res == VK_SUCCESS);
 }
 
-void Log::CheckDXResult(HRESULT hr, const char *func_name, int line) const noexcept
+void Log::CheckDXResult(long hr, const char *func_name, int line) const noexcept
 {
     if (FAILED(hr)) {
         m_logger->error("[function: {}], [line: {}], directx result checking failed: HRESULT {:08X}",
