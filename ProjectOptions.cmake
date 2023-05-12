@@ -5,33 +5,37 @@ include(CheckCXXCompilerFlag)
 
 function(configure_compile_options proj_name)
     set(CMAKE_CXX_STANDARD 17)
+
     if(WIN32)
         if(MSVC)
             message("using MSVC under windows")
 
             target_compile_options(${proj_name} PRIVATE /std:c++17)
             target_compile_options(${proj_name} PRIVATE /MP /permissive /w14640 /W4 /WX /external:anglebrackets /external:W0 /GR-)
-            string(REGEX REPLACE "/EH[a-z]+" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}) # disable exception
+
         else()
             message("using GCC/Clang under windows")
             target_compile_options(${proj_name} PRIVATE -std=c++17)
-            target_compile_options(${proj_name} PRIVATE -Wall -Wextra -Werror -Wshadow -Wnon-virtual-dtor -pedantic Weverything -fno-exceptions -fno-rtti)
+            target_compile_options(${proj_name} PRIVATE -Wall -Wextra -Werror -Wshadow -Wnon-virtual-dtor -pedantic Weverything -fno-rtti)
         endif()
     elseif(LINUX)
         message("using GCC/Clang under LINUX")
         target_compile_options(${proj_name} PRIVATE -std=c++17)
-        target_compile_options(${proj_name} PRIVATE -Wall -Wextra -Werror -Wshadow -Wnon-virtual-dtor -pedantic Weverything -fno-exceptions -fno-rtti)
+        target_compile_options(${proj_name} PRIVATE -Wall -Wextra -Werror -Wshadow -Wnon-virtual-dtor -pedantic Weverything -fno-rtti)
     endif()
 
+    # disable exceptions
+    # MSVC string(REGEX REPLACE "/EH[a-z]+" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}) # disable exception
+    # GCC/Clang  -fno-exceptions
 endfunction()
 
 macro(configure_antumbra)
     if(WIN32)
         if(MSVC)
             message("using MSVC under windows")
-            add_compile_options(/MP /permissive /w14640 /WX /external:anglebrackets /external:W0 /GR-)
+            add_compile_options(/MP /permissive /w14640 /WX /external:anglebrackets /external:W0 /GR- -D_HAS_EXCEPTIONS=0 -D_STATIC_CPPLIB)
             string(REGEX REPLACE "/EH[a-z]+" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}) # disable exception
-            else()
+        else()
             message("using GCC/Clang under windows")
             target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Werror -Wshadow -Wnon-virtual-dtor -pedantic Weverything -fno-exceptions -fno-rtti)
         endif()
@@ -39,9 +43,7 @@ macro(configure_antumbra)
         message("using GCC/Clang under LINUX")
         target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Werror -Wshadow -Wnon-virtual-dtor -pedantic Weverything -fno-exceptions -fno-rtti)
     endif()
-
 endmacro()
-
 
 macro(antumbra_supports_sanitizers)
     if((CMAKE_CXX_COMPILER_ID MATCHES ".*Clang.*" OR CMAKE_CXX_COMPILER_ID MATCHES ".*GNU.*") AND NOT WIN32)

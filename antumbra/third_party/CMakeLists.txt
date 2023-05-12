@@ -26,7 +26,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     glm/glm
     glfw/include
     json/include
-    Catch2/src
     VulkanMemoryAllocator/include
 )
 
@@ -43,7 +42,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     glfw
     spdlog
     mimalloc-static
-    Catch2
     flecs_static
     VulkanMemoryAllocator
     nlohmann_json

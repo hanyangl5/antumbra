@@ -5,6 +5,7 @@
 #include <framework/01core/singleton/public_singleton.h>
 #include <framework/01core/memory/memory.h>
 #include <windows.h>
+
 enum VkResult;
 
 namespace ant
