@@ -33,6 +33,7 @@ if(WIN32)
     target_include_directories(${PROJECT_NAME} PUBLIC
         D3D12MemoryAllocator/include
         DirectXTK12/Inc
+        DirectXTK12/Src
     )
 endif()
 

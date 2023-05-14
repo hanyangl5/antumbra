@@ -50,4 +50,28 @@ void Log::CheckDXResult(long hr, const char *func_name, int line) const noexcept
     }
 }
 
+void Log::SetLogLevel(loglevel level) noexcept
+{
+    switch (level) {
+    case ant::Log::debug:
+        spdlog::set_level(spdlog::level::debug);
+        break;
+    case ant::Log::info:
+        spdlog::set_level(spdlog::level::info);
+        break;
+    case ant::Log::warn:
+        spdlog::set_level(spdlog::level::warn);
+        break;
+    case ant::Log::error:
+        spdlog::set_level(spdlog::level::err);
+        break;
+    case ant::Log::fatal:
+
+        spdlog::set_level(spdlog::level::critical);
+        break;
+    default:
+        break;
+    }
+}
+
 }// namespace ant

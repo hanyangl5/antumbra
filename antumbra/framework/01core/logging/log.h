@@ -2,9 +2,9 @@
 
 #include <spdlog/spdlog.h>
 
-#include <framework/01core/utils/utils.h>
 #include <framework/01core/memory/memory.h>
 #include <framework/01core/singleton/public_singleton.h>
+#include <framework/01core/utils/utils.h>
 
 enum VkResult;
 
@@ -24,6 +24,8 @@ class Log : public Singleton<Log>
   public:
     Log() noexcept;
     ~Log() noexcept;
+
+    DELETE_COPY_MOVE(Log);
 
     template<typename... args> inline void Debug(args &&..._args) const noexcept
     {
@@ -52,6 +54,9 @@ class Log : public Singleton<Log>
 
     void CheckDXResult(long hr, const char *func_name, int line) const noexcept;
 
+    void SetLogLevel(loglevel level) noexcept;
+
+
   private:
     std::shared_ptr<spdlog::logger> m_logger;
 };
@@ -69,5 +74,7 @@ class Log : public Singleton<Log>
 #define CHECK_VK_RESULT(res) ant::Log::get().CheckVulkanResult(res, __FUNCTION__, __LINE__);
 
 #define CHECK_DX_RESULT(res) ant::Log::get().CheckDXResult(res, __FUNCTION__, __LINE__);
+
+#define SET_LOG_LEVEL(level) ant::Log::get().SetLogLevel(level);
 
 }// namespace ant

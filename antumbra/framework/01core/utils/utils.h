@@ -1,11 +1,3 @@
-/*****************************************************************/ /**
-                                                                     * \file   functions.h
-                                                                     * \brief
-                                                                     *
-                                                                     * \author hylu
-                                                                     * \date   January 2023
-                                                                     *********************************************************************/
-
 #pragma once
 
 // standard libraries
@@ -16,6 +8,13 @@
 // third party libraries
 
 // project headers
+
+#define DELETE_COPY_MOVE(class_name)\
+class_name##(const class_name &) = delete;\
+class_name##(class_name &&) = delete;\
+class_name &operator=(const class_name &) = delete;\
+class_name &operator=(class_name &&) = delete;
+
 namespace ant {
 
 using u8 = uint8_t;
@@ -30,18 +29,22 @@ using i64 = int64_t;
 using f32 = float;
 using f64 = double;
 
-template<typename T> T Min(const T &lhs, const T &rhs) { return lhs < rhs ? lhs : rhs; }
-
-template<typename T> T Max(const T &lhs, const T &rhs) { return !Min(lhs, rhs); }
-
-
-template<typename T> T constexpr Lerp(const T &lhs, const T &rhs, f32 t) { return lhs + t * (rhs - lhs); }
-
-template<typename T> T constexpr AlignUp(const T &lhs, const T &rhs) { return (lhs + T(rhs - 1)) / rhs; }
+// add nodiscard for lambda function
+//template<typename F> struct NoDiscard
+//{
+//    F f;
+//    NoDiscard(F const &f) : f(f) {}
+//    template<typename... T>
+//    [[nodiscard]] constexpr auto operator()(T &&...t) const noexcept(noexcept(f(std::forward<T>(t)...)))
+//    {
+//        return f(std::forward<T>(t)...);
+//    }
+//};
 
 // [major8, minor8, patch16]
 constexpr u32 MakeVersion(u32 major, u32 minor, u32 patch)
 {
+    // 8 bit major, 8 bit minor, 16bit patch
     u32 _major = major << 24;
     u32 _minor = minor << 16;
     u32 _patch = patch;

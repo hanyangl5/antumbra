@@ -21,7 +21,6 @@ template<typename T> class Singleton
     Singleton &operator=(const Singleton &) = delete;
     Singleton &operator=(Singleton &&) = delete;
 
-  public:
     static T &get() noexcept(std::is_nothrow_constructible<T>::value)
     {
         static T instance;
