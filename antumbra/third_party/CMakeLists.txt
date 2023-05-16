@@ -6,7 +6,7 @@ find_package(Vulkan REQUIRED)
 target_include_directories(${PROJECT_NAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${Vulkan_LIBRARIES})
 
-#add_subdirectory(glfw)
+add_subdirectory(glfw)
 add_subdirectory(json)
 option(MI_BUILD_TESTS "Build test executables" OFF)
 option(MI_BUILD_SHARED "Build shared library" OFF)
@@ -22,7 +22,6 @@ add_subdirectory(flecs)
 option(TRACY_ENABLE "" ON)
 option(TRACY_ONDEMAND "" ON)
 add_subdirectory(tracy)
-
 if(WIN32)
     add_subdirectory(D3D12MemoryAllocator)
     option(BUILD_TESTING "Build testing" OFF)
@@ -33,7 +32,7 @@ endif()
 target_include_directories(${PROJECT_NAME} PUBLIC
     spdlog/include
     glm/glm
-    #glfw/include
+    glfw/include
     json/include
     VulkanMemoryAllocator/include
     tracy/public
@@ -50,7 +49,7 @@ endif()
 # link libraries
 target_link_libraries(${PROJECT_NAME} PUBLIC
     mimalloc-static
-    #glfw
+    glfw
     spdlog
     flecs_static
     VulkanMemoryAllocator
@@ -71,7 +70,7 @@ set_property(TARGET
     Catch2
     Catch2WithMain
     VulkanMemoryAllocator
-    #glfw
+    glfw
     mimalloc-static
     flecs_static
     spirv-cross

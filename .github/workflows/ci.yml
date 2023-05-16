@@ -1,18 +1,12 @@
 name: ci
 on:
   pull_request:
-  release:
-    types: [published]
+    branches:
+      - main
   push:
-    tags:
     branches:
       - main
       - develop
-
-env:
-  CLANG_TIDY_VERSION: "15.0.2"
-  VERBOSE: 1
-
 
 jobs:
   Test:
@@ -20,102 +14,20 @@ jobs:
     strategy:
       fail-fast: false
 
-      # Recommendations:
-      #   * support at least 2 operating systems
-      #   * support at least 2 compilers
-      #   * make sure all supported configurations for your project are built
-      #
-      # Disable/enable builds in this list to meet the above recommendations
-      # and your own projects needs
       matrix:
         os:
           - ubuntu-20.04
-          - macos-10.15
-          - windows-2019
+          - windows-2022
         compiler:
           # you can specify the version after `-` like "llvm-15.0.2".
           - llvm-15.0.2
           - gcc-11
-        generator:
-          - "Ninja Multi-Config"
+        arch: [x64]
+        cxx: [cxx17]
+        toolchain: [msvc, clang-cl]
         build_type:
           - Release
           - Debug
-        packaging_maintainer_mode:
-          - ON
-          - OFF
-        build_shared:
-          - OFF
-
-        exclude:
-          # mingw is determined by this author to be too buggy to support
-          - os: windows-2019
-            compiler: gcc-11
-
-        include:
-          # Add appropriate variables for gcov version required. This will intentionally break
-          # if you try to use a compiler that does not have gcov set
-          - compiler: gcc-11
-            gcov_executable: gcov
-            enable_ipo: On
-
-          - compiler: llvm-15.0.2
-            enable_ipo: Off
-            gcov_executable: "llvm-cov gcov"
-
-          - os: macos-10.15
-            enable_ipo: Off
-
-          # Set up preferred package generators, for given build configurations
-          - build_type: Release
-            packaging_maintainer_mode: OFF
-            package_generator: TBZ2
-
-          # This exists solely to make sure a non-multiconfig build works
-          - os: ubuntu-20.04
-            compiler: gcc-11
-            generator: "Unix Makefiles"
-            build_type: Debug
-            gcov_executable: gcov
-            packaging_maintainer_mode: On
-            enable_ipo: Off
-
-          # Windows msvc builds
-          - os: windows-2022
-            compiler: msvc
-            generator: "Visual Studio 17 2022"
-            build_type: Debug
-            packaging_maintainer_mode: On
-            enable_ipo: On
-
-          - os: windows-2022
-            compiler: msvc
-            generator: "Visual Studio 17 2022"
-            build_type: Release
-            packaging_maintainer_mode: On
-            enable_ipo: On
-
-          - os: windows-2022
-            compiler: msvc
-            generator: "Visual Studio 17 2022"
-            build_type: Debug
-            packaging_maintainer_mode: Off
-
-          - os: windows-2022
-            compiler: msvc
-            generator: "Visual Studio 17 2022"
-            build_type: Release
-            packaging_maintainer_mode: Off
-            package_generator: ZIP
-
-          - os: windows-2022
-            compiler: msvc
-            generator: "Visual Studio 17 2022"
-            build_type: Release
-            packaging_maintainer_mode: On
-            enable_ipo: On
-            build_shared: On
-
 
     steps:
       - name: Check for llvm version mismatches
@@ -124,8 +36,12 @@ jobs:
         with:
           script: |
             core.setFailed('There is a mismatch between configured llvm compiler and clang-tidy version chosen')
-
-      - uses: actions/checkout@v3
+      - name: Prepare Vulkan SDK
+        uses: humbletim/setup-vulkan-sdk@v1.2.0
+        with:
+          vulkan-query-version: 1.3.204.0
+          vulkan-components: Vulkan-Headers, Vulkan-Loader
+          vulkan-use-cache: true
 
       - name: Setup Cache
         uses: ./.github/actions/setup_cache
@@ -138,8 +54,7 @@ jobs:
       - name: Project Name
         uses: cardinalby/export-env-action@v2
         with:
-          envFile: '.github/constants.env'
-
+          envFile: ".github/constants.env"
 
       - name: Setup Cpp
         uses: aminya/setup-cpp@v1
@@ -152,7 +67,6 @@ jobs:
           vcpkg: false
           ccache: true
           clangtidy: ${{ env.CLANG_TIDY_VERSION }}
-
 
           cppcheck: true
 
@@ -195,7 +109,6 @@ jobs:
         with:
           files: |
             build/*-*${{ matrix.build_type }}*-*.*
-
 
       - name: Publish to codecov
         uses: codecov/codecov-action@v2
