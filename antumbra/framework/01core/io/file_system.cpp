@@ -32,17 +32,17 @@ namespace ant::io {
 
 bool is_directory(const std::filesystem::path &path) { return std::filesystem::is_directory(path); }
 
-void create_directory(const std::filesystem::path &path)
-{
-    if (io::is_directory(path) == false) { std::filesystem::create_directory(path); }
+void create_directory(const std::filesystem::path &path) {
+    if (io::is_directory(path) == false) {
+        std::filesystem::create_directory(path);
+    }
 }
 
 void remove(const std::filesystem::path &path) { std::filesystem::remove(path); }
 
 bool is_file(const std::filesystem::path &filename) { return std::filesystem::is_regular_file(filename); }
 
-void create_path(const std::filesystem::path &root, const std::filesystem::path &path)
-{
+void create_path(const std::filesystem::path &root, const std::filesystem::path &path) {
     auto str = path.string();
     for (auto it = str.begin(); it != str.end(); ++it) {
         it = std::find(it, path.string().end(), '/');
@@ -52,8 +52,7 @@ void create_path(const std::filesystem::path &root, const std::filesystem::path 
     }
 }
 
-ant::str read_text_file(const std::filesystem::path filename)
-{
+ant::str read_text_file(const std::filesystem::path filename) {
     ant::vector<ant::str> data;
 
     std::ifstream file;
@@ -65,11 +64,10 @@ ant::str read_text_file(const std::filesystem::path filename)
         return {};
     }
 
-    return ant::str{ (std::istreambuf_iterator<char>(file)), (std::istreambuf_iterator<char>()) };
+    return ant::str{(std::istreambuf_iterator<char>(file)), (std::istreambuf_iterator<char>())};
 }
 
-ant::vector<u8> read_binary_file(const std::filesystem::path &filename, const uint32_t count)
-{
+ant::vector<u8> read_binary_file(const std::filesystem::path &filename, const uint32_t count) {
     ant::vector<u8> data;
 
     std::ifstream file;
@@ -95,8 +93,7 @@ ant::vector<u8> read_binary_file(const std::filesystem::path &filename, const ui
     return data;
 }
 
-void write_text_file(const std::filesystem::path filename, void *data, u64 size)
-{
+void write_text_file(const std::filesystem::path filename, void *data, u64 size) {
     std::ofstream file;
     file.open(filename, std::ios::out | std::ios::trunc);
 
@@ -109,8 +106,7 @@ void write_text_file(const std::filesystem::path filename, void *data, u64 size)
     file.close();
 }
 
-void write_binary_file(const ant::vector<u8> &data, const std::filesystem::path &filename, const uint32_t count)
-{
+void write_binary_file(const ant::vector<u8> &data, const std::filesystem::path &filename, const uint32_t count) {
     std::ofstream file;
 
     file.open(filename, std::ios::out | std::ios::binary | std::ios::trunc);
@@ -121,14 +117,15 @@ void write_binary_file(const ant::vector<u8> &data, const std::filesystem::path 
     }
 
     uint64_t write_count = count;
-    if (count == 0) { write_count = data.size(); }
+    if (count == 0) {
+        write_count = data.size();
+    }
 
     file.write(reinterpret_cast<const char *>(data.data()), write_count);
     file.close();
 }
 
-bool write_json(nlohmann::json &data, const std::filesystem::path &filename)
-{
+bool write_json(nlohmann::json &data, const std::filesystem::path &filename) {
     std::stringstream json;
     json << data << " ";
 
@@ -151,4 +148,4 @@ bool write_json(nlohmann::json &data, const std::filesystem::path &filename)
     return true;
 }
 
-}// namespace ant::io
+} // namespace ant::io

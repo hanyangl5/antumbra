@@ -9,11 +9,17 @@
 
 // project headers
 
-#define DELETE_COPY_MOVE(class_name)\
-class_name##(const class_name &) = delete;\
-class_name##(class_name &&) = delete;\
-class_name &operator=(const class_name &) = delete;\
-class_name &operator=(class_name &&) = delete;
+#define DELETE_COPY_MOVE(class_name)                                                                                   \
+    class_name##(const class_name &) = delete;                                                                         \
+    class_name##(class_name &&) = delete;                                                                              \
+    class_name &operator=(const class_name &) = delete;                                                                \
+    class_name &operator=(class_name &&) = delete;
+
+#define DEFAULT_COPY_MOVE(class_name)                                                                                  \
+    class_name##(const class_name &) = default;                                                                        \
+    class_name##(class_name &&) = default;                                                                             \
+    class_name &operator=(const class_name &) = default;                                                               \
+    class_name &operator=(class_name &&) = default;
 
 namespace ant {
 
@@ -30,7 +36,7 @@ using f32 = float;
 using f64 = double;
 
 // add nodiscard for lambda function
-//template<typename F> struct NoDiscard
+// template<typename F> struct NoDiscard
 //{
 //    F f;
 //    NoDiscard(F const &f) : f(f) {}
@@ -42,8 +48,7 @@ using f64 = double;
 //};
 
 // [major8, minor8, patch16]
-constexpr u32 MakeVersion(u32 major, u32 minor, u32 patch)
-{
+constexpr u32 MakeVersion(u32 major, u32 minor, u32 patch) {
     // 8 bit major, 8 bit minor, 16bit patch
     u32 _major = major << 24;
     u32 _minor = minor << 16;
@@ -51,8 +56,7 @@ constexpr u32 MakeVersion(u32 major, u32 minor, u32 patch)
     return _major | _minor | _patch;
 }
 
-template<class T> void HashCombine(u64 &seed, const T &v)
-{
+template <class T> void HashCombine(u64 &seed, const T &v) {
     std::hash<T> hasher{};
     u64 hash = hasher(v);
     hash += 0x9e3779b9 + (seed << 6) + (seed >> 2);
@@ -67,11 +71,10 @@ template<class T> void HashCombine(u64 &seed, const T &v)
 //     return str;
 // }
 
-template<typename TP> std::time_t to_time_t(TP tp)
-{
+template <typename TP> std::time_t to_time_t(TP tp) {
     using namespace std::chrono;
     auto sctp = time_point_cast<system_clock::duration>(tp - TP::clock::now() + system_clock::now());
     return system_clock::to_time_t(sctp);
 }
 
-}// namespace ant
+} // namespace ant

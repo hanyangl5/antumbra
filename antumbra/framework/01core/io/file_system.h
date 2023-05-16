@@ -65,7 +65,6 @@ ant::vector<u8> read_binary_file(const std::filesystem::path &filename, const ui
 
 void write_text_file(const std::filesystem::path filename, void *data, u64 size);
 
-void write_binary_file(const ant::vector<u8> &data,
-    const std::filesystem::path &filename,
-    const uint32_t count);// TODO(hyl5): what count means
-}// namespace ant::io
+void write_binary_file(const ant::vector<u8> &data, const std::filesystem::path &filename,
+                       const uint32_t count); // TODO(hyl5): what count means
+} // namespace ant::io

@@ -10,8 +10,7 @@
 
 namespace ant {
 
-template<typename T> class Singleton
-{
+template <typename T> class Singleton {
   public:
     Singleton() = default;
     virtual ~Singleton() noexcept = default;
@@ -21,11 +20,10 @@ template<typename T> class Singleton
     Singleton &operator=(const Singleton &) = delete;
     Singleton &operator=(Singleton &&) = delete;
 
-    static T &get() noexcept(std::is_nothrow_constructible<T>::value)
-    {
+    static T &get() noexcept(std::is_nothrow_constructible<T>::value) {
         static T instance;
         return instance;
     }
 };
 
-}// namespace ant
+} // namespace ant

@@ -6,8 +6,7 @@ using namespace ant;
 
 TEST_CASE("memory") { auto stack_resource = ant::GetStackMemoryResource(1024); }
 
-TEST_CASE("container")
-{
+TEST_CASE("container") {
     ant::str str = "test string";
     REQUIRE(str.length() == 11);
 
@@ -18,6 +17,6 @@ TEST_CASE("container")
         REQUIRE(vec.back() == static_cast<i32>(i));
         REQUIRE(static_cast<u32>(vec.size()) == i + 1);
     }
-    ant::fixed_array<i32, 5> arr{ 1, 2, 3, 4, 5 };
+    ant::fixed_array<i32, 5> arr{1, 2, 3, 4, 5};
     REQUIRE(arr.size() == 5);
 }

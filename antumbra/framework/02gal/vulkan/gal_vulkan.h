@@ -12,61 +12,32 @@
 
 namespace ant::gal {
 
-#define DECLARE_VK_FUNCTION(ret, name, ...) ret vk_##name(__VA_ARGS__);
+struct vk_gal_context {
+    VkInstance instance = VK_NULL_HANDLE;
+    VkPhysicalDevice active_gpu = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
+    VmaAllocator vma_allocator = nullptr;
 
-struct vk_gal_context
-{
-    VkInstance instance;
-    VkPhysicalDevice active_gpu;
-    VkDevice device;
-    VmaAllocator *vma_allocator;
+    // queues
+    u32 graphcis_queue_family_index = 0;
+    u32 compute_queue_family_index = 0;
+    u32 transfer_queue_family_index = 0;
+    f32 default_queue_property = 0.0f;
+    VkQueue graphics_queue = VK_NULL_HANDLE;
+    VkQueue compute_queue = VK_NULL_HANDLE;
+    VkQueue transfer_queue = VK_NULL_HANDLE;
+};
+
+struct vk_buffer {
+    VkBuffer buffer;
+    VmaAllocation allocation;
 };
 
 gal_error_code vk_init_gal(gal_context *context);
-gal_error_code vk_destroy_gal(gal_context *context);
 
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, create_instance, GalDesc *gal_desc, gal_context *context);
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, destroy_instane, gal_context *context);
 
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, select_gpu, GalDesc *desc, gal_context *context);
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, create_device, GalDesc* gal_desc, gal_context *context);
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, destroy_device, gal_context *context);
+#define VK_FUNCTION_DECLARE
+#include "../helper/helper_macro.h"
+#undef VK_FUNCTION_DECLARE
 
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, init_memory_allocator, gal_context *context);
-
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, create_buffer);
-
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, destroy_buffer);
-
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, create_texture);
-
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, destroy_texture);
-
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, create_sampler);
-
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, destroy_sampler);
-
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, create_swap_chain);
-
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, destroy_swap_chain);
-
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, create_shader);
-
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, destroy_shader);
-
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, create_pipeline);
-
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, destroy_pipeline);
-
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, create_surface);
-
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, destroy_surface);
-
-// cmds
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, cmd_begin_recording);
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, cmd_end_recording);
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, bind_descriptor_set);
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, bind_index_buffer);
-DECLARE_VK_FUNCTION(ant::gal::gal_error_code, bind_index_buffer);
-
-}// namespace ant::gal
+} // namespace ant::gal

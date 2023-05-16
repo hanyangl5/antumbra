@@ -6,17 +6,26 @@ find_package(Vulkan REQUIRED)
 target_include_directories(${PROJECT_NAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${Vulkan_LIBRARIES})
 
-add_subdirectory(glfw)
+#add_subdirectory(glfw)
 add_subdirectory(json)
+option(MI_BUILD_TESTS "Build test executables" OFF)
+option(MI_BUILD_SHARED "Build shared library" OFF)
+option(MI_BUILD_OBJECT "" OFF)
 add_subdirectory(mimalloc)
 add_subdirectory(spdlog)
 add_subdirectory(SPIRV-Cross)
 add_subdirectory(VulkanMemoryAllocator)
 add_subdirectory(Catch2)
+option(FLECS_SHARED "Build static flecs lib" OFF)
 add_subdirectory(flecs)
+
+option(TRACY_ENABLE "" ON)
+option(TRACY_ONDEMAND "" ON)
+add_subdirectory(tracy)
 
 if(WIN32)
     add_subdirectory(D3D12MemoryAllocator)
+    option(BUILD_TESTING "Build testing" OFF)
     add_subdirectory(DirectXTK12)
 endif()
 
@@ -24,9 +33,10 @@ endif()
 target_include_directories(${PROJECT_NAME} PUBLIC
     spdlog/include
     glm/glm
-    glfw/include
+    #glfw/include
     json/include
     VulkanMemoryAllocator/include
+    tracy/public
 )
 
 if(WIN32)
@@ -39,13 +49,13 @@ endif()
 
 # link libraries
 target_link_libraries(${PROJECT_NAME} PUBLIC
-    mimalloc
-    glfw
-    spdlog
     mimalloc-static
+    #glfw
+    spdlog
     flecs_static
     VulkanMemoryAllocator
     nlohmann_json
+    TracyClient
 )
 
 if(WIN32)
@@ -57,9 +67,15 @@ endif(WIN32)
 
 set_property(TARGET
     ${PROJECT_NAME}
-    mimalloc
     spdlog
+    Catch2
+    Catch2WithMain
+    VulkanMemoryAllocator
+    #glfw
+    mimalloc-static
+    flecs_static
     spirv-cross
+    spirv-cross-c
     spirv-cross-c
     spirv-cross-core
     spirv-cross-cpp
@@ -68,15 +84,7 @@ set_property(TARGET
     spirv-cross-msl
     spirv-cross-reflect
     spirv-cross-util
-    VulkanMemoryAllocator
-    glfw
-    mimalloc-static
-    mimalloc-obj
-    spirv-cross-c
-    Catch2
-    Catch2WithMain
-    flecs
-    flecs_static
+    TracyClient
     PROPERTY FOLDER "third_party")
 
 if(WIN32)

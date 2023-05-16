@@ -9,17 +9,15 @@
 enum VkResult;
 
 namespace ant {
-inline ant::str HrToString(long hr)
-{
+inline ant::str HrToString(long hr) {
     char s_str[64] = {};
     sprintf_s(s_str, "HRESULT of 0x%08X", static_cast<u32>(hr));
     return ant::str(s_str);
 }
 
-class Log : public Singleton<Log>
-{
+class Log : public Singleton<Log> {
   public:
-    enum loglevel : u8 { debug, info, warn, error, fatal };
+    enum class loglevel : u8 { debug, info, warn, error, fatal };
 
   public:
     Log() noexcept;
@@ -27,27 +25,22 @@ class Log : public Singleton<Log>
 
     DELETE_COPY_MOVE(Log);
 
-    template<typename... args> inline void Debug(args &&..._args) const noexcept
-    {
+    template <typename... args> inline void Debug(args &&..._args) const noexcept {
         m_logger->debug(std::forward<args>(_args)...);
     }
 
-    template<typename... args> inline void Info(args &&..._args) const noexcept
-    {
+    template <typename... args> inline void Info(args &&..._args) const noexcept {
         m_logger->info(std::forward<args>(_args)...);
     }
 
-    template<typename... args> inline void Warn(args &&..._args) const noexcept
-    {
+    template <typename... args> inline void Warn(args &&..._args) const noexcept {
         m_logger->warn(std::forward<args>(_args)...);
     }
 
-    template<typename... args> inline void Error(args &&..._args) const noexcept
-    {
+    template <typename... args> inline void Error(args &&..._args) const noexcept {
         m_logger->error(std::forward<args>(_args)...);
     }
-    template<typename... args> inline void Fatal(args &&..._args) const noexcept
-    {
+    template <typename... args> inline void Fatal(args &&..._args) const noexcept {
         // m_logger->fatal(std::forward<args>(_args)...);
     }
     void CheckVulkanResult(VkResult _res, const char *func_name, int line) const noexcept;
@@ -55,7 +48,6 @@ class Log : public Singleton<Log>
     void CheckDXResult(long hr, const char *func_name, int line) const noexcept;
 
     void SetLogLevel(loglevel level) noexcept;
-
 
   private:
     std::shared_ptr<spdlog::logger> m_logger;
@@ -77,4 +69,4 @@ class Log : public Singleton<Log>
 
 #define SET_LOG_LEVEL(level) ant::Log::get().SetLogLevel(level);
 
-}// namespace ant
+} // namespace ant

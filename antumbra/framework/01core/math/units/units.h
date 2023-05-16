@@ -32,4 +32,4 @@ f32 operator"" _rad(long double);
 
 f32 operator"" _deg(long double);
 
-}// namespace ant
+} // namespace ant

@@ -6,4 +6,4 @@ namespace ant {
 
 namespace ecs = flecs;
 
-}// namespace ant
+} // namespace ant
