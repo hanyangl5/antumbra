@@ -2,9 +2,9 @@
 	path = antumbra/third_party/stb
 	url = https://github.com/nothings/stb
 
-# [submodule "antumbra/third_party/glfw"]
-# 	path = antumbra/third_party/glfw
-# 	url = https://github.com/glfw/glfw
+[submodule "antumbra/third_party/glfw"]
+	path = antumbra/third_party/glfw
+	url = https://github.com/glfw/glfw
 
 [submodule "antumbra/third_party/json"]
 	path = antumbra/third_party/json
