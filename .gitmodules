@@ -62,3 +62,18 @@
 [submodule "antumbra/third_party/glfw"]
 	path = antumbra/third_party/glfw
 	url = https://github.com/glfw/glfw.git
+[submodule "antumbra/third_party/sol2"]
+	path = antumbra/third_party/sol2
+	url = https://github.com/ThePhD/sol2.git
+
+# [submodule "antumbra/third_party/JoltPhysics"]
+# 	path = antumbra/third_party/JoltPhysics
+# 	url = https://github.com/jrouwe/JoltPhysics.git
+
+[submodule "antumbra/third_party/tinygltf"]
+	path = antumbra/third_party/tinygltf
+	url = https://github.com/syoyo/tinygltf.git
+
+[submodule "antumbra/third_party/Lua"]
+	path = antumbra/third_party/Lua
+	url = https://github.com/walterschell/Lua.git

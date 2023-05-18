@@ -2,7 +2,7 @@ project(ant_third_party)
 
 add_library(${PROJECT_NAME} third_party_dummy.cpp)
 
-add_subdirectory(glfw)
+add_subdirectory(glfw) # CMakeLists of glfw added some useless projects/folders in root directory
 add_subdirectory(json)
 option(MI_BUILD_TESTS "Build test executables" OFF)
 option(MI_BUILD_SHARED "Build shared library" OFF)
@@ -13,12 +13,13 @@ add_subdirectory(SPIRV-Cross)
 add_subdirectory(Catch2)
 option(FLECS_SHARED "Build static flecs lib" OFF)
 add_subdirectory(flecs)
-add_subdirectory(magic_enum)
-
+add_subdirectory(sol2)
 option(TRACY_ENABLE "" ON)
 option(TRACY_ONDEMAND "" ON)
 add_subdirectory(tracy)
-
+#add_subdirectory(JoltPhysics/Build)
+option(TINYGLTF_BUILD_LOADER_EXAMPLE "" OFF)
+add_subdirectory(tinygltf)
 if(ANTUMBRA_BUILD_VK)
     # prefer to use system installed vulkan sdk
     find_package(Vulkan REQUIRED)
@@ -47,6 +48,10 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     json/include
     VulkanMemoryAllocator/include
     tracy/public
+    magic_enum/include
+    sol2/include
+    #JoltPhysics/ # this will include some useless folder
+    lua
 )
 
 if(ANTUMBRA_BUILD_D3D12)
@@ -65,6 +70,9 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     flecs_static
     nlohmann_json
     TracyClient
+    sol2
+    #Jolt
+    tinygltf
 )
 
 if(ANTUMBRA_BUILD_D3D12)
@@ -93,6 +101,8 @@ set_property(TARGET
     spirv-cross-reflect
     spirv-cross-util
     TracyClient
+    #Jolt
+    tinygltf
     PROPERTY FOLDER "third_party")
 
 if(ANTUMBRA_BUILD_D3D12)

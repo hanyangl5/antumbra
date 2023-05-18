@@ -1,7 +1,9 @@
 #pragma once
 
 #include "framework/01core/utils/utils.h"
+#include "framework/01core/reflection/enum_reflection.h"
 #include "format.h"
+
 namespace ant::gal {
 enum class gal_error_code : u32 { success, unsupporte_platform, error, unsupported_device, invalid_parameter };
 
@@ -172,6 +174,69 @@ struct gal_texture_desc {
     gal_resource_types resource_types; // descriptor types of buffer
     gal_resource_states initial_state; // initial state of buffer
 };
+
+struct gal_sampler_desc {};
+
+struct gal_rendertarget_desc {
+
+};
+
+struct swapchain_desc {
+
+};
+
+struct shader_desc {
+
+};
+
+struct graphics_pipeline_desc {
+    
+};
+
+struct compute_pipelne_desc {
+
+};
+
+struct raytrace_pipeline_desc {
+
+};
+
+struct gal_commandpool_desc {
+
+};
+
+// struct to consume descriptorset
+
+struct gal_descriptorset_desc {
+
+};
+
+struct gal_rootsignature_desc {
+
+};
+
+struct gal_fence_desc {
+
+};
+
+
+struct gal_semaphore_desc {
+
+};
+struct gal_command_pool_desc {
+
+};
+
+// desc to allocate commandlist
+struct gal_commandlist_desc {
+
+};
+
+struct gal_renderpass_begin_desc {
+
+};
+
+
 
 // intailize gal_context, load function pointer
 [[nodiscard]] gal_error_code init_gal(RenderApi api, gal_context *context);

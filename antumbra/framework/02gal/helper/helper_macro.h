@@ -74,8 +74,9 @@ __GAL_HELPER_MACRO__(gal_error_code, create_pipeline);
 __GAL_HELPER_MACRO__(gal_error_code, destroy_pipeline);
 __GAL_HELPER_MACRO__(gal_error_code, create_descriptorpool);
 __GAL_HELPER_MACRO__(gal_error_code, destroy_descriptorpool);
-__GAL_HELPER_MACRO__(gal_error_code, create_descriptorset);
-__GAL_HELPER_MACRO__(gal_error_code, destroy_descriptorset);
+// consume the descriptorset from pool
+__GAL_HELPER_MACRO__(gal_error_code, consume_descriptorset);
+__GAL_HELPER_MACRO__(gal_error_code, free_descriptorset);
 __GAL_HELPER_MACRO__(gal_error_code, create_rootsignature);
 __GAL_HELPER_MACRO__(gal_error_code, destroy_rootsignature);
 // sync
@@ -94,10 +95,8 @@ __GAL_HELPER_MACRO__(gal_error_code, free_commandlist);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_begin_recording);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_end_recording);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_resource_barrier);
-__GAL_HELPER_MACRO__(gal_error_code, cmd_bind_descriptor_set);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_bind_index_buffer);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_bind_vertex_buffer);
-__GAL_HELPER_MACRO__(gal_error_code, cmd_bind_descriptorset);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_bind_pipeline);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_begin_renderpass);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_end_renderpass);

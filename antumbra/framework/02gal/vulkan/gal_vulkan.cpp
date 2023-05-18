@@ -51,6 +51,13 @@ struct vk_texture {
     VmaAllocation allocation;
 };
 
+struct vk_sampler {};
+struct vk_rendertarget {};
+struct vk_fence {};
+struct vk_semaphore {};
+struct vk_swapchain {};
+struct vk_commandlist {};
+
 VkBufferUsageFlags util_to_vk_buffer_usage(gal_resource_types types) {
     VkBufferUsageFlags flags = 0;
 
@@ -2006,64 +2013,231 @@ gal_error_code vk_destroy_texture(gal_context context, gal_texture texture) {
     return gal_error_code::success;
 }
 
-gal_error_code vk_create_sampler() { return gal_error_code::success; }
-gal_error_code vk_destroy_sampler() { return gal_error_code::success; }
-gal_error_code vk_create_rendertarget() { return gal_error_code::success; }
-gal_error_code vk_destroy_rendertarget() { return gal_error_code::success; }
+gal_error_code vk_create_sampler() {
+    //vkCreateSampler();
+    return gal_error_code::success;
+}
+gal_error_code vk_destroy_sampler() {
+    //vkDestroySampler();
+    return gal_error_code::success;
+}
+gal_error_code vk_create_rendertarget() {
+    // fill some rendertarget desc
+    //vk_create_texture();
+    return gal_error_code::success;
+}
+gal_error_code vk_destroy_rendertarget() {
+    //vk_destroy_texture();
+    return gal_error_code::success;
+}
 // surface
-gal_error_code vk_create_swapchain() { return gal_error_code::success; }
-gal_error_code vk_destroy_swapchain() { return gal_error_code::success; }
-gal_error_code vk_create_surface() { return gal_error_code::success; }
-gal_error_code vk_destroy_surface() { return gal_error_code::success; }
+gal_error_code vk_create_swapchain() {
+    //vkCreateSwapchainKHR();
+    return gal_error_code::success;
+}
+gal_error_code vk_destroy_swapchain() {
+    //vkDestroySwapchainKHR();
+    return gal_error_code::success;
+}
+gal_error_code vk_create_surface() {
+    // //#include <GLFW/glfw3.h>
+    //glfwCreateWindowSurface();
+    return gal_error_code::success;
+}
+gal_error_code vk_destroy_surface() {
+    //vkDestroySurfaceKHR();
+    return gal_error_code::success;
+}
 // pipeline
-gal_error_code vk_create_shader() { return gal_error_code::success; }
-gal_error_code vk_destroy_shader() { return gal_error_code::success; }
-gal_error_code vk_create_pipeline() { return gal_error_code::success; }
-gal_error_code vk_destroy_pipeline() { return gal_error_code::success; }
-gal_error_code vk_create_descriptorpool() { return gal_error_code::success; }
-gal_error_code vk_destroy_descriptorpool() { return gal_error_code::success; }
-gal_error_code vk_create_descriptorset() { return gal_error_code::success; }
-gal_error_code vk_destroy_descriptorset() { return gal_error_code::success; }
-gal_error_code vk_create_rootsignature() { return gal_error_code::success; }
-gal_error_code vk_destroy_rootsignature() { return gal_error_code::success; }
+gal_error_code vk_create_shader() {
+    //vkCreateShaderModule();
+    return gal_error_code::success;
+}
+gal_error_code vk_destroy_shader() {
+    //vkDestroyShaderModule();
+    return gal_error_code::success;
+}
+gal_error_code vk_create_pipeline() {
+    //vkCreateGraphicsPipelines();
+    //vkCreateComputePipelines();
+    return gal_error_code::success;
+}
+gal_error_code vk_destroy_pipeline() {
+    //vkDestroyPipeline();
+    return gal_error_code::success;
+}
+gal_error_code vk_create_descriptorpool() {
+    //vkCreateDescriptorPool();
+    return gal_error_code::success;
+}
+gal_error_code vk_destroy_descriptorpool() {
+    //vkDestroyDescriptorPool();
+    return gal_error_code::success;
+}
+gal_error_code vk_consume_descriptorset() {
+    //vkAllocateDescriptorSets();
+    return gal_error_code::success;
+}
+gal_error_code vk_free_descriptorset() {
+    //vkFreeDescriptorSets()
+    return gal_error_code::success;
+}
+gal_error_code vk_create_rootsignature() {
+    //vkCreatePipelineLayout();
+    return gal_error_code::success;
+}
+gal_error_code vk_destroy_rootsignature() {
+    //vkDestroyPipelineLayout();
+    return gal_error_code::success;
+}
 // sync
-gal_error_code vk_create_fence() { return gal_error_code::success; }
-gal_error_code vk_wait_fence() { return gal_error_code::success; }
-gal_error_code vk_destroy_fence() { return gal_error_code::success; }
-gal_error_code vk_wait_gpu() { return gal_error_code::success; }
-gal_error_code vk_create_semaphore() { return gal_error_code::success; }
-gal_error_code vk_destroy_semaphore() { return gal_error_code::success; }
+gal_error_code vk_create_fence() {
+    //vkCreateFence();
+    return gal_error_code::success;
+}
+gal_error_code vk_wait_fence() {
+    //vkWaitForFences();
+    return gal_error_code::success;
+}
+gal_error_code vk_destroy_fence() {
+    //vkDestroyFence();
+    return gal_error_code::success;
+}
+gal_error_code vk_wait_gpu() {
+    //vkDeviceWaitIdle();
+    return gal_error_code::success;
+}
+gal_error_code vk_create_semaphore() {
+    //vkCreateSemaphore();
+    return gal_error_code::success;
+}
+gal_error_code vk_destroy_semaphore() {
+    //vkDestroySemaphore();
+    return gal_error_code::success;
+}
 // cmds
-gal_error_code vk_create_commandpool() { return gal_error_code::success; }
-gal_error_code vk_reset_commandpool() { return gal_error_code::success; }
-gal_error_code vk_destroy_commandpool() { return gal_error_code::success; }
-gal_error_code vk_allocate_commandlist() { return gal_error_code::success; }
-gal_error_code vk_free_commandlist() { return gal_error_code::success; }
-gal_error_code vk_cmd_begin_recording() { return gal_error_code::success; }
-gal_error_code vk_cmd_end_recording() { return gal_error_code::success; }
-gal_error_code vk_cmd_resource_barrier() { return gal_error_code::success; }
-gal_error_code vk_cmd_bind_descriptor_set() { return gal_error_code::success; }
-gal_error_code vk_cmd_bind_index_buffer() { return gal_error_code::success; }
-gal_error_code vk_cmd_bind_vertex_buffer() { return gal_error_code::success; }
-gal_error_code vk_cmd_bind_descriptorset() { return gal_error_code::success; }
-gal_error_code vk_cmd_bind_pipeline() { return gal_error_code::success; }
-gal_error_code vk_cmd_begin_renderpass() { return gal_error_code::success; }
-gal_error_code vk_cmd_end_renderpass() { return gal_error_code::success; }
-gal_error_code vk_cmd_dispatch() { return gal_error_code::success; }
-gal_error_code vk_cmd_dispatch_indirect() { return gal_error_code::success; }
-gal_error_code vk_cmd_draw_instanced() { return gal_error_code::success; }
-gal_error_code vk_cmd_draw_indexed_instanced() { return gal_error_code::success; }
-gal_error_code vk_cmd_draw_indirect_instanced() { return gal_error_code::success; }
-gal_error_code vk_cmd_draw_indirect_indexed_instanced() { return gal_error_code::success; }
-gal_error_code vk_cmd_draw_mesh_task() { return gal_error_code::success; }
-gal_error_code vk_cmd_draw_indirect_mesh_task() { return gal_error_code::success; }
-gal_error_code vk_cmd_copy_texture() { return gal_error_code::success; }
-gal_error_code vk_cmd_copy_buffer() { return gal_error_code::success; }
-gal_error_code vk_cmd_fill_buffer() { return gal_error_code::success; }
-gal_error_code vk_cmd_fill_texture() { return gal_error_code::success; }
+gal_error_code vk_create_commandpool() {
+    //vkCreateCommandPool();
+    return gal_error_code::success;
+}
+gal_error_code vk_reset_commandpool() {
+    //vkResetCommandPool();
+    return gal_error_code::success;
+}
+gal_error_code vk_destroy_commandpool() {
+    //vkDestroyCommandPool();
+    return gal_error_code::success;
+}
+gal_error_code vk_allocate_commandlist() {
+    //vkAllocateCommandBuffers();
+    return gal_error_code::success;
+}
+gal_error_code vk_free_commandlist() {
+    //vkFreeCommandBuffers();
+    return gal_error_code::success;
+}
+gal_error_code vk_cmd_begin_recording() {
+    //vkBeginCommandBuffer();
+    return gal_error_code::success;
+}
+gal_error_code vk_cmd_end_recording() {
+    //vkEndCommandBuffer();
+    return gal_error_code::success;
+}
+gal_error_code vk_cmd_resource_barrier() {
+    //vkCmdPipelineBarrier();
+    //vkCmdPipelineBarrier2();
+    return gal_error_code::success;
+}
+
+gal_error_code vk_cmd_bind_index_buffer() {
+    //vkCmdBindIndexBuffer();
+    return gal_error_code::success;
+}
+gal_error_code vk_cmd_bind_vertex_buffer() {
+    //vkCmdBindVertexBuffers();
+    return gal_error_code::success;
+}
+gal_error_code vk_cmd_bind_descriptorset() {
+    //vkCmdBindDescriptorSets();
+    return gal_error_code::success;
+}
+gal_error_code vk_cmd_bind_pipeline() {
+    //vkCmdBindPipeline();
+    return gal_error_code::success;
+}
+gal_error_code vk_cmd_begin_renderpass() {
+    // using dynamic rendering
+    //vkCmdBeginRendering();
+    return gal_error_code::success;
+}
+gal_error_code vk_cmd_end_renderpass() {
+    //vkCmdEndRendering();
+    return gal_error_code::success;
+}
+gal_error_code vk_cmd_dispatch() {
+    //vkCmdDispatch();
+    return gal_error_code::success;
+}
+gal_error_code vk_cmd_dispatch_indirect() {
+    //vkCmdDispatchIndirect();
+    return gal_error_code::success;
+}
+gal_error_code vk_cmd_draw_instanced() {
+    //vkCmdDraw();
+    return gal_error_code::success;
+}
+gal_error_code vk_cmd_draw_indexed_instanced() {
+    //vkCmdDrawIndexed();
+    return gal_error_code::success;
+}
+gal_error_code vk_cmd_draw_indirect_instanced() {
+    //vkCmdDrawIndirect();
+    return gal_error_code::success;
+}
+gal_error_code vk_cmd_draw_indirect_indexed_instanced() {
+    //vkCmdDrawIndexedIndirect();
+    return gal_error_code::success;
+}
+gal_error_code vk_cmd_draw_mesh_task() {
+    // vkCmdDrawMeshTasksEXT
+    return gal_error_code::success;
+}
+gal_error_code vk_cmd_draw_indirect_mesh_task() {
+    // vkCmdDrawMeshTasksEXT
+    return gal_error_code::success;
+}
+gal_error_code vk_cmd_copy_texture() {
+    //vkCmdCopyImage();
+    //vkCmdCopyImage2();
+    return gal_error_code::success;
+}
+gal_error_code vk_cmd_copy_buffer() {
+    //vkCmdCopyBuffer();
+    // vkCmdCopyBuffer2()
+    return gal_error_code::success;
+}
+gal_error_code vk_cmd_fill_buffer() {
+    //vkCmdFillBuffer();
+    return gal_error_code::success;
+}
+gal_error_code vk_cmd_fill_texture() {
+    //vkCmdClearColorImage();
+    //vkCmdClearDepthStencilImage();
+    //vkCmdClearAttachments();
+    return gal_error_code::success;
+}
 gal_error_code vk_cmd_upload_buffer() { return gal_error_code::success; }
 gal_error_code vk_cmd_upload_texture() { return gal_error_code::success; }
-gal_error_code vk_cmd_copy_buffer_to_texture() { return gal_error_code::success; }
-gal_error_code vk_cmd_copy_texture_to_buffer() { return gal_error_code::success; }
+gal_error_code vk_cmd_copy_buffer_to_texture() {
+    //vkCmdCopyBufferToImage();
+    //vkCmdCopyBufferToImage2();
+    return gal_error_code::success;
+}
+gal_error_code vk_cmd_copy_texture_to_buffer() {
+    //vkCmdCopyImageToBuffer();
+    //vkCmdCopyImageToBuffer2();
+    return gal_error_code::success;
+}
 
 } // namespace ant::gal
