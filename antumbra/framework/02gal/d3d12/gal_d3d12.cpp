@@ -55,7 +55,7 @@ struct d3d12_commandlist {
     ID3D12GraphicsCommandList6 *commandlist;
 };
 
-D3D12_RESOURCE_STATES util_to_dx12_resource_state(gal_resource_states state) {
+constexpr D3D12_RESOURCE_STATES util_to_dx12_resource_state(gal_resource_states state) {
     D3D12_RESOURCE_STATES ret = D3D12_RESOURCE_STATE_COMMON;
 
     // These states cannot be combined with other states so we just do an == check
@@ -101,7 +101,7 @@ D3D12_RESOURCE_STATES util_to_dx12_resource_state(gal_resource_states state) {
     return ret;
 }
 
-D3D12_RESOURCE_FLAGS util_to_dx12_resource_flags(gal_buffer_desc *desc) {
+constexpr D3D12_RESOURCE_FLAGS util_to_dx12_resource_flags(gal_buffer_desc *desc) {
     D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE;
 
     if (desc->resource_types & gal_resource_type::rt_rw_buffer) {
@@ -122,7 +122,7 @@ D3D12_RESOURCE_FLAGS util_to_dx12_resource_flags(gal_buffer_desc *desc) {
     return flags;
 }
 
-inline gal_texture_format FromDXGI_FORMAT(DXGI_FORMAT fmt) {
+constexpr gal_texture_format FromDXGI_FORMAT(DXGI_FORMAT fmt) {
     switch (fmt) {
     case DXGI_FORMAT_UNKNOWN:
         return gal_texture_format::UNDEFINED;
@@ -342,7 +342,7 @@ inline gal_texture_format FromDXGI_FORMAT(DXGI_FORMAT fmt) {
     return gal_texture_format::UNDEFINED;
 }
 
-inline constexpr DXGI_FORMAT galtextureformat_to_dxgiformat(gal_texture_format fmt) {
+constexpr DXGI_FORMAT galtextureformat_to_dxgiformat(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::R1_UNORM:
         return DXGI_FORMAT_R1_UNORM;
@@ -505,7 +505,7 @@ inline constexpr DXGI_FORMAT galtextureformat_to_dxgiformat(gal_texture_format f
     return DXGI_FORMAT_UNKNOWN;
 }
 
-inline constexpr DXGI_FORMAT dxgiformat_to_typeless(DXGI_FORMAT fmt) {
+constexpr DXGI_FORMAT dxgiformat_to_typeless(DXGI_FORMAT fmt) {
     switch (fmt) {
     case DXGI_FORMAT_R32G32B32A32_FLOAT:
     case DXGI_FORMAT_R32G32B32A32_UINT:
@@ -678,13 +678,13 @@ inline constexpr DXGI_FORMAT dxgiformat_to_typeless(DXGI_FORMAT fmt) {
     return DXGI_FORMAT_UNKNOWN;
 }
 
-void load_gal_d3d12_functions() {
+constexpr void load_gal_d3d12_functions() {
 #define D3D12_LOAD_FUNCTION_PTRS
 #include "../helper/helper_macro.h"
 #undef D3D12_LOAD_FUNCTION_PTRS
 }
 
-void offload_gal_d3d12_functions(){
+constexpr void offload_gal_d3d12_functions(){
 #define D3D12_OFFLOAD_FUNCTION_PTRS
 #include "../helper/helper_macro.h"
 #undef D3D12_OFFLOAD_FUNCTION_PTRS
@@ -1059,7 +1059,7 @@ gal_error_code d3d12_destroy_texture(gal_context context, gal_texture texture) {
 }
 
 gal_error_code d3d12_create_sampler() {
-   // d3d12_context *d3d12_ctx;
+    // d3d12_context *d3d12_ctx;
     //d3d12_ctx->device->CreateSampler();
     return gal_error_code::success;
 }
@@ -1072,7 +1072,7 @@ gal_error_code d3d12_create_rendertarget() {
     return gal_error_code::success;
 }
 gal_error_code d3d12_destroy_rendertarget() {
-   // d3d12_context *d3d12_ctx;
+    // d3d12_context *d3d12_ctx;
     return gal_error_code::success;
 }
 // surface

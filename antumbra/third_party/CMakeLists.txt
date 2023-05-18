@@ -13,6 +13,7 @@ add_subdirectory(SPIRV-Cross)
 add_subdirectory(Catch2)
 option(FLECS_SHARED "Build static flecs lib" OFF)
 add_subdirectory(flecs)
+include(lua.cmake)
 add_subdirectory(sol2)
 option(TRACY_ENABLE "" ON)
 option(TRACY_ONDEMAND "" ON)
@@ -70,6 +71,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     flecs_static
     nlohmann_json
     TracyClient
+    lua_static
     sol2
     #Jolt
     tinygltf
@@ -101,8 +103,9 @@ set_property(TARGET
     spirv-cross-reflect
     spirv-cross-util
     TracyClient
-    #Jolt
+    # Jolt
     tinygltf
+    lua_static
     PROPERTY FOLDER "third_party")
 
 if(ANTUMBRA_BUILD_D3D12)

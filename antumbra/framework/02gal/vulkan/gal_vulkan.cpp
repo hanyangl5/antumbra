@@ -58,7 +58,9 @@ struct vk_semaphore {};
 struct vk_swapchain {};
 struct vk_commandlist {};
 
-VkBufferUsageFlags util_to_vk_buffer_usage(gal_resource_types types) {
+// TODO(hyl5): static or inline?
+
+constexpr VkBufferUsageFlags util_to_vk_buffer_usage(gal_resource_types types) {
     VkBufferUsageFlags flags = 0;
 
     if (types & gal_resource_type::rt_constant_buffer) {
@@ -82,7 +84,7 @@ VkBufferUsageFlags util_to_vk_buffer_usage(gal_resource_types types) {
     return flags;
 }
 
-VkImageType utils_to_vk_image_type(gal_texture_dimension dimension) {
+constexpr VkImageType utils_to_vk_image_type(gal_texture_dimension dimension) {
     switch (dimension) {
     case ant::gal::gal_texture_dimension::td_1D:
         return VK_IMAGE_TYPE_1D;
@@ -95,7 +97,7 @@ VkImageType utils_to_vk_image_type(gal_texture_dimension dimension) {
     }
 }
 
-VkFormat utils_to_vk_image_format(gal_texture_format format) {
+constexpr VkFormat utils_to_vk_image_format(gal_texture_format format) {
     switch (format) {
     case ant::gal::gal_texture_format::UNDEFINED:
         return VK_FORMAT_MAX_ENUM;
@@ -508,7 +510,7 @@ VkFormat utils_to_vk_image_format(gal_texture_format format) {
     return VK_FORMAT_MAX_ENUM;
 }
 
-VkSampleCountFlagBits utils_to_vk_sample_count_flags(gal_texture_sample_count samples) {
+constexpr VkSampleCountFlagBits utils_to_vk_sample_count_flags(gal_texture_sample_count samples) {
     switch (samples) {
     case ant::gal::gal_texture_sample_count::tsc_1:
         return VK_SAMPLE_COUNT_1_BIT;
@@ -534,7 +536,7 @@ VkSampleCountFlagBits utils_to_vk_sample_count_flags(gal_texture_sample_count sa
 //    return flags;
 //}
 
-VkImageUsageFlags utils_to_vk_image_usage(gal_resource_types types, gal_memory_flag memory_flag) {
+constexpr VkImageUsageFlags utils_to_vk_image_usage(gal_resource_types types, gal_memory_flag memory_flag) {
     VkImageUsageFlags flags = 0;
     if (memory_flag == gal_memory_flag::cpu_upload) {
         flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
@@ -559,7 +561,7 @@ VkImageUsageFlags utils_to_vk_image_usage(gal_resource_types types, gal_memory_f
     return flags;
 }
 
-VkImageAspectFlags util_vk_determine_aspect_mask(VkFormat format, bool has_stencil) {
+constexpr VkImageAspectFlags util_vk_determine_aspect_mask(VkFormat format, bool has_stencil) {
     VkImageAspectFlags result = 0;
     switch (format) {
         // Depth
@@ -587,7 +589,7 @@ VkImageAspectFlags util_vk_determine_aspect_mask(VkFormat format, bool has_stenc
     }
     return result;
 }
-VkFormatFeatureFlags util_vk_image_usage_to_format_features(VkImageUsageFlags usage) {
+constexpr VkFormatFeatureFlags util_vk_image_usage_to_format_features(VkImageUsageFlags usage) {
     VkFormatFeatureFlags result = (VkFormatFeatureFlags)0;
     if (VK_IMAGE_USAGE_SAMPLED_BIT == (usage & VK_IMAGE_USAGE_SAMPLED_BIT)) {
         result |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
@@ -604,7 +606,7 @@ VkFormatFeatureFlags util_vk_image_usage_to_format_features(VkImageUsageFlags us
     return result;
 }
 
-VkQueueFlags util_to_vk_queue_flags(gal_queue_type queueType) {
+constexpr VkQueueFlags util_to_vk_queue_flags(gal_queue_type queueType) {
     switch (queueType) {
     case gal_queue_type::graphcis:
         return VK_QUEUE_GRAPHICS_BIT;
@@ -617,7 +619,7 @@ VkQueueFlags util_to_vk_queue_flags(gal_queue_type queueType) {
     }
 }
 
-inline constexpr gal_texture_format vkformat_to_galtextureformat(VkFormat fmt) {
+constexpr gal_texture_format vkformat_to_galtextureformat(VkFormat fmt) {
     switch (fmt) {
 
     case VK_FORMAT_UNDEFINED:
@@ -1039,7 +1041,7 @@ inline constexpr gal_texture_format vkformat_to_galtextureformat(VkFormat fmt) {
     return gal_texture_format::UNDEFINED;
 }
 
-inline constexpr VkFormat galtextureformat_to_vkformat(gal_texture_format fmt) {
+constexpr VkFormat galtextureformat_to_vkformat(gal_texture_format fmt) {
     switch (fmt) {
 
     case gal_texture_format::UNDEFINED:
@@ -1431,13 +1433,13 @@ inline constexpr VkFormat galtextureformat_to_vkformat(gal_texture_format fmt) {
     }
 }
 
-void load_gal_vk_functions() {
+constexpr void load_gal_vk_functions() {
 #define VK_LOAD_FUNCTION_PTRS
 #include "../helper/helper_macro.h"
 #undef VK_LOAD_FUNCTION_PTRS
 }
 
-void offload_gal_vk_functions(){
+constexpr void offload_gal_vk_functions(){
 #define VK_OFFLOAD_FUNCTION_PTRS
 #include "../helper/helper_macro.h"
 #undef VK_LOAD_FUNCTION_PTRS

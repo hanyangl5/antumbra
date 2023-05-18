@@ -77,3 +77,6 @@
 [submodule "antumbra/third_party/Lua"]
 	path = antumbra/third_party/Lua
 	url = https://github.com/walterschell/Lua.git
+[submodule "antumbra/third_party/lua"]
+	path = antumbra/third_party/lua
+	url = https://github.com/lua/lua.git
