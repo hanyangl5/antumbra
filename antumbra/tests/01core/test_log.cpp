@@ -1,5 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
-#include <framework/01core/logging/log.h>
+#include "framework/01core/logging/log.h"
 
 TEST_CASE("log") {
     LOG_DEBUG("{}", "log test: debug");

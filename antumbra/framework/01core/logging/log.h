@@ -2,9 +2,9 @@
 
 #include <spdlog/spdlog.h>
 
-#include <framework/01core/memory/memory.h>
-#include <framework/01core/singleton/public_singleton.h>
-#include <framework/01core/utils/utils.h>
+#include "framework/01core/memory/memory.h"
+#include "framework/01core/singleton/public_singleton.h"
+#include "framework/01core/utils/utils.h"
 
 enum VkResult;
 

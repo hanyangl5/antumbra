@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
-#include <framework/01core/logging/log.h>
-#include <framework/02gal/gal.h>
+#include "framework/01core/logging/log.h"
+#include "framework/02gal/gal.h"
 
 using namespace ant;
 

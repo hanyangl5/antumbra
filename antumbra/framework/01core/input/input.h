@@ -2,7 +2,7 @@
 
 #include <GLFW/glfw3.h>
 
-#include <framework/01core/utils/utils.h>
+#include "framework/01core/utils/utils.h"
 namespace ant {
 struct ant_window {
     GLFWwindow *window;
@@ -33,8 +33,12 @@ struct window_desc {
 //    //glfwTerminate();
 //}
 
-//enum class ant_input_mode {
-//    mk,
-//
-//};
+enum class input_mode { mouse_keyboard, controller };
+
+bool add_device(input_mode mode);
+
+bool get_key();
+bool get_key_down();
+};
+
 } // namespace ant

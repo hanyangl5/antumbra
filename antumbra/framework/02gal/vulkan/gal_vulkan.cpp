@@ -8,7 +8,7 @@
 #define VMA_IMPLEMENTATION 1
 #include <vk_mem_alloc.h>
 
-#include <framework/01core/logging/log.h>
+#include "framework/01core/logging/log.h"
 
 #define ANT_VK_API_VERSION VK_API_VERSION_1_3
 
@@ -527,11 +527,11 @@ VkSampleCountFlagBits utils_to_vk_sample_count_flags(gal_texture_sample_count sa
 //    return flags;
 //}
 
-VkImageUsageFlags utils_to_vk_image_usage(gal_resource_types types, memory_flag mf) {
+VkImageUsageFlags utils_to_vk_image_usage(gal_resource_types types, gal_memory_flag memory_flag) {
     VkImageUsageFlags flags = 0;
-    if (mf == memory_flag::cpu_upload) {
+    if (memory_flag == gal_memory_flag::cpu_upload) {
         flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    } else if (mf == memory_flag::gpu_download) {
+    } else if (memory_flag == gal_memory_flag::gpu_download) {
         flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     }
     if (types & gal_resource_type::rt_color_rt) {
@@ -545,39 +545,895 @@ VkImageUsageFlags utils_to_vk_image_usage(gal_resource_types types, memory_flag 
     }
     if (types & gal_resource_type::rt_rw_texture) {
         flags |= VK_IMAGE_USAGE_STORAGE_BIT;
+        flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     }
+    // add copy usage for all resources
+    flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     return flags;
 }
 
-void load_gal_vk_functions() {
-    destroy_gal = &vk_destroy_gal;
-    create_instance = &vk_create_instance;
-    destroy_instance = &vk_destroy_instance;
-    create_device = &vk_create_device;
-    destroy_device = &vk_destroy_device;
-    create_memory_allocator = &vk_create_memory_allocator;
-    destroy_memory_allocator = &vk_destroy_memory_allocator;
-    create_buffer = &vk_create_buffer;
-    destroy_buffer = &vk_destroy_buffer;
-    // TODO(hyl5): enable when all functions are availble;
-    //#define VK_LOAD_FUNCTION_PTRS
-    //#include "../helper/helper_macro.h"
-    //#undef VK_LOAD_FUNCTION_PTRS
+VkImageAspectFlags util_vk_determine_aspect_mask(VkFormat format, bool has_stencil) {
+    VkImageAspectFlags result = 0;
+    switch (format) {
+        // Depth
+    case VK_FORMAT_D16_UNORM:
+    case VK_FORMAT_X8_D24_UNORM_PACK32:
+    case VK_FORMAT_D32_SFLOAT:
+        result = VK_IMAGE_ASPECT_DEPTH_BIT;
+        break;
+        // Stencil
+    case VK_FORMAT_S8_UINT:
+        result = VK_IMAGE_ASPECT_STENCIL_BIT;
+        break;
+        // Depth/stencil
+    case VK_FORMAT_D16_UNORM_S8_UINT:
+    case VK_FORMAT_D24_UNORM_S8_UINT:
+    case VK_FORMAT_D32_SFLOAT_S8_UINT:
+        result = VK_IMAGE_ASPECT_DEPTH_BIT;
+        if (has_stencil)
+            result |= VK_IMAGE_ASPECT_STENCIL_BIT;
+        break;
+        // Assume everything else is Color
+    default:
+        result = VK_IMAGE_ASPECT_COLOR_BIT;
+        break;
+    }
+    return result;
+}
+VkFormatFeatureFlags util_vk_image_usage_to_format_features(VkImageUsageFlags usage) {
+    VkFormatFeatureFlags result = (VkFormatFeatureFlags)0;
+    if (VK_IMAGE_USAGE_SAMPLED_BIT == (usage & VK_IMAGE_USAGE_SAMPLED_BIT)) {
+        result |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+    }
+    if (VK_IMAGE_USAGE_STORAGE_BIT == (usage & VK_IMAGE_USAGE_STORAGE_BIT)) {
+        result |= VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
+    }
+    if (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT == (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) {
+        result |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
+    }
+    if (VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT == (usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
+        result |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    }
+    return result;
 }
 
-void offload_gal_vk_functions() {
-    destroy_gal = nullptr;
-    create_instance = nullptr;
-    destroy_instance = nullptr;
-    create_device = nullptr;
-    destroy_device = nullptr;
-    create_memory_allocator = nullptr;
-    destroy_memory_allocator = nullptr;
-    create_buffer = nullptr;
-    destroy_buffer = nullptr;
-    //#define VK_OFFLOAD_FUNCTION_PTRS
-    //#include "../helper/helper_macro.h"
-    //#undef VK_LOAD_FUNCTION_PTRS
+VkQueueFlags util_to_vk_queue_flags(gal_queue_type queueType) {
+    switch (queueType) {
+    case gal_queue_type::graphcis:
+        return VK_QUEUE_GRAPHICS_BIT;
+    case gal_queue_type::transfer:
+        return VK_QUEUE_TRANSFER_BIT;
+    case gal_queue_type::compute:
+        return VK_QUEUE_COMPUTE_BIT;
+    default:
+        return VK_QUEUE_FLAG_BITS_MAX_ENUM;
+    }
+}
+
+inline constexpr gal_texture_format vkformat_to_galtextureformat(VkFormat fmt) {
+    switch (fmt) {
+
+    case VK_FORMAT_UNDEFINED:
+        return gal_texture_format::UNDEFINED;
+    case VK_FORMAT_R4G4_UNORM_PACK8:
+        return gal_texture_format::G4R4_UNORM;
+    case VK_FORMAT_R4G4B4A4_UNORM_PACK16:
+        return gal_texture_format::A4B4G4R4_UNORM;
+    case VK_FORMAT_B4G4R4A4_UNORM_PACK16:
+        return gal_texture_format::A4R4G4B4_UNORM;
+    case VK_FORMAT_R5G6B5_UNORM_PACK16:
+        return gal_texture_format::B5G6R5_UNORM;
+    case VK_FORMAT_B5G6R5_UNORM_PACK16:
+        return gal_texture_format::R5G6B5_UNORM;
+    case VK_FORMAT_R5G5B5A1_UNORM_PACK16:
+        return gal_texture_format::A1B5G5R5_UNORM;
+    case VK_FORMAT_B5G5R5A1_UNORM_PACK16:
+        return gal_texture_format::A1R5G5B5_UNORM;
+    case VK_FORMAT_A1R5G5B5_UNORM_PACK16:
+        return gal_texture_format::B5G5R5A1_UNORM;
+    case VK_FORMAT_R8_UNORM:
+        return gal_texture_format::R8_UNORM;
+    case VK_FORMAT_R8_SNORM:
+        return gal_texture_format::R8_SNORM;
+    case VK_FORMAT_R8_UINT:
+        return gal_texture_format::R8_UINT;
+    case VK_FORMAT_R8_SINT:
+        return gal_texture_format::R8_SINT;
+    case VK_FORMAT_R8_SRGB:
+        return gal_texture_format::R8_SRGB;
+    case VK_FORMAT_R8G8_UNORM:
+        return gal_texture_format::R8G8_UNORM;
+    case VK_FORMAT_R8G8_SNORM:
+        return gal_texture_format::R8G8_SNORM;
+    case VK_FORMAT_R8G8_UINT:
+        return gal_texture_format::R8G8_UINT;
+    case VK_FORMAT_R8G8_SINT:
+        return gal_texture_format::R8G8_SINT;
+    case VK_FORMAT_R8G8_SRGB:
+        return gal_texture_format::R8G8_SRGB;
+    case VK_FORMAT_R8G8B8_UNORM:
+        return gal_texture_format::R8G8B8_UNORM;
+    case VK_FORMAT_R8G8B8_SNORM:
+        return gal_texture_format::R8G8B8_SNORM;
+    case VK_FORMAT_R8G8B8_UINT:
+        return gal_texture_format::R8G8B8_UINT;
+    case VK_FORMAT_R8G8B8_SINT:
+        return gal_texture_format::R8G8B8_SINT;
+    case VK_FORMAT_R8G8B8_SRGB:
+        return gal_texture_format::R8G8B8_SRGB;
+    case VK_FORMAT_B8G8R8_UNORM:
+        return gal_texture_format::B8G8R8_UNORM;
+    case VK_FORMAT_B8G8R8_SNORM:
+        return gal_texture_format::B8G8R8_SNORM;
+    case VK_FORMAT_B8G8R8_UINT:
+        return gal_texture_format::B8G8R8_UINT;
+    case VK_FORMAT_B8G8R8_SINT:
+        return gal_texture_format::B8G8R8_SINT;
+    case VK_FORMAT_B8G8R8_SRGB:
+        return gal_texture_format::B8G8R8_SRGB;
+    case VK_FORMAT_R8G8B8A8_UNORM:
+        return gal_texture_format::R8G8B8A8_UNORM;
+    case VK_FORMAT_R8G8B8A8_SNORM:
+        return gal_texture_format::R8G8B8A8_SNORM;
+    case VK_FORMAT_R8G8B8A8_UINT:
+        return gal_texture_format::R8G8B8A8_UINT;
+    case VK_FORMAT_R8G8B8A8_SINT:
+        return gal_texture_format::R8G8B8A8_SINT;
+    case VK_FORMAT_R8G8B8A8_SRGB:
+        return gal_texture_format::R8G8B8A8_SRGB;
+    case VK_FORMAT_B8G8R8A8_UNORM:
+        return gal_texture_format::B8G8R8A8_UNORM;
+    case VK_FORMAT_B8G8R8A8_SNORM:
+        return gal_texture_format::B8G8R8A8_SNORM;
+    case VK_FORMAT_B8G8R8A8_UINT:
+        return gal_texture_format::B8G8R8A8_UINT;
+    case VK_FORMAT_B8G8R8A8_SINT:
+        return gal_texture_format::B8G8R8A8_SINT;
+    case VK_FORMAT_B8G8R8A8_SRGB:
+        return gal_texture_format::B8G8R8A8_SRGB;
+    case VK_FORMAT_A2R10G10B10_UNORM_PACK32:
+        return gal_texture_format::A2R10G10B10_UNORM;
+    case VK_FORMAT_A2R10G10B10_UINT_PACK32:
+        return gal_texture_format::A2R10G10B10_UINT;
+    case VK_FORMAT_A2B10G10R10_UNORM_PACK32:
+        return gal_texture_format::A2B10G10R10_UNORM;
+    case VK_FORMAT_A2B10G10R10_UINT_PACK32:
+        return gal_texture_format::A2B10G10R10_UINT;
+    case VK_FORMAT_R16_UNORM:
+        return gal_texture_format::R16_UNORM;
+    case VK_FORMAT_R16_SNORM:
+        return gal_texture_format::R16_SNORM;
+    case VK_FORMAT_R16_UINT:
+        return gal_texture_format::R16_UINT;
+    case VK_FORMAT_R16_SINT:
+        return gal_texture_format::R16_SINT;
+    case VK_FORMAT_R16_SFLOAT:
+        return gal_texture_format::R16_SFLOAT;
+    case VK_FORMAT_R16G16_UNORM:
+        return gal_texture_format::R16G16_UNORM;
+    case VK_FORMAT_R16G16_SNORM:
+        return gal_texture_format::R16G16_SNORM;
+    case VK_FORMAT_R16G16_UINT:
+        return gal_texture_format::R16G16_UINT;
+    case VK_FORMAT_R16G16_SINT:
+        return gal_texture_format::R16G16_SINT;
+    case VK_FORMAT_R16G16_SFLOAT:
+        return gal_texture_format::R16G16_SFLOAT;
+    case VK_FORMAT_R16G16B16_UNORM:
+        return gal_texture_format::R16G16B16_UNORM;
+    case VK_FORMAT_R16G16B16_SNORM:
+        return gal_texture_format::R16G16B16_SNORM;
+    case VK_FORMAT_R16G16B16_UINT:
+        return gal_texture_format::R16G16B16_UINT;
+    case VK_FORMAT_R16G16B16_SINT:
+        return gal_texture_format::R16G16B16_SINT;
+    case VK_FORMAT_R16G16B16_SFLOAT:
+        return gal_texture_format::R16G16B16_SFLOAT;
+    case VK_FORMAT_R16G16B16A16_UNORM:
+        return gal_texture_format::R16G16B16A16_UNORM;
+    case VK_FORMAT_R16G16B16A16_SNORM:
+        return gal_texture_format::R16G16B16A16_SNORM;
+    case VK_FORMAT_R16G16B16A16_UINT:
+        return gal_texture_format::R16G16B16A16_UINT;
+    case VK_FORMAT_R16G16B16A16_SINT:
+        return gal_texture_format::R16G16B16A16_SINT;
+    case VK_FORMAT_R16G16B16A16_SFLOAT:
+        return gal_texture_format::R16G16B16A16_SFLOAT;
+    case VK_FORMAT_R32_UINT:
+        return gal_texture_format::R32_UINT;
+    case VK_FORMAT_R32_SINT:
+        return gal_texture_format::R32_SINT;
+    case VK_FORMAT_R32_SFLOAT:
+        return gal_texture_format::R32_SFLOAT;
+    case VK_FORMAT_R32G32_UINT:
+        return gal_texture_format::R32G32_UINT;
+    case VK_FORMAT_R32G32_SINT:
+        return gal_texture_format::R32G32_SINT;
+    case VK_FORMAT_R32G32_SFLOAT:
+        return gal_texture_format::R32G32_SFLOAT;
+    case VK_FORMAT_R32G32B32_UINT:
+        return gal_texture_format::R32G32B32_UINT;
+    case VK_FORMAT_R32G32B32_SINT:
+        return gal_texture_format::R32G32B32_SINT;
+    case VK_FORMAT_R32G32B32_SFLOAT:
+        return gal_texture_format::R32G32B32_SFLOAT;
+    case VK_FORMAT_R32G32B32A32_UINT:
+        return gal_texture_format::R32G32B32A32_UINT;
+    case VK_FORMAT_R32G32B32A32_SINT:
+        return gal_texture_format::R32G32B32A32_SINT;
+    case VK_FORMAT_R32G32B32A32_SFLOAT:
+        return gal_texture_format::R32G32B32A32_SFLOAT;
+    case VK_FORMAT_R64_UINT:
+        return gal_texture_format::R64_UINT;
+    case VK_FORMAT_R64_SINT:
+        return gal_texture_format::R64_SINT;
+    case VK_FORMAT_R64_SFLOAT:
+        return gal_texture_format::R64_SFLOAT;
+    case VK_FORMAT_R64G64_UINT:
+        return gal_texture_format::R64G64_UINT;
+    case VK_FORMAT_R64G64_SINT:
+        return gal_texture_format::R64G64_SINT;
+    case VK_FORMAT_R64G64_SFLOAT:
+        return gal_texture_format::R64G64_SFLOAT;
+    case VK_FORMAT_R64G64B64_UINT:
+        return gal_texture_format::R64G64B64_UINT;
+    case VK_FORMAT_R64G64B64_SINT:
+        return gal_texture_format::R64G64B64_SINT;
+    case VK_FORMAT_R64G64B64_SFLOAT:
+        return gal_texture_format::R64G64B64_SFLOAT;
+    case VK_FORMAT_R64G64B64A64_UINT:
+        return gal_texture_format::R64G64B64A64_UINT;
+    case VK_FORMAT_R64G64B64A64_SINT:
+        return gal_texture_format::R64G64B64A64_SINT;
+    case VK_FORMAT_R64G64B64A64_SFLOAT:
+        return gal_texture_format::R64G64B64A64_SFLOAT;
+    case VK_FORMAT_B10G11R11_UFLOAT_PACK32:
+        return gal_texture_format::B10G11R11_UFLOAT;
+    case VK_FORMAT_E5B9G9R9_UFLOAT_PACK32:
+        return gal_texture_format::E5B9G9R9_UFLOAT;
+    case VK_FORMAT_D16_UNORM:
+        return gal_texture_format::D16_UNORM;
+    case VK_FORMAT_X8_D24_UNORM_PACK32:
+        return gal_texture_format::X8_D24_UNORM;
+    case VK_FORMAT_D32_SFLOAT:
+        return gal_texture_format::D32_SFLOAT;
+    case VK_FORMAT_S8_UINT:
+        return gal_texture_format::S8_UINT;
+    case VK_FORMAT_D16_UNORM_S8_UINT:
+        return gal_texture_format::D16_UNORM_S8_UINT;
+    case VK_FORMAT_D24_UNORM_S8_UINT:
+        return gal_texture_format::D24_UNORM_S8_UINT;
+    case VK_FORMAT_D32_SFLOAT_S8_UINT:
+        return gal_texture_format::D32_SFLOAT_S8_UINT;
+    case VK_FORMAT_BC1_RGB_UNORM_BLOCK:
+        return gal_texture_format::DXBC1_RGB_UNORM;
+    case VK_FORMAT_BC1_RGB_SRGB_BLOCK:
+        return gal_texture_format::DXBC1_RGB_SRGB;
+    case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
+        return gal_texture_format::DXBC1_RGBA_UNORM;
+    case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
+        return gal_texture_format::DXBC1_RGBA_SRGB;
+    case VK_FORMAT_BC2_UNORM_BLOCK:
+        return gal_texture_format::DXBC2_UNORM;
+    case VK_FORMAT_BC2_SRGB_BLOCK:
+        return gal_texture_format::DXBC2_SRGB;
+    case VK_FORMAT_BC3_UNORM_BLOCK:
+        return gal_texture_format::DXBC3_UNORM;
+    case VK_FORMAT_BC3_SRGB_BLOCK:
+        return gal_texture_format::DXBC3_SRGB;
+    case VK_FORMAT_BC4_UNORM_BLOCK:
+        return gal_texture_format::DXBC4_UNORM;
+    case VK_FORMAT_BC4_SNORM_BLOCK:
+        return gal_texture_format::DXBC4_SNORM;
+    case VK_FORMAT_BC5_UNORM_BLOCK:
+        return gal_texture_format::DXBC5_UNORM;
+    case VK_FORMAT_BC5_SNORM_BLOCK:
+        return gal_texture_format::DXBC5_SNORM;
+    case VK_FORMAT_BC6H_UFLOAT_BLOCK:
+        return gal_texture_format::DXBC6H_UFLOAT;
+    case VK_FORMAT_BC6H_SFLOAT_BLOCK:
+        return gal_texture_format::DXBC6H_SFLOAT;
+    case VK_FORMAT_BC7_UNORM_BLOCK:
+        return gal_texture_format::DXBC7_UNORM;
+    case VK_FORMAT_BC7_SRGB_BLOCK:
+        return gal_texture_format::DXBC7_SRGB;
+    case VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK:
+        return gal_texture_format::ETC2_R8G8B8_UNORM;
+    case VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK:
+        return gal_texture_format::ETC2_R8G8B8_SRGB;
+    case VK_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK:
+        return gal_texture_format::ETC2_R8G8B8A1_UNORM;
+    case VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK:
+        return gal_texture_format::ETC2_R8G8B8A1_SRGB;
+    case VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK:
+        return gal_texture_format::ETC2_R8G8B8A8_UNORM;
+    case VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK:
+        return gal_texture_format::ETC2_R8G8B8A8_SRGB;
+    case VK_FORMAT_EAC_R11_UNORM_BLOCK:
+        return gal_texture_format::ETC2_EAC_R11_UNORM;
+    case VK_FORMAT_EAC_R11_SNORM_BLOCK:
+        return gal_texture_format::ETC2_EAC_R11_SNORM;
+    case VK_FORMAT_EAC_R11G11_UNORM_BLOCK:
+        return gal_texture_format::ETC2_EAC_R11G11_UNORM;
+    case VK_FORMAT_EAC_R11G11_SNORM_BLOCK:
+        return gal_texture_format::ETC2_EAC_R11G11_SNORM;
+    case VK_FORMAT_ASTC_4x4_UNORM_BLOCK:
+        return gal_texture_format::ASTC_4x4_UNORM;
+    case VK_FORMAT_ASTC_4x4_SRGB_BLOCK:
+        return gal_texture_format::ASTC_4x4_SRGB;
+    case VK_FORMAT_ASTC_5x4_UNORM_BLOCK:
+        return gal_texture_format::ASTC_5x4_UNORM;
+    case VK_FORMAT_ASTC_5x4_SRGB_BLOCK:
+        return gal_texture_format::ASTC_5x4_SRGB;
+    case VK_FORMAT_ASTC_5x5_UNORM_BLOCK:
+        return gal_texture_format::ASTC_5x5_UNORM;
+    case VK_FORMAT_ASTC_5x5_SRGB_BLOCK:
+        return gal_texture_format::ASTC_5x5_SRGB;
+    case VK_FORMAT_ASTC_6x5_UNORM_BLOCK:
+        return gal_texture_format::ASTC_6x5_UNORM;
+    case VK_FORMAT_ASTC_6x5_SRGB_BLOCK:
+        return gal_texture_format::ASTC_6x5_SRGB;
+    case VK_FORMAT_ASTC_6x6_UNORM_BLOCK:
+        return gal_texture_format::ASTC_6x6_UNORM;
+    case VK_FORMAT_ASTC_6x6_SRGB_BLOCK:
+        return gal_texture_format::ASTC_6x6_SRGB;
+    case VK_FORMAT_ASTC_8x5_UNORM_BLOCK:
+        return gal_texture_format::ASTC_8x5_UNORM;
+    case VK_FORMAT_ASTC_8x5_SRGB_BLOCK:
+        return gal_texture_format::ASTC_8x5_SRGB;
+    case VK_FORMAT_ASTC_8x6_UNORM_BLOCK:
+        return gal_texture_format::ASTC_8x6_UNORM;
+    case VK_FORMAT_ASTC_8x6_SRGB_BLOCK:
+        return gal_texture_format::ASTC_8x6_SRGB;
+    case VK_FORMAT_ASTC_8x8_UNORM_BLOCK:
+        return gal_texture_format::ASTC_8x8_UNORM;
+    case VK_FORMAT_ASTC_8x8_SRGB_BLOCK:
+        return gal_texture_format::ASTC_8x8_SRGB;
+    case VK_FORMAT_ASTC_10x5_UNORM_BLOCK:
+        return gal_texture_format::ASTC_10x5_UNORM;
+    case VK_FORMAT_ASTC_10x5_SRGB_BLOCK:
+        return gal_texture_format::ASTC_10x5_SRGB;
+    case VK_FORMAT_ASTC_10x6_UNORM_BLOCK:
+        return gal_texture_format::ASTC_10x6_UNORM;
+    case VK_FORMAT_ASTC_10x6_SRGB_BLOCK:
+        return gal_texture_format::ASTC_10x6_SRGB;
+    case VK_FORMAT_ASTC_10x8_UNORM_BLOCK:
+        return gal_texture_format::ASTC_10x8_UNORM;
+    case VK_FORMAT_ASTC_10x8_SRGB_BLOCK:
+        return gal_texture_format::ASTC_10x8_SRGB;
+    case VK_FORMAT_ASTC_10x10_UNORM_BLOCK:
+        return gal_texture_format::ASTC_10x10_UNORM;
+    case VK_FORMAT_ASTC_10x10_SRGB_BLOCK:
+        return gal_texture_format::ASTC_10x10_SRGB;
+    case VK_FORMAT_ASTC_12x10_UNORM_BLOCK:
+        return gal_texture_format::ASTC_12x10_UNORM;
+    case VK_FORMAT_ASTC_12x10_SRGB_BLOCK:
+        return gal_texture_format::ASTC_12x10_SRGB;
+    case VK_FORMAT_ASTC_12x12_UNORM_BLOCK:
+        return gal_texture_format::ASTC_12x12_UNORM;
+    case VK_FORMAT_ASTC_12x12_SRGB_BLOCK:
+        return gal_texture_format::ASTC_12x12_SRGB;
+
+    case VK_FORMAT_PVRTC1_2BPP_UNORM_BLOCK_IMG:
+        return gal_texture_format::PVRTC1_2BPP_UNORM;
+    case VK_FORMAT_PVRTC1_4BPP_UNORM_BLOCK_IMG:
+        return gal_texture_format::PVRTC1_4BPP_UNORM;
+    case VK_FORMAT_PVRTC1_2BPP_SRGB_BLOCK_IMG:
+        return gal_texture_format::PVRTC1_2BPP_SRGB;
+    case VK_FORMAT_PVRTC1_4BPP_SRGB_BLOCK_IMG:
+        return gal_texture_format::PVRTC1_4BPP_SRGB;
+
+    case VK_FORMAT_G16B16G16R16_422_UNORM:
+        return gal_texture_format::G16B16G16R16_422_UNORM;
+    case VK_FORMAT_B16G16R16G16_422_UNORM:
+        return gal_texture_format::B16G16R16G16_422_UNORM;
+    case VK_FORMAT_R12X4G12X4B12X4A12X4_UNORM_4PACK16:
+        return gal_texture_format::R12X4G12X4B12X4A12X4_UNORM_4PACK16;
+    case VK_FORMAT_G12X4B12X4G12X4R12X4_422_UNORM_4PACK16:
+        return gal_texture_format::G12X4B12X4G12X4R12X4_422_UNORM_4PACK16;
+    case VK_FORMAT_B12X4G12X4R12X4G12X4_422_UNORM_4PACK16:
+        return gal_texture_format::B12X4G12X4R12X4G12X4_422_UNORM_4PACK16;
+    case VK_FORMAT_R10X6G10X6B10X6A10X6_UNORM_4PACK16:
+        return gal_texture_format::R10X6G10X6B10X6A10X6_UNORM_4PACK16;
+    case VK_FORMAT_G10X6B10X6G10X6R10X6_422_UNORM_4PACK16:
+        return gal_texture_format::G10X6B10X6G10X6R10X6_422_UNORM_4PACK16;
+    case VK_FORMAT_B10X6G10X6R10X6G10X6_422_UNORM_4PACK16:
+        return gal_texture_format::B10X6G10X6R10X6G10X6_422_UNORM_4PACK16;
+    case VK_FORMAT_G8B8G8R8_422_UNORM:
+        return gal_texture_format::G8B8G8R8_422_UNORM;
+    case VK_FORMAT_B8G8R8G8_422_UNORM:
+        return gal_texture_format::B8G8R8G8_422_UNORM;
+    case VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM:
+        return gal_texture_format::G8_B8_R8_3PLANE_420_UNORM;
+    case VK_FORMAT_G8_B8R8_2PLANE_420_UNORM:
+        return gal_texture_format::G8_B8R8_2PLANE_420_UNORM;
+    case VK_FORMAT_G8_B8_R8_3PLANE_422_UNORM:
+        return gal_texture_format::G8_B8_R8_3PLANE_422_UNORM;
+    case VK_FORMAT_G8_B8R8_2PLANE_422_UNORM:
+        return gal_texture_format::G8_B8R8_2PLANE_422_UNORM;
+    case VK_FORMAT_G8_B8_R8_3PLANE_444_UNORM:
+        return gal_texture_format::G8_B8_R8_3PLANE_444_UNORM;
+    case VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16:
+        return gal_texture_format::G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16;
+    case VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16:
+        return gal_texture_format::G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16;
+    case VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16:
+        return gal_texture_format::G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16;
+    case VK_FORMAT_G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16:
+        return gal_texture_format::G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16;
+    case VK_FORMAT_G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16:
+        return gal_texture_format::G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16;
+    case VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16:
+        return gal_texture_format::G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16;
+    case VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16:
+        return gal_texture_format::G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16;
+    case VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16:
+        return gal_texture_format::G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16;
+    case VK_FORMAT_G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16:
+        return gal_texture_format::G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16;
+    case VK_FORMAT_G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16:
+        return gal_texture_format::G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16;
+    case VK_FORMAT_G16_B16_R16_3PLANE_420_UNORM:
+        return gal_texture_format::G16_B16_R16_3PLANE_420_UNORM;
+    case VK_FORMAT_G16_B16_R16_3PLANE_422_UNORM:
+        return gal_texture_format::G16_B16_R16_3PLANE_422_UNORM;
+    case VK_FORMAT_G16_B16_R16_3PLANE_444_UNORM:
+        return gal_texture_format::G16_B16_R16_3PLANE_444_UNORM;
+    case VK_FORMAT_G16_B16R16_2PLANE_420_UNORM:
+        return gal_texture_format::G16_B16R16_2PLANE_420_UNORM;
+    case VK_FORMAT_G16_B16R16_2PLANE_422_UNORM:
+        return gal_texture_format::G16_B16R16_2PLANE_422_UNORM;
+
+    case VK_FORMAT_A8B8G8R8_UNORM_PACK32:
+    case VK_FORMAT_R8_USCALED:
+    case VK_FORMAT_R8_SSCALED:
+    case VK_FORMAT_R8G8_USCALED:
+    case VK_FORMAT_R8G8_SSCALED:
+    case VK_FORMAT_R8G8B8_USCALED:
+    case VK_FORMAT_R8G8B8_SSCALED:
+    case VK_FORMAT_B8G8R8_USCALED:
+    case VK_FORMAT_B8G8R8_SSCALED:
+    case VK_FORMAT_R8G8B8A8_USCALED:
+    case VK_FORMAT_R8G8B8A8_SSCALED:
+    case VK_FORMAT_B8G8R8A8_USCALED:
+    case VK_FORMAT_B8G8R8A8_SSCALED:
+    case VK_FORMAT_A8B8G8R8_SNORM_PACK32:
+    case VK_FORMAT_A8B8G8R8_USCALED_PACK32:
+    case VK_FORMAT_A8B8G8R8_SSCALED_PACK32:
+    case VK_FORMAT_A8B8G8R8_UINT_PACK32:
+    case VK_FORMAT_A8B8G8R8_SINT_PACK32:
+    case VK_FORMAT_A8B8G8R8_SRGB_PACK32:
+    case VK_FORMAT_A2R10G10B10_SNORM_PACK32:
+    case VK_FORMAT_A2R10G10B10_USCALED_PACK32:
+    case VK_FORMAT_A2R10G10B10_SSCALED_PACK32:
+    case VK_FORMAT_A2R10G10B10_SINT_PACK32:
+    case VK_FORMAT_A2B10G10R10_SNORM_PACK32:
+    case VK_FORMAT_A2B10G10R10_USCALED_PACK32:
+    case VK_FORMAT_A2B10G10R10_SSCALED_PACK32:
+    case VK_FORMAT_A2B10G10R10_SINT_PACK32:
+    case VK_FORMAT_R16_USCALED:
+    case VK_FORMAT_R16_SSCALED:
+    case VK_FORMAT_R16G16_USCALED:
+    case VK_FORMAT_R16G16_SSCALED:
+    case VK_FORMAT_R16G16B16_USCALED:
+    case VK_FORMAT_R16G16B16_SSCALED:
+    case VK_FORMAT_R16G16B16A16_USCALED:
+    case VK_FORMAT_R16G16B16A16_SSCALED:
+    case VK_FORMAT_R10X6_UNORM_PACK16:
+    case VK_FORMAT_R10X6G10X6_UNORM_2PACK16:
+    case VK_FORMAT_R12X4_UNORM_PACK16:
+    case VK_FORMAT_R12X4G12X4_UNORM_2PACK16:
+    case VK_FORMAT_PVRTC2_2BPP_UNORM_BLOCK_IMG:
+    case VK_FORMAT_PVRTC2_4BPP_UNORM_BLOCK_IMG:
+    case VK_FORMAT_PVRTC2_2BPP_SRGB_BLOCK_IMG:
+    case VK_FORMAT_PVRTC2_4BPP_SRGB_BLOCK_IMG:
+        return gal_texture_format::UNDEFINED;
+    }
+    return gal_texture_format::UNDEFINED;
+}
+
+inline constexpr VkFormat galtextureformat_to_vkformat(gal_texture_format fmt) {
+    switch (fmt) {
+
+    case gal_texture_format::UNDEFINED:
+        return VK_FORMAT_UNDEFINED;
+    case gal_texture_format::G4R4_UNORM:
+        return VK_FORMAT_R4G4_UNORM_PACK8;
+    case gal_texture_format::A4B4G4R4_UNORM:
+        return VK_FORMAT_R4G4B4A4_UNORM_PACK16;
+    case gal_texture_format::A4R4G4B4_UNORM:
+        return VK_FORMAT_B4G4R4A4_UNORM_PACK16;
+    case gal_texture_format::R5G6B5_UNORM:
+        return VK_FORMAT_B5G6R5_UNORM_PACK16;
+    case gal_texture_format::B5G6R5_UNORM:
+        return VK_FORMAT_R5G6B5_UNORM_PACK16;
+    case gal_texture_format::A1B5G5R5_UNORM:
+        return VK_FORMAT_R5G5B5A1_UNORM_PACK16;
+    case gal_texture_format::A1R5G5B5_UNORM:
+        return VK_FORMAT_B5G5R5A1_UNORM_PACK16;
+    case gal_texture_format::B5G5R5A1_UNORM:
+        return VK_FORMAT_A1R5G5B5_UNORM_PACK16;
+    case gal_texture_format::A2B10G10R10_UNORM:
+        return VK_FORMAT_A2B10G10R10_UNORM_PACK32;
+
+    case gal_texture_format::R8_UNORM:
+        return VK_FORMAT_R8_UNORM;
+    case gal_texture_format::R8_SNORM:
+        return VK_FORMAT_R8_SNORM;
+    case gal_texture_format::R8_UINT:
+        return VK_FORMAT_R8_UINT;
+    case gal_texture_format::R8_SINT:
+        return VK_FORMAT_R8_SINT;
+    case gal_texture_format::R8_SRGB:
+        return VK_FORMAT_R8_SRGB;
+    case gal_texture_format::R8G8_UNORM:
+        return VK_FORMAT_R8G8_UNORM;
+    case gal_texture_format::R8G8_SNORM:
+        return VK_FORMAT_R8G8_SNORM;
+    case gal_texture_format::R8G8_UINT:
+        return VK_FORMAT_R8G8_UINT;
+    case gal_texture_format::R8G8_SINT:
+        return VK_FORMAT_R8G8_SINT;
+    case gal_texture_format::R8G8_SRGB:
+        return VK_FORMAT_R8G8_SRGB;
+    case gal_texture_format::R8G8B8_UNORM:
+        return VK_FORMAT_R8G8B8_UNORM;
+    case gal_texture_format::R8G8B8_SNORM:
+        return VK_FORMAT_R8G8B8_SNORM;
+    case gal_texture_format::R8G8B8_UINT:
+        return VK_FORMAT_R8G8B8_UINT;
+    case gal_texture_format::R8G8B8_SINT:
+        return VK_FORMAT_R8G8B8_SINT;
+    case gal_texture_format::R8G8B8_SRGB:
+        return VK_FORMAT_R8G8B8_SRGB;
+    case gal_texture_format::B8G8R8_UNORM:
+        return VK_FORMAT_B8G8R8_UNORM;
+    case gal_texture_format::B8G8R8_SNORM:
+        return VK_FORMAT_B8G8R8_SNORM;
+    case gal_texture_format::B8G8R8_UINT:
+        return VK_FORMAT_B8G8R8_UINT;
+    case gal_texture_format::B8G8R8_SINT:
+        return VK_FORMAT_B8G8R8_SINT;
+    case gal_texture_format::B8G8R8_SRGB:
+        return VK_FORMAT_B8G8R8_SRGB;
+    case gal_texture_format::R8G8B8A8_UNORM:
+        return VK_FORMAT_R8G8B8A8_UNORM;
+    case gal_texture_format::R8G8B8A8_SNORM:
+        return VK_FORMAT_R8G8B8A8_SNORM;
+    case gal_texture_format::R8G8B8A8_UINT:
+        return VK_FORMAT_R8G8B8A8_UINT;
+    case gal_texture_format::R8G8B8A8_SINT:
+        return VK_FORMAT_R8G8B8A8_SINT;
+    case gal_texture_format::R8G8B8A8_SRGB:
+        return VK_FORMAT_R8G8B8A8_SRGB;
+    case gal_texture_format::B8G8R8A8_UNORM:
+        return VK_FORMAT_B8G8R8A8_UNORM;
+    case gal_texture_format::B8G8R8A8_SNORM:
+        return VK_FORMAT_B8G8R8A8_SNORM;
+    case gal_texture_format::B8G8R8A8_UINT:
+        return VK_FORMAT_B8G8R8A8_UINT;
+    case gal_texture_format::B8G8R8A8_SINT:
+        return VK_FORMAT_B8G8R8A8_SINT;
+    case gal_texture_format::B8G8R8A8_SRGB:
+        return VK_FORMAT_B8G8R8A8_SRGB;
+    case gal_texture_format::R16_UNORM:
+        return VK_FORMAT_R16_UNORM;
+    case gal_texture_format::R16_SNORM:
+        return VK_FORMAT_R16_SNORM;
+    case gal_texture_format::R16_UINT:
+        return VK_FORMAT_R16_UINT;
+    case gal_texture_format::R16_SINT:
+        return VK_FORMAT_R16_SINT;
+    case gal_texture_format::R16_SFLOAT:
+        return VK_FORMAT_R16_SFLOAT;
+    case gal_texture_format::R16G16_UNORM:
+        return VK_FORMAT_R16G16_UNORM;
+    case gal_texture_format::R16G16_SNORM:
+        return VK_FORMAT_R16G16_SNORM;
+    case gal_texture_format::R16G16_UINT:
+        return VK_FORMAT_R16G16_UINT;
+    case gal_texture_format::R16G16_SINT:
+        return VK_FORMAT_R16G16_SINT;
+    case gal_texture_format::R16G16_SFLOAT:
+        return VK_FORMAT_R16G16_SFLOAT;
+    case gal_texture_format::R16G16B16_UNORM:
+        return VK_FORMAT_R16G16B16_UNORM;
+    case gal_texture_format::R16G16B16_SNORM:
+        return VK_FORMAT_R16G16B16_SNORM;
+    case gal_texture_format::R16G16B16_UINT:
+        return VK_FORMAT_R16G16B16_UINT;
+    case gal_texture_format::R16G16B16_SINT:
+        return VK_FORMAT_R16G16B16_SINT;
+    case gal_texture_format::R16G16B16_SFLOAT:
+        return VK_FORMAT_R16G16B16_SFLOAT;
+    case gal_texture_format::R16G16B16A16_UNORM:
+        return VK_FORMAT_R16G16B16A16_UNORM;
+    case gal_texture_format::R16G16B16A16_SNORM:
+        return VK_FORMAT_R16G16B16A16_SNORM;
+    case gal_texture_format::R16G16B16A16_UINT:
+        return VK_FORMAT_R16G16B16A16_UINT;
+    case gal_texture_format::R16G16B16A16_SINT:
+        return VK_FORMAT_R16G16B16A16_SINT;
+    case gal_texture_format::R16G16B16A16_SFLOAT:
+        return VK_FORMAT_R16G16B16A16_SFLOAT;
+    case gal_texture_format::R32_UINT:
+        return VK_FORMAT_R32_UINT;
+    case gal_texture_format::R32_SINT:
+        return VK_FORMAT_R32_SINT;
+    case gal_texture_format::R32_SFLOAT:
+        return VK_FORMAT_R32_SFLOAT;
+    case gal_texture_format::R32G32_UINT:
+        return VK_FORMAT_R32G32_UINT;
+    case gal_texture_format::R32G32_SINT:
+        return VK_FORMAT_R32G32_SINT;
+    case gal_texture_format::R32G32_SFLOAT:
+        return VK_FORMAT_R32G32_SFLOAT;
+    case gal_texture_format::R32G32B32_UINT:
+        return VK_FORMAT_R32G32B32_UINT;
+    case gal_texture_format::R32G32B32_SINT:
+        return VK_FORMAT_R32G32B32_SINT;
+    case gal_texture_format::R32G32B32_SFLOAT:
+        return VK_FORMAT_R32G32B32_SFLOAT;
+    case gal_texture_format::R32G32B32A32_UINT:
+        return VK_FORMAT_R32G32B32A32_UINT;
+    case gal_texture_format::R32G32B32A32_SINT:
+        return VK_FORMAT_R32G32B32A32_SINT;
+    case gal_texture_format::R32G32B32A32_SFLOAT:
+        return VK_FORMAT_R32G32B32A32_SFLOAT;
+    case gal_texture_format::R64_UINT:
+        return VK_FORMAT_R64_UINT;
+    case gal_texture_format::R64_SINT:
+        return VK_FORMAT_R64_SINT;
+    case gal_texture_format::R64_SFLOAT:
+        return VK_FORMAT_R64_SFLOAT;
+    case gal_texture_format::R64G64_UINT:
+        return VK_FORMAT_R64G64_UINT;
+    case gal_texture_format::R64G64_SINT:
+        return VK_FORMAT_R64G64_SINT;
+    case gal_texture_format::R64G64_SFLOAT:
+        return VK_FORMAT_R64G64_SFLOAT;
+    case gal_texture_format::R64G64B64_UINT:
+        return VK_FORMAT_R64G64B64_UINT;
+    case gal_texture_format::R64G64B64_SINT:
+        return VK_FORMAT_R64G64B64_SINT;
+    case gal_texture_format::R64G64B64_SFLOAT:
+        return VK_FORMAT_R64G64B64_SFLOAT;
+    case gal_texture_format::R64G64B64A64_UINT:
+        return VK_FORMAT_R64G64B64A64_UINT;
+    case gal_texture_format::R64G64B64A64_SINT:
+        return VK_FORMAT_R64G64B64A64_SINT;
+    case gal_texture_format::R64G64B64A64_SFLOAT:
+        return VK_FORMAT_R64G64B64A64_SFLOAT;
+
+    case gal_texture_format::B10G10R10A2_UNORM:
+        return VK_FORMAT_A2R10G10B10_UNORM_PACK32;
+    case gal_texture_format::B10G10R10A2_UINT:
+        return VK_FORMAT_A2R10G10B10_UINT_PACK32;
+    case gal_texture_format::R10G10B10A2_UNORM:
+        return VK_FORMAT_A2B10G10R10_UNORM_PACK32;
+    case gal_texture_format::R10G10B10A2_UINT:
+        return VK_FORMAT_A2B10G10R10_UINT_PACK32;
+
+    case gal_texture_format::B10G11R11_UFLOAT:
+        return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
+    case gal_texture_format::E5B9G9R9_UFLOAT:
+        return VK_FORMAT_E5B9G9R9_UFLOAT_PACK32;
+
+    case gal_texture_format::G16B16G16R16_422_UNORM:
+        return VK_FORMAT_G16B16G16R16_422_UNORM;
+    case gal_texture_format::B16G16R16G16_422_UNORM:
+        return VK_FORMAT_B16G16R16G16_422_UNORM;
+    case gal_texture_format::R12X4G12X4B12X4A12X4_UNORM_4PACK16:
+        return VK_FORMAT_R12X4G12X4B12X4A12X4_UNORM_4PACK16;
+    case gal_texture_format::G12X4B12X4G12X4R12X4_422_UNORM_4PACK16:
+        return VK_FORMAT_G12X4B12X4G12X4R12X4_422_UNORM_4PACK16;
+    case gal_texture_format::B12X4G12X4R12X4G12X4_422_UNORM_4PACK16:
+        return VK_FORMAT_B12X4G12X4R12X4G12X4_422_UNORM_4PACK16;
+    case gal_texture_format::R10X6G10X6B10X6A10X6_UNORM_4PACK16:
+        return VK_FORMAT_R10X6G10X6B10X6A10X6_UNORM_4PACK16;
+    case gal_texture_format::G10X6B10X6G10X6R10X6_422_UNORM_4PACK16:
+        return VK_FORMAT_G10X6B10X6G10X6R10X6_422_UNORM_4PACK16;
+    case gal_texture_format::B10X6G10X6R10X6G10X6_422_UNORM_4PACK16:
+        return VK_FORMAT_B10X6G10X6R10X6G10X6_422_UNORM_4PACK16;
+    case gal_texture_format::G8B8G8R8_422_UNORM:
+        return VK_FORMAT_G8B8G8R8_422_UNORM;
+    case gal_texture_format::B8G8R8G8_422_UNORM:
+        return VK_FORMAT_B8G8R8G8_422_UNORM;
+    case gal_texture_format::G8_B8_R8_3PLANE_420_UNORM:
+        return VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM;
+    case gal_texture_format::G8_B8R8_2PLANE_420_UNORM:
+        return VK_FORMAT_G8_B8R8_2PLANE_420_UNORM;
+    case gal_texture_format::G8_B8_R8_3PLANE_422_UNORM:
+        return VK_FORMAT_G8_B8_R8_3PLANE_422_UNORM;
+    case gal_texture_format::G8_B8R8_2PLANE_422_UNORM:
+        return VK_FORMAT_G8_B8R8_2PLANE_422_UNORM;
+    case gal_texture_format::G8_B8_R8_3PLANE_444_UNORM:
+        return VK_FORMAT_G8_B8_R8_3PLANE_444_UNORM;
+    case gal_texture_format::G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16:
+        return VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16;
+    case gal_texture_format::G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16:
+        return VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16;
+    case gal_texture_format::G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16:
+        return VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16;
+    case gal_texture_format::G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16:
+        return VK_FORMAT_G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16;
+    case gal_texture_format::G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16:
+        return VK_FORMAT_G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16;
+    case gal_texture_format::G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16:
+        return VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16;
+    case gal_texture_format::G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16:
+        return VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16;
+    case gal_texture_format::G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16:
+        return VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16;
+    case gal_texture_format::G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16:
+        return VK_FORMAT_G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16;
+    case gal_texture_format::G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16:
+        return VK_FORMAT_G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16;
+    case gal_texture_format::G16_B16_R16_3PLANE_420_UNORM:
+        return VK_FORMAT_G16_B16_R16_3PLANE_420_UNORM;
+    case gal_texture_format::G16_B16_R16_3PLANE_422_UNORM:
+        return VK_FORMAT_G16_B16_R16_3PLANE_422_UNORM;
+    case gal_texture_format::G16_B16_R16_3PLANE_444_UNORM:
+        return VK_FORMAT_G16_B16_R16_3PLANE_444_UNORM;
+    case gal_texture_format::G16_B16R16_2PLANE_420_UNORM:
+        return VK_FORMAT_G16_B16R16_2PLANE_420_UNORM;
+    case gal_texture_format::G16_B16R16_2PLANE_422_UNORM:
+        return VK_FORMAT_G16_B16R16_2PLANE_422_UNORM;
+
+    case gal_texture_format::D16_UNORM:
+        return VK_FORMAT_D16_UNORM;
+    case gal_texture_format::X8_D24_UNORM:
+        return VK_FORMAT_X8_D24_UNORM_PACK32;
+    case gal_texture_format::D32_SFLOAT:
+        return VK_FORMAT_D32_SFLOAT;
+    case gal_texture_format::S8_UINT:
+        return VK_FORMAT_S8_UINT;
+    case gal_texture_format::D16_UNORM_S8_UINT:
+        return VK_FORMAT_D16_UNORM_S8_UINT;
+    case gal_texture_format::D24_UNORM_S8_UINT:
+        return VK_FORMAT_D24_UNORM_S8_UINT;
+    case gal_texture_format::D32_SFLOAT_S8_UINT:
+        return VK_FORMAT_D32_SFLOAT_S8_UINT;
+    case gal_texture_format::DXBC1_RGB_UNORM:
+        return VK_FORMAT_BC1_RGB_UNORM_BLOCK;
+    case gal_texture_format::DXBC1_RGB_SRGB:
+        return VK_FORMAT_BC1_RGB_SRGB_BLOCK;
+    case gal_texture_format::DXBC1_RGBA_UNORM:
+        return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
+    case gal_texture_format::DXBC1_RGBA_SRGB:
+        return VK_FORMAT_BC1_RGBA_SRGB_BLOCK;
+    case gal_texture_format::DXBC2_UNORM:
+        return VK_FORMAT_BC2_UNORM_BLOCK;
+    case gal_texture_format::DXBC2_SRGB:
+        return VK_FORMAT_BC2_SRGB_BLOCK;
+    case gal_texture_format::DXBC3_UNORM:
+        return VK_FORMAT_BC3_UNORM_BLOCK;
+    case gal_texture_format::DXBC3_SRGB:
+        return VK_FORMAT_BC3_SRGB_BLOCK;
+    case gal_texture_format::DXBC4_UNORM:
+        return VK_FORMAT_BC4_UNORM_BLOCK;
+    case gal_texture_format::DXBC4_SNORM:
+        return VK_FORMAT_BC4_SNORM_BLOCK;
+    case gal_texture_format::DXBC5_UNORM:
+        return VK_FORMAT_BC5_UNORM_BLOCK;
+    case gal_texture_format::DXBC5_SNORM:
+        return VK_FORMAT_BC5_SNORM_BLOCK;
+    case gal_texture_format::DXBC6H_UFLOAT:
+        return VK_FORMAT_BC6H_UFLOAT_BLOCK;
+    case gal_texture_format::DXBC6H_SFLOAT:
+        return VK_FORMAT_BC6H_SFLOAT_BLOCK;
+    case gal_texture_format::DXBC7_UNORM:
+        return VK_FORMAT_BC7_UNORM_BLOCK;
+    case gal_texture_format::DXBC7_SRGB:
+        return VK_FORMAT_BC7_SRGB_BLOCK;
+    case gal_texture_format::PVRTC1_2BPP_UNORM:
+        return VK_FORMAT_PVRTC1_2BPP_UNORM_BLOCK_IMG;
+    case gal_texture_format::PVRTC1_4BPP_UNORM:
+        return VK_FORMAT_PVRTC1_4BPP_UNORM_BLOCK_IMG;
+    case gal_texture_format::PVRTC1_2BPP_SRGB:
+        return VK_FORMAT_PVRTC1_2BPP_SRGB_BLOCK_IMG;
+    case gal_texture_format::PVRTC1_4BPP_SRGB:
+        return VK_FORMAT_PVRTC1_4BPP_SRGB_BLOCK_IMG;
+    case gal_texture_format::ETC2_R8G8B8_UNORM:
+        return VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK;
+    case gal_texture_format::ETC2_R8G8B8A1_UNORM:
+        return VK_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK;
+    case gal_texture_format::ETC2_R8G8B8A8_UNORM:
+        return VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK;
+    case gal_texture_format::ETC2_R8G8B8_SRGB:
+        return VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK;
+    case gal_texture_format::ETC2_R8G8B8A1_SRGB:
+        return VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK;
+    case gal_texture_format::ETC2_R8G8B8A8_SRGB:
+        return VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK;
+    case gal_texture_format::ETC2_EAC_R11_UNORM:
+        return VK_FORMAT_EAC_R11_UNORM_BLOCK;
+    case gal_texture_format::ETC2_EAC_R11G11_UNORM:
+        return VK_FORMAT_EAC_R11G11_UNORM_BLOCK;
+    case gal_texture_format::ETC2_EAC_R11_SNORM:
+        return VK_FORMAT_EAC_R11_SNORM_BLOCK;
+    case gal_texture_format::ETC2_EAC_R11G11_SNORM:
+        return VK_FORMAT_EAC_R11G11_SNORM_BLOCK;
+    case gal_texture_format::ASTC_4x4_UNORM:
+        return VK_FORMAT_ASTC_4x4_UNORM_BLOCK;
+    case gal_texture_format::ASTC_4x4_SRGB:
+        return VK_FORMAT_ASTC_4x4_SRGB_BLOCK;
+    case gal_texture_format::ASTC_5x4_UNORM:
+        return VK_FORMAT_ASTC_5x4_UNORM_BLOCK;
+    case gal_texture_format::ASTC_5x4_SRGB:
+        return VK_FORMAT_ASTC_5x4_SRGB_BLOCK;
+    case gal_texture_format::ASTC_5x5_UNORM:
+        return VK_FORMAT_ASTC_5x5_UNORM_BLOCK;
+    case gal_texture_format::ASTC_5x5_SRGB:
+        return VK_FORMAT_ASTC_5x5_SRGB_BLOCK;
+    case gal_texture_format::ASTC_6x5_UNORM:
+        return VK_FORMAT_ASTC_6x5_UNORM_BLOCK;
+    case gal_texture_format::ASTC_6x5_SRGB:
+        return VK_FORMAT_ASTC_6x5_SRGB_BLOCK;
+    case gal_texture_format::ASTC_6x6_UNORM:
+        return VK_FORMAT_ASTC_6x6_UNORM_BLOCK;
+    case gal_texture_format::ASTC_6x6_SRGB:
+        return VK_FORMAT_ASTC_6x6_SRGB_BLOCK;
+    case gal_texture_format::ASTC_8x5_UNORM:
+        return VK_FORMAT_ASTC_8x5_UNORM_BLOCK;
+    case gal_texture_format::ASTC_8x5_SRGB:
+        return VK_FORMAT_ASTC_8x5_SRGB_BLOCK;
+    case gal_texture_format::ASTC_8x6_UNORM:
+        return VK_FORMAT_ASTC_8x6_UNORM_BLOCK;
+    case gal_texture_format::ASTC_8x6_SRGB:
+        return VK_FORMAT_ASTC_8x6_SRGB_BLOCK;
+    case gal_texture_format::ASTC_8x8_UNORM:
+        return VK_FORMAT_ASTC_8x8_UNORM_BLOCK;
+    case gal_texture_format::ASTC_8x8_SRGB:
+        return VK_FORMAT_ASTC_8x8_SRGB_BLOCK;
+    case gal_texture_format::ASTC_10x5_UNORM:
+        return VK_FORMAT_ASTC_10x5_UNORM_BLOCK;
+    case gal_texture_format::ASTC_10x5_SRGB:
+        return VK_FORMAT_ASTC_10x5_SRGB_BLOCK;
+    case gal_texture_format::ASTC_10x6_UNORM:
+        return VK_FORMAT_ASTC_10x6_UNORM_BLOCK;
+    case gal_texture_format::ASTC_10x6_SRGB:
+        return VK_FORMAT_ASTC_10x6_SRGB_BLOCK;
+    case gal_texture_format::ASTC_10x8_UNORM:
+        return VK_FORMAT_ASTC_10x8_UNORM_BLOCK;
+    case gal_texture_format::ASTC_10x8_SRGB:
+        return VK_FORMAT_ASTC_10x8_SRGB_BLOCK;
+    case gal_texture_format::ASTC_10x10_UNORM:
+        return VK_FORMAT_ASTC_10x10_UNORM_BLOCK;
+    case gal_texture_format::ASTC_10x10_SRGB:
+        return VK_FORMAT_ASTC_10x10_SRGB_BLOCK;
+    case gal_texture_format::ASTC_12x10_UNORM:
+        return VK_FORMAT_ASTC_12x10_UNORM_BLOCK;
+    case gal_texture_format::ASTC_12x10_SRGB:
+        return VK_FORMAT_ASTC_12x10_SRGB_BLOCK;
+    case gal_texture_format::ASTC_12x12_UNORM:
+        return VK_FORMAT_ASTC_12x12_UNORM_BLOCK;
+    case gal_texture_format::ASTC_12x12_SRGB:
+        return VK_FORMAT_ASTC_12x12_SRGB_BLOCK;
+    case gal_texture_format::PVRTC2_2BPP_UNORM:
+        return VK_FORMAT_PVRTC2_2BPP_UNORM_BLOCK_IMG;
+    case gal_texture_format::PVRTC2_4BPP_UNORM:
+        return VK_FORMAT_PVRTC2_4BPP_UNORM_BLOCK_IMG;
+    case gal_texture_format::PVRTC2_2BPP_SRGB:
+        return VK_FORMAT_PVRTC2_2BPP_SRGB_BLOCK_IMG;
+    case gal_texture_format::PVRTC2_4BPP_SRGB:
+        return VK_FORMAT_PVRTC2_4BPP_SRGB_BLOCK_IMG;
+
+    default:
+        return VK_FORMAT_UNDEFINED;
+    }
+}
+
+void load_gal_vk_functions() {
+#define VK_LOAD_FUNCTION_PTRS
+#include "../helper/helper_macro.h"
+#undef VK_LOAD_FUNCTION_PTRS
+}
+
+void offload_gal_vk_functions(){
+#define VK_OFFLOAD_FUNCTION_PTRS
+#include "../helper/helper_macro.h"
+#undef VK_LOAD_FUNCTION_PTRS
 }
 
 gal_error_code vk_init_gal(gal_context *context) {
@@ -737,17 +1593,17 @@ gal_error_code vk_create_device(GalDesc *gal_desc, gal_context *context) {
             vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count,
                                                      queue_family_properties.data()); // Get queue family properties
 
-            auto getQueueFamilyIndex = [&](QueueType queue_type) -> std::optional<u32> {
+            auto getQueueFamilyIndex = [&](gal_queue_type queue_type) -> std::optional<u32> {
                 // For other queue types or if no separate compute queue is present, return the first one to support
                 // the requested flags
 
-                if (queue_type == QueueType::graphcis) {
+                if (queue_type == gal_queue_type::graphcis) {
                     return 0;
                 }
 
                 // Dedicated queue for compute
                 // Try to find a queue family index that supports compute but not graphics
-                if (queue_type == QueueType::compute) {
+                if (queue_type == gal_queue_type::compute) {
                     for (uint32_t i = 0; i < static_cast<uint32_t>(queue_family_properties.size()); i++) {
                         if ((queue_family_properties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) &&
                             ((queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0)) {
@@ -758,7 +1614,7 @@ gal_error_code vk_create_device(GalDesc *gal_desc, gal_context *context) {
 
                 // Dedicated queue for transfer
                 // Try to find a queue family index that supports transfer but not graphics and compute
-                if (queue_type == QueueType::transfer) {
+                if (queue_type == gal_queue_type::transfer) {
                     for (uint32_t i = 0; i < static_cast<uint32_t>(queue_family_properties.size()); i++) {
                         if ((queue_family_properties[i].queueFlags & VK_QUEUE_TRANSFER_BIT) &&
                             ((queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0) &&
@@ -771,19 +1627,19 @@ gal_error_code vk_create_device(GalDesc *gal_desc, gal_context *context) {
                 return {};
             };
 
-            auto graphics_queue_family_index = getQueueFamilyIndex(QueueType::graphcis);
+            auto graphics_queue_family_index = getQueueFamilyIndex(gal_queue_type::graphcis);
             auto compute_queue_family_index = graphics_queue_family_index;
             auto transfer_queue_family_index = graphics_queue_family_index;
             // TODO(hyl5): code is not clear
             if (gal_desc->b_async_compute) {
-                auto t = getQueueFamilyIndex(QueueType::compute);
+                auto t = getQueueFamilyIndex(gal_queue_type::compute);
                 if (!t.has_value()) {
                     continue;
                 }
                 compute_queue_family_index = t.value();
             }
             if (gal_desc->b_async_transfer) {
-                auto t = getQueueFamilyIndex(QueueType::transfer);
+                auto t = getQueueFamilyIndex(gal_queue_type::transfer);
                 if (!t.has_value()) {
                     continue;
                 }
@@ -971,14 +1827,13 @@ gal_error_code vk_create_buffer(gal_context context, gal_buffer_desc *desc, gal_
     VmaAllocationCreateInfo alloc_info = {};
     alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
 
-    if (desc->memory_flags == memory_flag::gpu_dedicated) {
+    if (desc->memory_flag == gal_memory_flag::gpu_dedicated) {
         alloc_info.requiredFlags |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    } else if (desc->memory_flags == memory_flag::cpu_upload) {
+    } else if (desc->memory_flag == gal_memory_flag::cpu_upload) {
         alloc_info.requiredFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-    } else if (desc->memory_flags == memory_flag::gpu_download) {
+    } else if (desc->memory_flag == gal_memory_flag::gpu_download) {
         alloc_info.requiredFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-
     } else {
         return gal_error_code::invalid_parameter;
     }
@@ -1017,42 +1872,125 @@ gal_error_code vk_create_texture(gal_context context, gal_texture_desc *desc, ga
     *texture = reinterpret_cast<gal_handle>(new ant::gal::vk_texture);
     vk_texture *vk_tex = reinterpret_cast<vk_texture *>(*texture);
 
-    if (desc && texture && context) {
-        return gal_error_code::error;
-    }
+    u32 array_size = desc->array_size > 1u ? desc->array_size : 1u;
+    u32 depth = desc->depth > 1u ? desc->depth : 1u;
+    bool b_is_cubemap = (desc->resource_types & gal_resource_type::rt_texture_cube) && desc->array_size == 6;
     VkImageCreateInfo image_create_info{};
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     image_create_info.imageType = utils_to_vk_image_type(desc->dimension);
     image_create_info.extent.width = desc->width;
     image_create_info.extent.height = desc->height;
-    image_create_info.extent.depth = desc->depth;
+    image_create_info.extent.depth = depth;
     image_create_info.mipLevels = desc->mip_level;
-    image_create_info.arrayLayers = desc->array_size;
+    image_create_info.arrayLayers = array_size;
     image_create_info.format = utils_to_vk_image_format(desc->format);
     image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     image_create_info.flags = 0; //utils_to_vk_image_creation_flags(desc->resource_types);
-    image_create_info.usage = utils_to_vk_image_usage(desc->resource_types, desc->memory_flags);
+    image_create_info.usage = utils_to_vk_image_usage(desc->resource_types, desc->memory_flag);
     image_create_info.samples = utils_to_vk_sample_count_flags(desc->sample_count);
 
-    // image_create_info.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-
-    // cubemap flags
-    if (desc->resource_types == gal_resource_type::rt_texture_cube) {
-        if (desc->array_size != 6) {
-            return gal_error_code::invalid_parameter;
-        }
-        image_create_info.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    if (desc->dimension == gal_texture_dimension::td_2D) {
+        image_create_info.flags |= VK_IMAGE_CREATE_2D_VIEW_COMPATIBLE_BIT_EXT;
     }
 
+    // cubemap flags
+    if (b_is_cubemap) {
+        // TODO(hyl5): should gal layer validate parameter?
+        //if (array_size != 6) {
+        //    return gal_error_code::invalid_parameter;
+        //}
+        image_create_info.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    }
+    if (array_size > 1) {
+        image_create_info.flags |= VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
+    }
+    VkFormatProperties format_props{};
+    vkGetPhysicalDeviceFormatProperties(vk_ctx->active_gpu, image_create_info.format, &format_props);
+
+    // Verify that GPU supports this format
+    VkFormatFeatureFlags format_features = util_vk_image_usage_to_format_features(image_create_info.usage);
+
+    if (format_props.optimalTilingFeatures & format_features) {
+        return gal_error_code::error;
+    }
     VmaAllocationCreateInfo allocation_create_info{};
     allocation_create_info.usage = VMA_MEMORY_USAGE_AUTO;
+
+    if (desc->memory_flag == gal_memory_flag::gpu_dedicated) {
+        allocation_create_info.requiredFlags |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    } else if (desc->memory_flag == gal_memory_flag::cpu_upload) {
+        allocation_create_info.requiredFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    } else if (desc->memory_flag == gal_memory_flag::gpu_download) {
+        allocation_create_info.requiredFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    } else {
+        return gal_error_code::invalid_parameter;
+    }
 
     VkResult result = vmaCreateImage(vk_ctx->vma_allocator, &image_create_info, &allocation_create_info, &vk_tex->image,
                                      &vk_tex->allocation, nullptr);
     if (result != VK_SUCCESS || vk_tex->image == VK_NULL_HANDLE || vk_tex->allocation == VK_NULL_HANDLE) {
         return gal_error_code::error;
     }
+
+    // create view form shader resources
+    if (desc->resource_types & gal_resource_type::rt_texture ||
+        desc->resource_types & gal_resource_type::rt_rw_texture) {
+
+        VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
+
+        if (array_size > 1) {
+            if (desc->dimension == gal_texture_dimension::td_1D) {
+                view_type = VK_IMAGE_VIEW_TYPE_1D_ARRAY;
+            }
+            if (desc->dimension == gal_texture_dimension::td_2D) {
+
+                view_type = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+            }
+            if (b_is_cubemap) {
+                view_type = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+            }
+        } else {
+            if (desc->dimension == gal_texture_dimension::td_1D) {
+                view_type = VK_IMAGE_VIEW_TYPE_1D;
+            }
+            if (desc->dimension == gal_texture_dimension::td_2D) {
+
+                view_type = VK_IMAGE_VIEW_TYPE_2D;
+            }
+            if (desc->dimension == gal_texture_dimension::td_3D) {
+                view_type = VK_IMAGE_VIEW_TYPE_3D;
+            }
+            if (b_is_cubemap) {
+                view_type = VK_IMAGE_VIEW_TYPE_CUBE;
+            }
+        }
+
+        VkImageViewCreateInfo srvDesc = {};
+        // SRV
+        srvDesc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        srvDesc.pNext = nullptr;
+        srvDesc.flags = 0;
+        srvDesc.image = vk_tex->image;
+        srvDesc.viewType = view_type;
+        srvDesc.format = galtextureformat_to_vkformat(desc->format);
+        srvDesc.components.r = VK_COMPONENT_SWIZZLE_R;
+        srvDesc.components.g = VK_COMPONENT_SWIZZLE_G;
+        srvDesc.components.b = VK_COMPONENT_SWIZZLE_B;
+        srvDesc.components.a = VK_COMPONENT_SWIZZLE_A;
+        srvDesc.subresourceRange.aspectMask =
+            util_vk_determine_aspect_mask(srvDesc.format, gal_tf_has_stencil(desc->format));
+        srvDesc.subresourceRange.baseMipLevel = 0;
+        srvDesc.subresourceRange.levelCount = desc->mip_level;
+        srvDesc.subresourceRange.baseArrayLayer = 0;
+        srvDesc.subresourceRange.layerCount = array_size;
+
+        result = (vkCreateImageView(vk_ctx->device, &srvDesc, nullptr, &vk_tex->image_view));
+        if (result != VK_SUCCESS || vk_tex->image == VK_NULL_HANDLE || vk_tex->allocation == VK_NULL_HANDLE) {
+            return gal_error_code::error;
+        }
+    }
+
     return gal_error_code::success;
 }
 
@@ -1067,5 +2005,65 @@ gal_error_code vk_destroy_texture(gal_context context, gal_texture texture) {
     }
     return gal_error_code::success;
 }
+
+gal_error_code vk_create_sampler() { return gal_error_code::success; }
+gal_error_code vk_destroy_sampler() { return gal_error_code::success; }
+gal_error_code vk_create_rendertarget() { return gal_error_code::success; }
+gal_error_code vk_destroy_rendertarget() { return gal_error_code::success; }
+// surface
+gal_error_code vk_create_swapchain() { return gal_error_code::success; }
+gal_error_code vk_destroy_swapchain() { return gal_error_code::success; }
+gal_error_code vk_create_surface() { return gal_error_code::success; }
+gal_error_code vk_destroy_surface() { return gal_error_code::success; }
+// pipeline
+gal_error_code vk_create_shader() { return gal_error_code::success; }
+gal_error_code vk_destroy_shader() { return gal_error_code::success; }
+gal_error_code vk_create_pipeline() { return gal_error_code::success; }
+gal_error_code vk_destroy_pipeline() { return gal_error_code::success; }
+gal_error_code vk_create_descriptorpool() { return gal_error_code::success; }
+gal_error_code vk_destroy_descriptorpool() { return gal_error_code::success; }
+gal_error_code vk_create_descriptorset() { return gal_error_code::success; }
+gal_error_code vk_destroy_descriptorset() { return gal_error_code::success; }
+gal_error_code vk_create_rootsignature() { return gal_error_code::success; }
+gal_error_code vk_destroy_rootsignature() { return gal_error_code::success; }
+// sync
+gal_error_code vk_create_fence() { return gal_error_code::success; }
+gal_error_code vk_wait_fence() { return gal_error_code::success; }
+gal_error_code vk_destroy_fence() { return gal_error_code::success; }
+gal_error_code vk_wait_gpu() { return gal_error_code::success; }
+gal_error_code vk_create_semaphore() { return gal_error_code::success; }
+gal_error_code vk_destroy_semaphore() { return gal_error_code::success; }
+// cmds
+gal_error_code vk_create_commandpool() { return gal_error_code::success; }
+gal_error_code vk_reset_commandpool() { return gal_error_code::success; }
+gal_error_code vk_destroy_commandpool() { return gal_error_code::success; }
+gal_error_code vk_allocate_commandlist() { return gal_error_code::success; }
+gal_error_code vk_free_commandlist() { return gal_error_code::success; }
+gal_error_code vk_cmd_begin_recording() { return gal_error_code::success; }
+gal_error_code vk_cmd_end_recording() { return gal_error_code::success; }
+gal_error_code vk_cmd_resource_barrier() { return gal_error_code::success; }
+gal_error_code vk_cmd_bind_descriptor_set() { return gal_error_code::success; }
+gal_error_code vk_cmd_bind_index_buffer() { return gal_error_code::success; }
+gal_error_code vk_cmd_bind_vertex_buffer() { return gal_error_code::success; }
+gal_error_code vk_cmd_bind_descriptorset() { return gal_error_code::success; }
+gal_error_code vk_cmd_bind_pipeline() { return gal_error_code::success; }
+gal_error_code vk_cmd_begin_renderpass() { return gal_error_code::success; }
+gal_error_code vk_cmd_end_renderpass() { return gal_error_code::success; }
+gal_error_code vk_cmd_dispatch() { return gal_error_code::success; }
+gal_error_code vk_cmd_dispatch_indirect() { return gal_error_code::success; }
+gal_error_code vk_cmd_draw_instanced() { return gal_error_code::success; }
+gal_error_code vk_cmd_draw_indexed_instanced() { return gal_error_code::success; }
+gal_error_code vk_cmd_draw_indirect_instanced() { return gal_error_code::success; }
+gal_error_code vk_cmd_draw_indirect_indexed_instanced() { return gal_error_code::success; }
+gal_error_code vk_cmd_draw_mesh_task() { return gal_error_code::success; }
+gal_error_code vk_cmd_draw_indirect_mesh_task() { return gal_error_code::success; }
+gal_error_code vk_cmd_copy_texture() { return gal_error_code::success; }
+gal_error_code vk_cmd_copy_buffer() { return gal_error_code::success; }
+gal_error_code vk_cmd_fill_buffer() { return gal_error_code::success; }
+gal_error_code vk_cmd_fill_texture() { return gal_error_code::success; }
+gal_error_code vk_cmd_upload_buffer() { return gal_error_code::success; }
+gal_error_code vk_cmd_upload_texture() { return gal_error_code::success; }
+gal_error_code vk_cmd_copy_buffer_to_texture() { return gal_error_code::success; }
+gal_error_code vk_cmd_copy_texture_to_buffer() { return gal_error_code::success; }
 
 } // namespace ant::gal

@@ -57,6 +57,7 @@ __GAL_HELPER_MACRO__(gal_error_code, destroy_buffer, gal_context context, gal_bu
 __GAL_HELPER_MACRO__(gal_error_code, create_texture, gal_context context, gal_texture_desc *desc, gal_texture *texture);
 // destroy gpu texture
 __GAL_HELPER_MACRO__(gal_error_code, destroy_texture, gal_context context, gal_texture texture);
+
 __GAL_HELPER_MACRO__(gal_error_code, create_sampler);
 __GAL_HELPER_MACRO__(gal_error_code, destroy_sampler);
 __GAL_HELPER_MACRO__(gal_error_code, create_rendertarget);

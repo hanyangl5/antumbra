@@ -59,18 +59,6 @@ jobs:
           cmake: true
       - name: Configure CMake
         run: |
-          echo "%VULKAN_SDK_VERSION%"
-          echo %VULKAN_SDK%
-          echo VULKAN_SDK=$VULKAN_SDK
-          echo VULKAN_SDK_PLATFORM=$platform
-          echo VULKAN_SDK_BUILD_DIR=$build_dir
-          echo VULKAN_SDK=$VULKAN_SDK
-          echo VULKAN_SDK_PLATFORM=$platform
-          echo VULKAN_SDK_QUERY_URL=$remote_url_used
-          echo VULKAN_SDK_QUERY_VERSION=$query_version
-          echo VULKAN_SDK_CONFIG_FILE=$config_file
-          echo VULKAN_SDK_CONFIG_VERSION=$sdk_version
-          echo VULKAN_SDK_COMPONENTS=\"$sdk_components\"
           cmake -S . -B ./build -DCMAKE_BUILD_TYPE:STRING=${{matrix.build_type}} -D${{ env.PROJECT_NAME }}_PACKAGING_MAINTAINER_MODE:BOOL=${{matrix.packaging_maintainer_mode}} -D${{ env.PROJECT_NAME }}_ENABLE_COVERAGE:BOOL=${{ matrix.build_type == 'Debug' }} -DGIT_SHA:STRING=${{ github.sha }}
 
       - name: Build

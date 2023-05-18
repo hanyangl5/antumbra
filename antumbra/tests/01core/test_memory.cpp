@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
-#include <framework/01core/memory/memory.h>
-#include <framework/01core/utils/utils.h>
+#include "framework/01core/memory/memory.h"
+#include "framework/01core/utils/utils.h"
 
 using namespace ant;
 
