@@ -10,7 +10,7 @@ gal::gal_context initialize(ant::gal::RenderApi api)
     gal::gal_error_code result = ant::gal::init_gal(api, &context);
     REQUIRE(result == gal::gal_error_code::success);
     gal::GalDesc gal_desc{};
-    gal_desc.b_debug_layer = true;
+    gal_desc.b_debug_layer = false;
     gal_desc.b_swap_chain = true;
     gal_desc.b_surface = true;
     gal_desc.b_async_compute = true;

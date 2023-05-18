@@ -5,7 +5,17 @@ project(antumbra)
 
 include(cmake/Doxygen.cmake)
 
-include(ProjectOptions.cmake)
+include(cmake/ProjectOptions.cmake)
+
+set(ANTUMBRA_PROJECT_DIR .)
+set(ANTUMBRA_SRC_DIR antumbra)
+set(ANTUMBRA_THIR_PARTY_DIR ${ANTUMBRA_SRC_DIR}/third_party)
+set(ANTUMBRA_BUILD_VK "build vulkan backend" ON)
+
+if(WIN32)
+    set(ANTUMBRA_BUILD_D3D12 "build d3d12 backend" ON)
+endif()
+#option(BUILD_WITH_DEBUG_LAYER "enable debug layer(require vulkan sdk installed)" ON) 
 
 add_subdirectory(antumbra)
 

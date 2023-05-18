@@ -37,11 +37,11 @@ macro(configure_antumbra)
             string(REGEX REPLACE "/EH[a-z]+" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}) # disable exception
         else()
             message("using GCC/Clang under windows")
-            target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Werror -Wshadow -Wnon-virtual-dtor -pedantic Weverything -fno-exceptions -fno-rtti)
+            target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Werror -Wshadow -Wnon-virtual-dtor -pedantic -fno-exceptions -fno-rtti)
         endif()
     elseif(LINUX)
         message("using GCC/Clang under LINUX")
-        target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Werror -Wshadow -Wnon-virtual-dtor -pedantic Weverything -fno-exceptions -fno-rtti)
+        target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Werror -Wshadow -Wnon-virtual-dtor -pedantic -fno-exceptions -fno-rtti)
     endif()
 endmacro()
 

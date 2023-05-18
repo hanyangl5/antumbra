@@ -16,7 +16,7 @@ using namespace std::chrono_literals;
 
 template <typename Interval, typename Func, typename... Args>
 [[nodiscard]] std::optional<typename std::result_of<Func(Args...)>::type>
-callFuncWithInterval(Interval interval, Func func, Args... args) {
+call_func_with_interval(Interval interval, Func func, Args... args) {
     using namespace std::chrono_literals;
     std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
     std::chrono::duration<f64> time_point = std::chrono::time_point_cast<Interval>(now).time_since_epoch();
@@ -30,12 +30,12 @@ callFuncWithInterval(Interval interval, Func func, Args... args) {
 }
 
 template <typename Func, typename... Args> auto callFuncPerSecond(Func func, Args... args) {
-    callFuncWithInterval(1s, func, args...);
+    call_func_with_interval(1s, func, args...);
 }
 template <typename Func, typename... Args> auto callFuncPerMinutes(Func func, Args... args) {
-    callFuncWithInterval(1m, func, args...);
+    call_func_with_interval(1m, func, args...);
 }
 template <typename Func, typename... Args> auto callFuncPerHour(Func func, Args... args) {
-    callFuncWithInterval(1h, func, args...);
+    call_func_with_interval(1h, func, args...);
 }
 } // namespace ant

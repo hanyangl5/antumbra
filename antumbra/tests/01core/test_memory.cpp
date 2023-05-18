@@ -4,7 +4,7 @@
 
 using namespace ant;
 
-TEST_CASE("memory") { auto stack_resource = ant::GetStackMemoryResource(1024); }
+TEST_CASE("memory") { auto stack_resource = ant::get_stack_memory_resource(1024); }
 
 TEST_CASE("container") {
     ant::str str = "test string";

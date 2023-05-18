@@ -11,7 +11,7 @@
 
 namespace ant {
 
-inline std::pmr::monotonic_buffer_resource GetStackMemoryResource(u64 size = 1024) {
+inline std::pmr::monotonic_buffer_resource get_stack_memory_resource(u64 size = 1024) {
     return std::pmr::monotonic_buffer_resource(size);
 }
 

@@ -50,13 +50,13 @@ __GAL_HELPER_MACRO__(gal_error_code, create_memory_allocator, gal_context *conte
 __GAL_HELPER_MACRO__(gal_error_code, destroy_memory_allocator, gal_context *context);
 // resources
 // create a gpu buffer and allocate gpu memory
-__GAL_HELPER_MACRO__(gal_error_code, create_buffer, gal_context context, buffer_desc *desc, buffer *buf);
+__GAL_HELPER_MACRO__(gal_error_code, create_buffer, gal_context context, gal_buffer_desc *desc, gal_buffer *buffer);
 // destroy a gpu buffer
-__GAL_HELPER_MACRO__(gal_error_code, destroy_buffer, gal_context context, buffer buf);
+__GAL_HELPER_MACRO__(gal_error_code, destroy_buffer, gal_context context, gal_buffer buffer);
 // create a gpu texture and allocate memory
-__GAL_HELPER_MACRO__(gal_error_code, create_texture);
+__GAL_HELPER_MACRO__(gal_error_code, create_texture, gal_context context, gal_texture_desc *desc, gal_texture *texture);
 // destroy gpu texture
-__GAL_HELPER_MACRO__(gal_error_code, destroy_texture);
+__GAL_HELPER_MACRO__(gal_error_code, destroy_texture, gal_context context, gal_texture texture);
 __GAL_HELPER_MACRO__(gal_error_code, create_sampler);
 __GAL_HELPER_MACRO__(gal_error_code, destroy_sampler);
 __GAL_HELPER_MACRO__(gal_error_code, create_rendertarget);

@@ -1,43 +1,87 @@
 #include "gal_d3d12.h"
 
+#include <D3D12MemAlloc.h>
+#include <Windows.h>
+#include <d3dx12.h>
+#include <dxgi1_6.h>
+
 #include <framework/01core/logging/log.h>
 
 #define ANT_DX12_API_VERSION D3D_FEATURE_LEVEL_12_1
 
 namespace ant::gal {
 
-D3D12_RESOURCE_STATES util_to_dx12_resource_state(resource_states state) {
+struct d3d12_context {
+    IDXGIFactory6 *factory = nullptr;
+    ID3D12Device *device = nullptr;
+    IDXGIAdapter4 *active_gpu = nullptr;
+    D3D12MA::Allocator *d3dma_allocator = nullptr;
+
+    ID3D12CommandQueue *graphics_queue = nullptr;
+    ID3D12CommandQueue *compute_queue = nullptr;
+    ID3D12CommandQueue *transfer_queue = nullptr;
+};
+
+struct d3d12_buffer {
+    ID3D12Resource *buffer = nullptr;
+    D3D12MA::Allocation *allocation = nullptr;
+};
+
+struct d3d12_texture {
+    ID3D12Resource *texture = nullptr;
+    D3D12MA::Allocation *allocation = nullptr;
+};
+
+struct d3d12_sampler {
+    ID3D12Resource *sampler = nullptr;
+};
+
+struct d3d12_rendertargte {};
+
+struct d3d12_swapchain {
+    IDXGISwapChain3 *gpu_swap_chain;
+};
+
+struct d3d12_fence {};
+
+struct d3d12_semaphore {};
+
+struct d3d12_command_list {
+    ID3D12GraphicsCommandList6 *gpu_command_list;
+};
+
+D3D12_RESOURCE_STATES util_to_dx12_resource_state(gal_resource_states state) {
     D3D12_RESOURCE_STATES ret = D3D12_RESOURCE_STATE_COMMON;
 
     // These states cannot be combined with other states so we just do an == check
-    if (state == resource_state::rs_common)
+    if (state == gal_resource_state::rs_common)
         return D3D12_RESOURCE_STATE_COMMON;
-    if (state == resource_state::rs_present)
+    if (state == gal_resource_state::rs_present)
         return D3D12_RESOURCE_STATE_PRESENT;
 
-    if (state & resource_state::rs_vertex_buffer)
+    if (state & gal_resource_state::rs_vertex_buffer)
         ret |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-    if (state & resource_state::rs_constant_buffer)
+    if (state & gal_resource_state::rs_constant_buffer)
         ret |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-    if (state & resource_state::rs_index_buffer)
+    if (state & gal_resource_state::rs_index_buffer)
         ret |= D3D12_RESOURCE_STATE_INDEX_BUFFER;
-    if (state & resource_state::rs_render_target)
+    if (state & gal_resource_state::rs_render_target)
         ret |= D3D12_RESOURCE_STATE_RENDER_TARGET;
-    if (state & resource_state::rs_rw_buffer)
+    if (state & gal_resource_state::rs_rw_buffer)
         ret |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-    if (state & resource_state::rs_rw_texture)
+    if (state & gal_resource_state::rs_rw_texture)
         ret |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-    if (state & resource_state::rs_depth_write)
+    if (state & gal_resource_state::rs_depth_write)
         ret |= D3D12_RESOURCE_STATE_DEPTH_WRITE;
-    if (state & resource_state::rs_depth_read)
+    if (state & gal_resource_state::rs_depth_read)
         ret |= D3D12_RESOURCE_STATE_DEPTH_READ;
-    if (state & resource_state::rs_indiret_buffer)
+    if (state & gal_resource_state::rs_indiret_buffer)
         ret |= D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
-    if (state & resource_state::rs_copy_dst)
+    if (state & gal_resource_state::rs_copy_dst)
         ret |= D3D12_RESOURCE_STATE_COPY_DEST;
-    if (state & resource_state::rs_copy_src)
+    if (state & gal_resource_state::rs_copy_src)
         ret |= D3D12_RESOURCE_STATE_COPY_SOURCE;
-    if (state & resource_state::rs_texture)
+    if (state & gal_resource_state::rs_texture)
         ret |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
     // TODO(hyl5):rt
     // #ifdef
@@ -52,19 +96,19 @@ D3D12_RESOURCE_STATES util_to_dx12_resource_state(resource_states state) {
     return ret;
 }
 
-D3D12_RESOURCE_FLAGS util_to_dx12_resource_flags(buffer_desc *desc) {
+D3D12_RESOURCE_FLAGS util_to_dx12_resource_flags(gal_buffer_desc *desc) {
     D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE;
 
-    if (desc->resource_types & resource_type::rt_rw_buffer) {
+    if (desc->resource_types & gal_resource_type::rt_rw_buffer) {
         flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     }
-    if (desc->resource_types & resource_type::rt_rw_texture) {
+    if (desc->resource_types & gal_resource_type::rt_rw_texture) {
         flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     }
-    if (desc->resource_types & resource_type::rt_color_rt) {
+    if (desc->resource_types & gal_resource_type::rt_color_rt) {
         flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
     }
-    if (desc->resource_types & resource_type::rt_depth_stencil_rt) {
+    if (desc->resource_types & gal_resource_type::rt_depth_stencil_rt) {
         flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
     }
     if (desc->memory_flags == memory_flag::gpu_download) {
@@ -108,7 +152,7 @@ void offload_gal_d3d12_functions() {
     //#undef VK_LOAD_FUNCTION_PTRS
 }
 gal_error_code d3d12_init_gal(gal_context *context) {
-    *context = reinterpret_cast<gal_handle>(new d3d12_gal_context);
+    *context = reinterpret_cast<gal_handle>(new d3d12_context);
     load_gal_d3d12_functions();
     if (*context == gal_null) {
         return gal_error_code::error;
@@ -117,15 +161,15 @@ gal_error_code d3d12_init_gal(gal_context *context) {
 }
 gal_error_code d3d12_destroy_gal(gal_context context) {
     if (context != gal_null) {
-        d3d12_gal_context *d3d12_handle = reinterpret_cast<d3d12_gal_context *>(context);
-        delete d3d12_handle;
+        d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(context);
+        delete d3d12_ctx;
         context = gal_null;
         offload_gal_d3d12_functions();
     }
     return gal_error_code::success;
 }
 gal_error_code d3d12_create_instance(GalDesc *desc, gal_context *context) {
-    d3d12_gal_context *d3d12_handle = reinterpret_cast<d3d12_gal_context *>(*context);
+    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(*context);
 
     u32 dxgi_factory_flags = 0;
     if (desc->b_debug_layer) {
@@ -143,8 +187,8 @@ gal_error_code d3d12_create_instance(GalDesc *desc, gal_context *context) {
     }
 
     // require directx12.1
-    HRESULT hr = CreateDXGIFactory2(dxgi_factory_flags, IID_PPV_ARGS(&d3d12_handle->factory));
-    if (FAILED(hr) || d3d12_handle->factory == nullptr) {
+    HRESULT hr = CreateDXGIFactory2(dxgi_factory_flags, IID_PPV_ARGS(&d3d12_ctx->factory));
+    if (FAILED(hr) || d3d12_ctx->factory == nullptr) {
         return gal_error_code::error;
     }
     return gal_error_code::success;
@@ -152,22 +196,27 @@ gal_error_code d3d12_create_instance(GalDesc *desc, gal_context *context) {
 
 gal_error_code d3d12_destroy_instance(gal_context *context) {
 
-    d3d12_gal_context *d3d12_handle = reinterpret_cast<d3d12_gal_context *>(*context);
-    if (d3d12_handle->factory != nullptr) {
-        d3d12_handle->factory->Release();
-        d3d12_handle->factory = nullptr;
+    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(*context);
+    if (d3d12_ctx->factory != nullptr) {
+        d3d12_ctx->factory->Release();
+        d3d12_ctx->factory = nullptr;
     }
     return gal_error_code::success;
 }
 
 gal_error_code d3d12_create_device(GalDesc *gal_desc, gal_context *context) {
-    d3d12_gal_context *d3d12_handle = reinterpret_cast<d3d12_gal_context *>(*context);
+    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(*context);
 
     auto pick_gpu = [&](IDXGIFactory6 *factory, IDXGIAdapter4 **gpu, ID3D12Device **device) -> gal_error_code {
         IDXGIAdapter4 *adapter = NULL;
         IDXGIFactory6 *factory6;
 
-        CHECK_DX_RESULT(factory->QueryInterface(IID_PPV_ARGS(&factory6)))
+        HRESULT hr;
+
+        hr = (factory->QueryInterface(IID_PPV_ARGS(&factory6)));
+        if (FAILED(hr)) {
+            return gal_error_code::unsupported_device;
+        }
 
         // Find number of usable GPUs
         // Use DXGI6 interface which lets us specify gpu preference so we dont need
@@ -183,41 +232,66 @@ gal_error_code d3d12_create_device(GalDesc *gal_desc, gal_context *context) {
                 // if (SUCCEEDED(D3D12CreateDevice(adapter, ANT_DX12_API_VERSION, _uuidof(ID3D12Device), nullptr))) {
 
                 auto check_features = [&]() -> gal_error_code {
+                    HRESULT hr = 0;
                     D3D12_FEATURE_DATA_D3D12_OPTIONS featureDataOptions = {};
-                    CHECK_DX_RESULT(t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &featureDataOptions,
-                                                                  sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS)));
+                    hr = (t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &featureDataOptions,
+                                                        sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS)));
+                    if (FAILED(hr)) {
+                        return gal_error_code::unsupported_device;
+                    }
 
                     D3D12_FEATURE_DATA_D3D12_OPTIONS1 featureDataOptions1 = {};
-                    CHECK_DX_RESULT(t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS1, &featureDataOptions1,
-                                                                  sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS1)));
+                    hr = (t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS1, &featureDataOptions1,
+                                                        sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS1)));
+                    if (FAILED(hr)) {
+                        return gal_error_code::unsupported_device;
+                    }
+
                     bool b_wave_ops = featureDataOptions1.WaveOps;
                     if (!b_wave_ops) {
                         return gal_error_code::unsupported_device;
                     }
 
                     D3D12_FEATURE_DATA_D3D12_OPTIONS2 featureDataOptions2 = {};
-                    CHECK_DX_RESULT(t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS2, &featureDataOptions2,
-                                                                  sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS2)));
+                    hr = (t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS2, &featureDataOptions2,
+                                                        sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS2)));
+                    if (FAILED(hr)) {
+                        return gal_error_code::unsupported_device;
+                    }
 
                     D3D12_FEATURE_DATA_D3D12_OPTIONS3 featureDataOptions3 = {};
-                    CHECK_DX_RESULT(t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS3, &featureDataOptions3,
-                                                                  sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS3)));
+                    hr = (t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS3, &featureDataOptions3,
+                                                        sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS3)));
+                    if (FAILED(hr)) {
+                        return gal_error_code::unsupported_device;
+                    }
 
                     D3D12_FEATURE_DATA_D3D12_OPTIONS4 featureDataOptions4 = {};
-                    CHECK_DX_RESULT(t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS4, &featureDataOptions4,
-                                                                  sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS4)));
+                    hr = (t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS4, &featureDataOptions4,
+                                                        sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS4)));
+                    if (FAILED(hr)) {
+                        return gal_error_code::unsupported_device;
+                    }
 
                     D3D12_FEATURE_DATA_D3D12_OPTIONS5 featureDataOptions5 = {};
-                    CHECK_DX_RESULT(t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &featureDataOptions5,
-                                                                  sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS5)));
+                    hr = (t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &featureDataOptions5,
+                                                        sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS5)));
+                    if (FAILED(hr)) {
+                        return gal_error_code::unsupported_device;
+                    }
+
                     bool b_rt11Supported = (featureDataOptions5.RaytracingTier & D3D12_RAYTRACING_TIER_1_1) != 0;
                     if (!b_rt11Supported) {
                         return gal_error_code::unsupported_device;
                     }
 
                     D3D12_FEATURE_DATA_D3D12_OPTIONS6 featureDataOptions6 = {};
-                    CHECK_DX_RESULT(t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS6, &featureDataOptions6,
-                                                                  sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS6)));
+                    hr = (t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS6, &featureDataOptions6,
+                                                        sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS6)));
+                    if (FAILED(hr)) {
+                        return gal_error_code::unsupported_device;
+                    }
+
                     if (gal_desc->b_variable_rate_shading) {
                         bool b_vrs2Supported =
                             (featureDataOptions6.VariableShadingRateTier & D3D12_VARIABLE_SHADING_RATE_TIER_2) != 0;
@@ -226,8 +300,11 @@ gal_error_code d3d12_create_device(GalDesc *gal_desc, gal_context *context) {
                         }
                     }
                     D3D12_FEATURE_DATA_D3D12_OPTIONS7 featureDataOptions7 = {};
-                    CHECK_DX_RESULT(t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &featureDataOptions7,
-                                                                  sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS7)));
+                    hr = (t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &featureDataOptions7,
+                                                        sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS7)));
+                    if (FAILED(hr)) {
+                        return gal_error_code::unsupported_device;
+                    }
 
                     if (gal_desc->b_mesh_shader) {
                         bool b_mesh_shader = (featureDataOptions7.MeshShaderTier & D3D12_MESH_SHADER_TIER_1) != 0;
@@ -235,13 +312,22 @@ gal_error_code d3d12_create_device(GalDesc *gal_desc, gal_context *context) {
                             return gal_error_code::unsupported_device;
                         }
                     }
+
+                    // FIXME(hyl5): these code may not compile on some windows sdks
                     D3D12_FEATURE_DATA_D3D12_OPTIONS8 featureDataOptions8 = {};
-                    CHECK_DX_RESULT(t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS8, &featureDataOptions8,
-                                                                  sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS8)));
+                    hr = (t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS8, &featureDataOptions8,
+                                                        sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS8)));
+                    if (FAILED(hr)) {
+                        return gal_error_code::unsupported_device;
+                    }
 
                     D3D12_FEATURE_DATA_D3D12_OPTIONS9 featureDataOptions9 = {};
-                    CHECK_DX_RESULT(t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS9, &featureDataOptions9,
-                                                                  sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS9)));
+                    hr = (t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS9, &featureDataOptions9,
+                                                        sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS9)));
+                    if (FAILED(hr)) {
+                        return gal_error_code::unsupported_device;
+                    }
+
                     if (gal_desc->b_mesh_shader) {
                         bool b_mesh_shader_pipeline = featureDataOptions9.MeshShaderPipelineStatsSupported;
                         if (!b_mesh_shader_pipeline) {
@@ -249,12 +335,18 @@ gal_error_code d3d12_create_device(GalDesc *gal_desc, gal_context *context) {
                         }
                     }
                     D3D12_FEATURE_DATA_D3D12_OPTIONS10 featureDataOptions10 = {};
-                    CHECK_DX_RESULT(t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS10, &featureDataOptions10,
-                                                                  sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS10)));
+                    hr = (t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS10, &featureDataOptions10,
+                                                        sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS10)));
+                    if (FAILED(hr)) {
+                        return gal_error_code::unsupported_device;
+                    }
 
                     D3D12_FEATURE_DATA_D3D12_OPTIONS11 featureDataOptions11 = {};
-                    CHECK_DX_RESULT(t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS11, &featureDataOptions11,
-                                                                  sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS11)));
+                    hr = (t_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS11, &featureDataOptions11,
+                                                        sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS11)));
+                    if (FAILED(hr)) {
+                        return gal_error_code::unsupported_device;
+                    }
 
                     return gal_error_code::success;
                 };
@@ -271,9 +363,9 @@ gal_error_code d3d12_create_device(GalDesc *gal_desc, gal_context *context) {
         return gal_error_code::unsupported_device;
     };
 
-    gal_error_code result = pick_gpu(d3d12_handle->factory, &d3d12_handle->active_gpu, &d3d12_handle->device);
+    gal_error_code result = pick_gpu(d3d12_ctx->factory, &d3d12_ctx->active_gpu, &d3d12_ctx->device);
 
-    if (result != gal_error_code::success || d3d12_handle->active_gpu == nullptr || d3d12_handle->device == nullptr) {
+    if (result != gal_error_code::success || d3d12_ctx->active_gpu == nullptr || d3d12_ctx->device == nullptr) {
         return gal_error_code::unsupported_device;
     }
     // create queue
@@ -281,9 +373,9 @@ gal_error_code d3d12_create_device(GalDesc *gal_desc, gal_context *context) {
     graphics_command_queue_desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
     graphics_command_queue_desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 
-    HRESULT hr = (d3d12_handle->device->CreateCommandQueue(&graphics_command_queue_desc,
-                                                           IID_PPV_ARGS(&d3d12_handle->graphics_queue)));
-    if (FAILED(hr) || d3d12_handle->graphics_queue == nullptr) {
+    HRESULT hr =
+        (d3d12_ctx->device->CreateCommandQueue(&graphics_command_queue_desc, IID_PPV_ARGS(&d3d12_ctx->graphics_queue)));
+    if (FAILED(hr) || d3d12_ctx->graphics_queue == nullptr) {
         return gal_error_code::error;
     }
     if (gal_desc->b_async_compute) {
@@ -291,30 +383,30 @@ gal_error_code d3d12_create_device(GalDesc *gal_desc, gal_context *context) {
         compute_command_queue_desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
         compute_command_queue_desc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
 
-        hr = (d3d12_handle->device->CreateCommandQueue(&compute_command_queue_desc,
-                                                       IID_PPV_ARGS(&d3d12_handle->compute_queue)));
+        hr = (d3d12_ctx->device->CreateCommandQueue(&compute_command_queue_desc,
+                                                    IID_PPV_ARGS(&d3d12_ctx->compute_queue)));
 
-        if (FAILED(hr) || d3d12_handle->compute_queue == nullptr) {
+        if (FAILED(hr) || d3d12_ctx->compute_queue == nullptr) {
             return gal_error_code::error;
         }
     } else {
-        d3d12_handle->compute_queue = d3d12_handle->graphics_queue;
+        d3d12_ctx->compute_queue = d3d12_ctx->graphics_queue;
     }
     if (gal_desc->b_async_transfer) {
         D3D12_COMMAND_QUEUE_DESC transfer_command_queue_desc{};
         transfer_command_queue_desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
         transfer_command_queue_desc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
 
-        hr = (d3d12_handle->device->CreateCommandQueue(&transfer_command_queue_desc,
-                                                       IID_PPV_ARGS(&d3d12_handle->transfer_queue)));
-        if (FAILED(hr) || d3d12_handle->transfer_queue == nullptr) {
+        hr = (d3d12_ctx->device->CreateCommandQueue(&transfer_command_queue_desc,
+                                                    IID_PPV_ARGS(&d3d12_ctx->transfer_queue)));
+        if (FAILED(hr) || d3d12_ctx->transfer_queue == nullptr) {
             return gal_error_code::error;
         }
     } else {
 
-        d3d12_handle->transfer_queue = d3d12_handle->graphics_queue;
+        d3d12_ctx->transfer_queue = d3d12_ctx->graphics_queue;
     }
-    if (result == gal_error_code::success && d3d12_handle->active_gpu != nullptr && d3d12_handle->device != nullptr) {
+    if (result == gal_error_code::success && d3d12_ctx->active_gpu != nullptr && d3d12_ctx->device != nullptr) {
         return gal_error_code::success;
     } else {
         return gal_error_code::error;
@@ -322,40 +414,40 @@ gal_error_code d3d12_create_device(GalDesc *gal_desc, gal_context *context) {
 }
 
 gal_error_code d3d12_destroy_device(gal_context *context) {
-    d3d12_gal_context *d3d12_handle = reinterpret_cast<d3d12_gal_context *>(*context);
-    if (d3d12_handle->device != nullptr) {
-        d3d12_handle->device->Release();
-        d3d12_handle->device = nullptr;
+    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(*context);
+    if (d3d12_ctx->device != nullptr) {
+        d3d12_ctx->device->Release();
+        d3d12_ctx->device = nullptr;
     }
     return gal_error_code::success;
 }
 gal_error_code d3d12_create_memory_allocator(gal_context *context) {
-    d3d12_gal_context *d3d12_handle = reinterpret_cast<d3d12_gal_context *>(*context);
+    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(*context);
     D3D12MA::ALLOCATOR_DESC allocatorDesc{};
-    allocatorDesc.pDevice = d3d12_handle->device;
-    allocatorDesc.pAdapter = d3d12_handle->active_gpu;
+    allocatorDesc.pDevice = d3d12_ctx->device;
+    allocatorDesc.pAdapter = d3d12_ctx->active_gpu;
 
-    HRESULT hr = D3D12MA::CreateAllocator(&allocatorDesc, &d3d12_handle->d3dma_allocator);
+    HRESULT hr = D3D12MA::CreateAllocator(&allocatorDesc, &d3d12_ctx->d3dma_allocator);
 
-    if (FAILED(hr) || d3d12_handle->d3dma_allocator == nullptr) {
+    if (FAILED(hr) || d3d12_ctx->d3dma_allocator == nullptr) {
         return gal_error_code::error;
     }
     return gal_error_code::success;
 }
 
 gal_error_code d3d12_destroy_memory_allocator(gal_context *context) {
-    d3d12_gal_context *d3d12_handle = reinterpret_cast<d3d12_gal_context *>(*context);
-    if (d3d12_handle->d3dma_allocator != nullptr) {
-        d3d12_handle->d3dma_allocator->Release();
-        d3d12_handle->d3dma_allocator = nullptr;
+    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(*context);
+    if (d3d12_ctx->d3dma_allocator != nullptr) {
+        d3d12_ctx->d3dma_allocator->Release();
+        d3d12_ctx->d3dma_allocator = nullptr;
     }
     return gal_error_code::success;
 }
 
-gal_error_code d3d12_create_buffer(gal_context context, buffer_desc *desc, buffer *buf) {
-    d3d12_gal_context *d3d12_handle = reinterpret_cast<d3d12_gal_context *>(context);
-    *buf = reinterpret_cast<gal_handle>(new ant::gal::d3d12_buffer);
-    d3d12_buffer *d3d12_buffer_handle = reinterpret_cast<d3d12_buffer *>(*buf);
+gal_error_code d3d12_create_buffer(gal_context context, gal_buffer_desc *desc, gal_buffer *buffer) {
+    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(context);
+    *buffer = reinterpret_cast<gal_handle>(new ant::gal::d3d12_buffer);
+    d3d12_buffer *d3d12_buf = reinterpret_cast<d3d12_buffer *>(*buffer);
 
     CD3DX12_RESOURCE_DESC buffer_desc =
         CD3DX12_RESOURCE_DESC::Buffer(desc->size, D3D12_RESOURCE_FLAG_NONE, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
@@ -377,15 +469,14 @@ gal_error_code d3d12_create_buffer(gal_context context, buffer_desc *desc, buffe
     } else {
         return gal_error_code::invalid_parameter;
     }
-    if (desc->flags & buffer_creation_flag::bcf_own_memory) {
+    if (desc->flags & gal_buffer_flag::bcf_own_memory) {
         allocation_desc.Flags |= D3D12MA::ALLOCATION_FLAGS::ALLOCATION_FLAG_COMMITTED;
     }
 
-    HRESULT hr = (d3d12_handle->d3dma_allocator->CreateResource(&allocation_desc, &buffer_desc, initial_state, NULL,
-                                                                &d3d12_buffer_handle->allocation,
-                                                                IID_PPV_ARGS(&d3d12_buffer_handle->buffer)));
+    HRESULT hr = (d3d12_ctx->d3dma_allocator->CreateResource(&allocation_desc, &buffer_desc, initial_state, NULL,
+                                                             &d3d12_buf->allocation, IID_PPV_ARGS(&d3d12_buf->buffer)));
 
-    if (FAILED(hr) || d3d12_buffer_handle->allocation == nullptr) {
+    if (FAILED(hr) || d3d12_buf->allocation == nullptr) {
         return gal_error_code::error;
     }
 
@@ -397,13 +488,13 @@ gal_error_code d3d12_create_buffer(gal_context context, buffer_desc *desc, buffe
     return gal_error_code::success;
 }
 
-gal_error_code d3d12_destroy_buffer([[maybe_unused]] gal_context context, buffer buf) {
-    if (buf != nullptr) {
-        d3d12_buffer *d3d12_buffer_handle = reinterpret_cast<d3d12_buffer *>(buf);
-        d3d12_buffer_handle->buffer->Release();
-        d3d12_buffer_handle->allocation->Release();
-        delete d3d12_buffer_handle;
-        buf = nullptr;
+gal_error_code d3d12_destroy_buffer([[maybe_unused]] gal_context context, gal_buffer buffer) {
+    if (buffer != nullptr) {
+        d3d12_buffer *d3d12_buf = reinterpret_cast<d3d12_buffer *>(buffer);
+        d3d12_buf->buffer->Release();
+        d3d12_buf->allocation->Release();
+        delete d3d12_buf;
+        buffer = nullptr;
     }
     return gal_error_code::success;
 }

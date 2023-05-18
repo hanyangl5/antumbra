@@ -48,7 +48,7 @@ using f64 = double;
 //};
 
 // [major8, minor8, patch16]
-constexpr u32 MakeVersion(u32 major, u32 minor, u32 patch) {
+constexpr u32 make_version(u32 major, u32 minor, u32 patch) {
     // 8 bit major, 8 bit minor, 16bit patch
     u32 _major = major << 24;
     u32 _minor = minor << 16;
@@ -56,7 +56,7 @@ constexpr u32 MakeVersion(u32 major, u32 minor, u32 patch) {
     return _major | _minor | _patch;
 }
 
-template <class T> void HashCombine(u64 &seed, const T &v) {
+template <class T> void hash_combine(u64 &seed, const T &v) {
     std::hash<T> hasher{};
     u64 hash = hasher(v);
     hash += 0x9e3779b9 + (seed << 6) + (seed >> 2);

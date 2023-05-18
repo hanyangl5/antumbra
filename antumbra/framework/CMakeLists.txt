@@ -1,6 +1,5 @@
 project(framework)
 
-
 file(GLOB_RECURSE HEADER_FILES "*.h")
 file(GLOB_RECURSE SOURCE_FILES "*.cpp")
 
@@ -14,4 +13,4 @@ target_link_libraries(${PROJECT_NAME} PUBLIC ant_third_party)
 
 configure_compile_options("${PROJECT_NAME}")
 
-#set_property(TARGET ${PROJECT_NAME} PROPERTY FOLDER "antumbra/Runtime")
+# set_property(TARGET ${PROJECT_NAME} PROPERTY FOLDER "antumbra/Runtime")

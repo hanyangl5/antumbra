@@ -2,10 +2,6 @@
 	path = antumbra/third_party/stb
 	url = https://github.com/nothings/stb
 
-[submodule "antumbra/third_party/glfw"]
-	path = antumbra/third_party/glfw
-	url = https://github.com/glfw/glfw
-
 [submodule "antumbra/third_party/json"]
 	path = antumbra/third_party/json
 	url = https://github.com/nlohmann/json
@@ -53,3 +49,16 @@
 [submodule "antumbra/third_party/tracy"]
 	path = antumbra/third_party/tracy
 	url = https://github.com/wolfpld/tracy.git
+# [submodule "antumbra/third_party/pybind11"]
+# 	path = antumbra/third_party/pybind11
+# 	url = https://github.com/pybind/pybind11
+	
+[submodule "antumbra/third_party/Vulkan-Headers"]
+	path = antumbra/third_party/Vulkan-Headers
+	url = https://github.com/KhronosGroup/Vulkan-Headers.git
+# [submodule "antumbra/third_party/volk"]
+# 	path = antumbra/third_party/volk
+# 	url = https://github.com/zeux/volk.git
+[submodule "antumbra/third_party/glfw"]
+	path = antumbra/third_party/glfw
+	url = https://github.com/glfw/glfw.git

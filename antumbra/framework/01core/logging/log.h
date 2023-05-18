@@ -25,27 +25,27 @@ class Log : public Singleton<Log> {
 
     DELETE_COPY_MOVE(Log);
 
-    template <typename... args> inline void Debug(args &&..._args) const noexcept {
+    template <typename... args> inline void debug(args &&..._args) const noexcept {
         m_logger->debug(std::forward<args>(_args)...);
     }
 
-    template <typename... args> inline void Info(args &&..._args) const noexcept {
+    template <typename... args> inline void info(args &&..._args) const noexcept {
         m_logger->info(std::forward<args>(_args)...);
     }
 
-    template <typename... args> inline void Warn(args &&..._args) const noexcept {
+    template <typename... args> inline void warn(args &&..._args) const noexcept {
         m_logger->warn(std::forward<args>(_args)...);
     }
 
-    template <typename... args> inline void Error(args &&..._args) const noexcept {
+    template <typename... args> inline void error(args &&..._args) const noexcept {
         m_logger->error(std::forward<args>(_args)...);
     }
-    template <typename... args> inline void Fatal(args &&..._args) const noexcept {
+    template <typename... args> inline void fatal(args &&..._args) const noexcept {
         // m_logger->fatal(std::forward<args>(_args)...);
     }
-    void CheckVulkanResult(VkResult _res, const char *func_name, int line) const noexcept;
+    //void CheckVulkanResult(VkResult _res, const char *func_name, int line) const noexcept;
 
-    void CheckDXResult(long hr, const char *func_name, int line) const noexcept;
+    //void CheckDXResult(long hr, const char *func_name, int line) const noexcept;
 
     void SetLogLevel(loglevel level) noexcept;
 
@@ -53,19 +53,19 @@ class Log : public Singleton<Log> {
     std::shared_ptr<spdlog::logger> m_logger;
 };
 
-#define LOG_DEBUG(...) ant::Log::get().Debug("[" + ant::str(__FUNCTION__) + "] " + __VA_ARGS__);
+#define LOG_DEBUG(...) ant::Log::get().debug("[" + ant::str(__FUNCTION__) + "] " + __VA_ARGS__);
 
-#define LOG_INFO(...) ant::Log::get().Info("[" + ant::str(__FUNCTION__) + "] " + __VA_ARGS__);
+#define LOG_INFO(...) ant::Log::get().info("[" + ant::str(__FUNCTION__) + "] " + __VA_ARGS__);
 
-#define LOG_WARN(...) ant::Log::get().Warn("[" + ant::str(__FUNCTION__) + "] " + __VA_ARGS__);
+#define LOG_WARN(...) ant::Log::get().warn("[" + ant::str(__FUNCTION__) + "] " + __VA_ARGS__);
 
-#define LOG_ERROR(...) ant::Log::get().Error("[" + ant::str(__FUNCTION__) + "] " + __VA_ARGS__);
+#define LOG_ERROR(...) ant::Log::get().error("[" + ant::str(__FUNCTION__) + "] " + __VA_ARGS__);
 
-#define LOG_FATAL(...) ant::Log::get().Fatal("[" + ant::str(__FUNCTION__) + "] " + __VA_ARGS__);
+#define LOG_FATAL(...) ant::Log::get().fatal("[" + ant::str(__FUNCTION__) + "] " + __VA_ARGS__);
 
-#define CHECK_VK_RESULT(res) ant::Log::get().CheckVulkanResult(res, __FUNCTION__, __LINE__);
-
-#define CHECK_DX_RESULT(res) ant::Log::get().CheckDXResult(res, __FUNCTION__, __LINE__);
+//#define CHECK_VK_RESULT(res) ant::Log::get().CheckVulkanResult(res, __FUNCTION__, __LINE__);
+//
+//#define CHECK_DX_RESULT(res) ant::Log::get().CheckDXResult(res, __FUNCTION__, __LINE__);
 
 #define SET_LOG_LEVEL(level) ant::Log::get().SetLogLevel(level);
 
