@@ -32,9 +32,12 @@ jobs:
         with:
           script: |
             core.setFailed('There is a mismatch between configured llvm compiler and clang-tidy version chosen')
-      - name: Install Vulkan SDK
-        run: choco install vulkan-sdk --version 1.3.204.0
-
+      - name: Prepare Vulkan SDK
+        uses: humbletim/setup-vulkan-sdk@v1.2.0
+        with:
+          vulkan-query-version: 1.3.204.0
+          vulkan-components: []
+          vulkan-use-cache: true
       - uses: actions/checkout@v3
       - name: Setup Cache
         uses: ./.github/actions/setup_cache
@@ -57,8 +60,8 @@ jobs:
           cmake: true
       - name: Configure CMake
         run: |
-          echo "Vulkan SDK Version=='$VULKAN_SDK_VERSION'"
-          echo "VULKAN_SDK=='$VULKAN_SDK'"
+          echo "Vulkan SDK Version=='%VULKAN_SDK_VERSION%"
+          echo "VULKAN_SDK==%VULKAN_SDK%"
           cmake -S . -B ./build -DCMAKE_BUILD_TYPE:STRING=${{matrix.build_type}} -D${{ env.PROJECT_NAME }}_PACKAGING_MAINTAINER_MODE:BOOL=${{matrix.packaging_maintainer_mode}} -D${{ env.PROJECT_NAME }}_ENABLE_COVERAGE:BOOL=${{ matrix.build_type == 'Debug' }} -DGIT_SHA:STRING=${{ github.sha }}
 
       - name: Build
