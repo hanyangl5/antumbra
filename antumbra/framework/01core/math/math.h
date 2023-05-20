@@ -1,8 +1,6 @@
 #pragma once
 
 // standard libraries
-#include <cstdint>
-
 // third party libraries
 #include <glm.hpp>
 

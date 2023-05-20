@@ -8,7 +8,11 @@
 #define VMA_IMPLEMENTATION 1
 #include <vk_mem_alloc.h>
 
+#include "framework/01core/io/file_system.h"
 #include "framework/01core/logging/log.h"
+#include "framework/01core/math/math.h"
+#include "gal_vulkan_enum.h"
+#include "gal_vulkan_utils.h"
 
 #define ANT_VK_API_VERSION VK_API_VERSION_1_3
 
@@ -24,1448 +28,27 @@ namespace ant::gal {
 //        base = (VkBaseOutStructure *)base->pNext;  \
 //    }
 
-struct vk_context {
-    VkInstance instance = VK_NULL_HANDLE;
-    VkPhysicalDevice active_gpu = VK_NULL_HANDLE;
-    VkDevice device = VK_NULL_HANDLE;
-    VmaAllocator vma_allocator = nullptr;
-
-    // queues
-    u32 graphcis_queue_family_index = 0;
-    u32 compute_queue_family_index = 0;
-    u32 transfer_queue_family_index = 0;
-    f32 default_queue_property = 0.0f;
-    VkQueue graphics_queue = VK_NULL_HANDLE;
-    VkQueue compute_queue = VK_NULL_HANDLE;
-    VkQueue transfer_queue = VK_NULL_HANDLE;
-};
-
-struct vk_buffer {
-    VkBuffer buffer;
-    VmaAllocation allocation;
-};
-
-struct vk_texture {
-    VkImage image;
-    VkImageView image_view;
-    VmaAllocation allocation;
-};
-
-struct vk_sampler {};
-struct vk_rendertarget {};
-struct vk_fence {};
-struct vk_semaphore {};
-struct vk_swapchain {};
-struct vk_commandlist {};
-
-// TODO(hyl5): static or inline?
-
-constexpr VkBufferUsageFlags util_to_vk_buffer_usage(gal_resource_types types) {
-    VkBufferUsageFlags flags = 0;
-
-    if (types & gal_resource_type::rt_constant_buffer) {
-        flags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-    }
-    if (types & gal_resource_type::rt_rw_buffer) {
-        flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-    }
-
-    if (types & gal_resource_type::rt_vertex_buffer) {
-        flags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    }
-    if (types & gal_resource_type::rt_index_buffer) {
-        flags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-    }
-    if (types & gal_resource_type::rt_indirect_buffer) {
-        flags |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
-    }
-
-    // TODO(hyl5): rt;
-    return flags;
-}
-
-constexpr VkImageType utils_to_vk_image_type(gal_texture_dimension dimension) {
-    switch (dimension) {
-    case ant::gal::gal_texture_dimension::td_1D:
-        return VK_IMAGE_TYPE_1D;
-    case ant::gal::gal_texture_dimension::td_2D:
-        return VK_IMAGE_TYPE_2D;
-    case ant::gal::gal_texture_dimension::td_3D:
-        return VK_IMAGE_TYPE_3D;
-    default:
-        return VK_IMAGE_TYPE_MAX_ENUM;
-    }
-}
-
-constexpr VkFormat utils_to_vk_image_format(gal_texture_format format) {
-    switch (format) {
-    case ant::gal::gal_texture_format::UNDEFINED:
-        return VK_FORMAT_MAX_ENUM;
-        break;
-    case ant::gal::gal_texture_format::R1_UNORM:
-        break;
-    case ant::gal::gal_texture_format::R2_UNORM:
-        break;
-    case ant::gal::gal_texture_format::R4_UNORM:
-        break;
-    case ant::gal::gal_texture_format::R4G4_UNORM:
-        break;
-    case ant::gal::gal_texture_format::G4R4_UNORM:
-        break;
-    case ant::gal::gal_texture_format::A8_UNORM:
-        break;
-    case ant::gal::gal_texture_format::R8_UNORM:
-        break;
-    case ant::gal::gal_texture_format::R8_SNORM:
-        break;
-    case ant::gal::gal_texture_format::R8_UINT:
-        break;
-    case ant::gal::gal_texture_format::R8_SINT:
-        break;
-    case ant::gal::gal_texture_format::R8_SRGB:
-        break;
-    case ant::gal::gal_texture_format::B2G3R3_UNORM:
-        break;
-    case ant::gal::gal_texture_format::R4G4B4A4_UNORM:
-        break;
-    case ant::gal::gal_texture_format::R4G4B4X4_UNORM:
-        break;
-    case ant::gal::gal_texture_format::B4G4R4A4_UNORM:
-        break;
-    case ant::gal::gal_texture_format::B4G4R4X4_UNORM:
-        break;
-    case ant::gal::gal_texture_format::A4R4G4B4_UNORM:
-        break;
-    case ant::gal::gal_texture_format::X4R4G4B4_UNORM:
-        break;
-    case ant::gal::gal_texture_format::A4B4G4R4_UNORM:
-        break;
-    case ant::gal::gal_texture_format::X4B4G4R4_UNORM:
-        break;
-    case ant::gal::gal_texture_format::R5G6B5_UNORM:
-        break;
-    case ant::gal::gal_texture_format::B5G6R5_UNORM:
-        break;
-    case ant::gal::gal_texture_format::R5G5B5A1_UNORM:
-        break;
-    case ant::gal::gal_texture_format::B5G5R5A1_UNORM:
-        break;
-    case ant::gal::gal_texture_format::A1B5G5R5_UNORM:
-        break;
-    case ant::gal::gal_texture_format::A1R5G5B5_UNORM:
-        break;
-    case ant::gal::gal_texture_format::R5G5B5X1_UNORM:
-        break;
-    case ant::gal::gal_texture_format::B5G5R5X1_UNORM:
-        break;
-    case ant::gal::gal_texture_format::X1R5G5B5_UNORM:
-        break;
-    case ant::gal::gal_texture_format::X1B5G5R5_UNORM:
-        break;
-    case ant::gal::gal_texture_format::B2G3R3A8_UNORM:
-        break;
-    case ant::gal::gal_texture_format::R8G8_UNORM:
-        break;
-    case ant::gal::gal_texture_format::R8G8_SNORM:
-        break;
-    case ant::gal::gal_texture_format::G8R8_UNORM:
-        break;
-    case ant::gal::gal_texture_format::G8R8_SNORM:
-        break;
-    case ant::gal::gal_texture_format::R8G8_UINT:
-        break;
-    case ant::gal::gal_texture_format::R8G8_SINT:
-        break;
-    case ant::gal::gal_texture_format::R8G8_SRGB:
-        break;
-    case ant::gal::gal_texture_format::R16_UNORM:
-        break;
-    case ant::gal::gal_texture_format::R16_SNORM:
-        break;
-    case ant::gal::gal_texture_format::R16_UINT:
-        break;
-    case ant::gal::gal_texture_format::R16_SINT:
-        break;
-    case ant::gal::gal_texture_format::R16_SFLOAT:
-        break;
-    case ant::gal::gal_texture_format::R16_SBFLOAT:
-        break;
-    case ant::gal::gal_texture_format::R8G8B8_UNORM:
-        break;
-    case ant::gal::gal_texture_format::R8G8B8_SNORM:
-        break;
-    case ant::gal::gal_texture_format::R8G8B8_UINT:
-        break;
-    case ant::gal::gal_texture_format::R8G8B8_SINT:
-        break;
-    case ant::gal::gal_texture_format::R8G8B8_SRGB:
-        break;
-    case ant::gal::gal_texture_format::B8G8R8_UNORM:
-        break;
-    case ant::gal::gal_texture_format::B8G8R8_SNORM:
-        break;
-    case ant::gal::gal_texture_format::B8G8R8_UINT:
-        break;
-    case ant::gal::gal_texture_format::B8G8R8_SINT:
-        break;
-    case ant::gal::gal_texture_format::B8G8R8_SRGB:
-        break;
-    case ant::gal::gal_texture_format::R8G8B8A8_UNORM:
-        break;
-    case ant::gal::gal_texture_format::R8G8B8A8_SNORM:
-        break;
-    case ant::gal::gal_texture_format::R8G8B8A8_UINT:
-        break;
-    case ant::gal::gal_texture_format::R8G8B8A8_SINT:
-        break;
-    case ant::gal::gal_texture_format::R8G8B8A8_SRGB:
-        break;
-    case ant::gal::gal_texture_format::B8G8R8A8_UNORM:
-        break;
-    case ant::gal::gal_texture_format::B8G8R8A8_SNORM:
-        break;
-    case ant::gal::gal_texture_format::B8G8R8A8_UINT:
-        break;
-    case ant::gal::gal_texture_format::B8G8R8A8_SINT:
-        break;
-    case ant::gal::gal_texture_format::B8G8R8A8_SRGB:
-        break;
-    case ant::gal::gal_texture_format::R8G8B8X8_UNORM:
-        break;
-    case ant::gal::gal_texture_format::B8G8R8X8_UNORM:
-        break;
-    case ant::gal::gal_texture_format::R16G16_UNORM:
-        break;
-    case ant::gal::gal_texture_format::G16R16_UNORM:
-        break;
-    case ant::gal::gal_texture_format::R16G16_SNORM:
-        break;
-    case ant::gal::gal_texture_format::G16R16_SNORM:
-        break;
-    case ant::gal::gal_texture_format::R16G16_UINT:
-        break;
-    case ant::gal::gal_texture_format::R16G16_SINT:
-        break;
-    case ant::gal::gal_texture_format::R16G16_SFLOAT:
-        break;
-    case ant::gal::gal_texture_format::R16G16_SBFLOAT:
-        break;
-    case ant::gal::gal_texture_format::R32_UINT:
-        break;
-    case ant::gal::gal_texture_format::R32_SINT:
-        break;
-    case ant::gal::gal_texture_format::R32_SFLOAT:
-        break;
-    case ant::gal::gal_texture_format::A2R10G10B10_UNORM:
-        break;
-    case ant::gal::gal_texture_format::A2R10G10B10_UINT:
-        break;
-    case ant::gal::gal_texture_format::A2R10G10B10_SNORM:
-        break;
-    case ant::gal::gal_texture_format::A2R10G10B10_SINT:
-        break;
-    case ant::gal::gal_texture_format::A2B10G10R10_UNORM:
-        break;
-    case ant::gal::gal_texture_format::A2B10G10R10_UINT:
-        break;
-    case ant::gal::gal_texture_format::A2B10G10R10_SNORM:
-        break;
-    case ant::gal::gal_texture_format::A2B10G10R10_SINT:
-        break;
-    case ant::gal::gal_texture_format::R10G10B10A2_UNORM:
-        break;
-    case ant::gal::gal_texture_format::R10G10B10A2_UINT:
-        break;
-    case ant::gal::gal_texture_format::R10G10B10A2_SNORM:
-        break;
-    case ant::gal::gal_texture_format::R10G10B10A2_SINT:
-        break;
-    case ant::gal::gal_texture_format::B10G10R10A2_UNORM:
-        break;
-    case ant::gal::gal_texture_format::B10G10R10A2_UINT:
-        break;
-    case ant::gal::gal_texture_format::B10G10R10A2_SNORM:
-        break;
-    case ant::gal::gal_texture_format::B10G10R10A2_SINT:
-        break;
-    case ant::gal::gal_texture_format::B10G11R11_UFLOAT:
-        break;
-    case ant::gal::gal_texture_format::E5B9G9R9_UFLOAT:
-        break;
-    case ant::gal::gal_texture_format::R16G16B16_UNORM:
-        break;
-    case ant::gal::gal_texture_format::R16G16B16_SNORM:
-        break;
-    case ant::gal::gal_texture_format::R16G16B16_UINT:
-        break;
-    case ant::gal::gal_texture_format::R16G16B16_SINT:
-        break;
-    case ant::gal::gal_texture_format::R16G16B16_SFLOAT:
-        break;
-    case ant::gal::gal_texture_format::R16G16B16_SBFLOAT:
-        break;
-    case ant::gal::gal_texture_format::R16G16B16A16_UNORM:
-        break;
-    case ant::gal::gal_texture_format::R16G16B16A16_SNORM:
-        break;
-    case ant::gal::gal_texture_format::R16G16B16A16_UINT:
-        break;
-    case ant::gal::gal_texture_format::R16G16B16A16_SINT:
-        break;
-    case ant::gal::gal_texture_format::R16G16B16A16_SFLOAT:
-        break;
-    case ant::gal::gal_texture_format::R16G16B16A16_SBFLOAT:
-        break;
-    case ant::gal::gal_texture_format::R32G32_UINT:
-        break;
-    case ant::gal::gal_texture_format::R32G32_SINT:
-        break;
-    case ant::gal::gal_texture_format::R32G32_SFLOAT:
-        break;
-    case ant::gal::gal_texture_format::R32G32B32_UINT:
-        break;
-    case ant::gal::gal_texture_format::R32G32B32_SINT:
-        break;
-    case ant::gal::gal_texture_format::R32G32B32_SFLOAT:
-        break;
-    case ant::gal::gal_texture_format::R32G32B32A32_UINT:
-        break;
-    case ant::gal::gal_texture_format::R32G32B32A32_SINT:
-        break;
-    case ant::gal::gal_texture_format::R32G32B32A32_SFLOAT:
-        break;
-    case ant::gal::gal_texture_format::R64_UINT:
-        break;
-    case ant::gal::gal_texture_format::R64_SINT:
-        break;
-    case ant::gal::gal_texture_format::R64_SFLOAT:
-        break;
-    case ant::gal::gal_texture_format::R64G64_UINT:
-        break;
-    case ant::gal::gal_texture_format::R64G64_SINT:
-        break;
-    case ant::gal::gal_texture_format::R64G64_SFLOAT:
-        break;
-    case ant::gal::gal_texture_format::R64G64B64_UINT:
-        break;
-    case ant::gal::gal_texture_format::R64G64B64_SINT:
-        break;
-    case ant::gal::gal_texture_format::R64G64B64_SFLOAT:
-        break;
-    case ant::gal::gal_texture_format::R64G64B64A64_UINT:
-        break;
-    case ant::gal::gal_texture_format::R64G64B64A64_SINT:
-        break;
-    case ant::gal::gal_texture_format::R64G64B64A64_SFLOAT:
-        break;
-    case ant::gal::gal_texture_format::D16_UNORM:
-        break;
-    case ant::gal::gal_texture_format::X8_D24_UNORM:
-        break;
-    case ant::gal::gal_texture_format::D32_SFLOAT:
-        break;
-    case ant::gal::gal_texture_format::S8_UINT:
-        break;
-    case ant::gal::gal_texture_format::D16_UNORM_S8_UINT:
-        break;
-    case ant::gal::gal_texture_format::D24_UNORM_S8_UINT:
-        break;
-    case ant::gal::gal_texture_format::D32_SFLOAT_S8_UINT:
-        break;
-    case ant::gal::gal_texture_format::DXBC1_RGB_UNORM:
-        break;
-    case ant::gal::gal_texture_format::DXBC1_RGB_SRGB:
-        break;
-    case ant::gal::gal_texture_format::DXBC1_RGBA_UNORM:
-        break;
-    case ant::gal::gal_texture_format::DXBC1_RGBA_SRGB:
-        break;
-    case ant::gal::gal_texture_format::DXBC2_UNORM:
-        break;
-    case ant::gal::gal_texture_format::DXBC2_SRGB:
-        break;
-    case ant::gal::gal_texture_format::DXBC3_UNORM:
-        break;
-    case ant::gal::gal_texture_format::DXBC3_SRGB:
-        break;
-    case ant::gal::gal_texture_format::DXBC4_UNORM:
-        break;
-    case ant::gal::gal_texture_format::DXBC4_SNORM:
-        break;
-    case ant::gal::gal_texture_format::DXBC5_UNORM:
-        break;
-    case ant::gal::gal_texture_format::DXBC5_SNORM:
-        break;
-    case ant::gal::gal_texture_format::DXBC6H_UFLOAT:
-        break;
-    case ant::gal::gal_texture_format::DXBC6H_SFLOAT:
-        break;
-    case ant::gal::gal_texture_format::DXBC7_UNORM:
-        break;
-    case ant::gal::gal_texture_format::DXBC7_SRGB:
-        break;
-    case ant::gal::gal_texture_format::PVRTC1_2BPP_UNORM:
-        break;
-    case ant::gal::gal_texture_format::PVRTC1_4BPP_UNORM:
-        break;
-    case ant::gal::gal_texture_format::PVRTC2_2BPP_UNORM:
-        break;
-    case ant::gal::gal_texture_format::PVRTC2_4BPP_UNORM:
-        break;
-    case ant::gal::gal_texture_format::PVRTC1_2BPP_SRGB:
-        break;
-    case ant::gal::gal_texture_format::PVRTC1_4BPP_SRGB:
-        break;
-    case ant::gal::gal_texture_format::PVRTC2_2BPP_SRGB:
-        break;
-    case ant::gal::gal_texture_format::PVRTC2_4BPP_SRGB:
-        break;
-    case ant::gal::gal_texture_format::ETC2_R8G8B8_UNORM:
-        break;
-    case ant::gal::gal_texture_format::ETC2_R8G8B8_SRGB:
-        break;
-    case ant::gal::gal_texture_format::ETC2_R8G8B8A1_UNORM:
-        break;
-    case ant::gal::gal_texture_format::ETC2_R8G8B8A1_SRGB:
-        break;
-    case ant::gal::gal_texture_format::ETC2_R8G8B8A8_UNORM:
-        break;
-    case ant::gal::gal_texture_format::ETC2_R8G8B8A8_SRGB:
-        break;
-    case ant::gal::gal_texture_format::ETC2_EAC_R11_UNORM:
-        break;
-    case ant::gal::gal_texture_format::ETC2_EAC_R11_SNORM:
-        break;
-    case ant::gal::gal_texture_format::ETC2_EAC_R11G11_UNORM:
-        break;
-    case ant::gal::gal_texture_format::ETC2_EAC_R11G11_SNORM:
-        break;
-    case ant::gal::gal_texture_format::ASTC_4x4_UNORM:
-        break;
-    case ant::gal::gal_texture_format::ASTC_4x4_SRGB:
-        break;
-    case ant::gal::gal_texture_format::ASTC_5x4_UNORM:
-        break;
-    case ant::gal::gal_texture_format::ASTC_5x4_SRGB:
-        break;
-    case ant::gal::gal_texture_format::ASTC_5x5_UNORM:
-        break;
-    case ant::gal::gal_texture_format::ASTC_5x5_SRGB:
-        break;
-    case ant::gal::gal_texture_format::ASTC_6x5_UNORM:
-        break;
-    case ant::gal::gal_texture_format::ASTC_6x5_SRGB:
-        break;
-    case ant::gal::gal_texture_format::ASTC_6x6_UNORM:
-        break;
-    case ant::gal::gal_texture_format::ASTC_6x6_SRGB:
-        break;
-    case ant::gal::gal_texture_format::ASTC_8x5_UNORM:
-        break;
-    case ant::gal::gal_texture_format::ASTC_8x5_SRGB:
-        break;
-    case ant::gal::gal_texture_format::ASTC_8x6_UNORM:
-        break;
-    case ant::gal::gal_texture_format::ASTC_8x6_SRGB:
-        break;
-    case ant::gal::gal_texture_format::ASTC_8x8_UNORM:
-        break;
-    case ant::gal::gal_texture_format::ASTC_8x8_SRGB:
-        break;
-    case ant::gal::gal_texture_format::ASTC_10x5_UNORM:
-        break;
-    case ant::gal::gal_texture_format::ASTC_10x5_SRGB:
-        break;
-    case ant::gal::gal_texture_format::ASTC_10x6_UNORM:
-        break;
-    case ant::gal::gal_texture_format::ASTC_10x6_SRGB:
-        break;
-    case ant::gal::gal_texture_format::ASTC_10x8_UNORM:
-        break;
-    case ant::gal::gal_texture_format::ASTC_10x8_SRGB:
-        break;
-    case ant::gal::gal_texture_format::ASTC_10x10_UNORM:
-        break;
-    case ant::gal::gal_texture_format::ASTC_10x10_SRGB:
-        break;
-    case ant::gal::gal_texture_format::ASTC_12x10_UNORM:
-        break;
-    case ant::gal::gal_texture_format::ASTC_12x10_SRGB:
-        break;
-    case ant::gal::gal_texture_format::ASTC_12x12_UNORM:
-        break;
-    case ant::gal::gal_texture_format::ASTC_12x12_SRGB:
-        break;
-    case ant::gal::gal_texture_format::CLUT_P4:
-        break;
-    case ant::gal::gal_texture_format::CLUT_P4A4:
-        break;
-    case ant::gal::gal_texture_format::CLUT_P8:
-        break;
-    case ant::gal::gal_texture_format::CLUT_P8A8:
-        break;
-    default:
-        break;
-    }
-    return VK_FORMAT_MAX_ENUM;
-}
-
-constexpr VkSampleCountFlagBits utils_to_vk_sample_count_flags(gal_texture_sample_count samples) {
-    switch (samples) {
-    case ant::gal::gal_texture_sample_count::tsc_1:
-        return VK_SAMPLE_COUNT_1_BIT;
-        break;
-    case ant::gal::gal_texture_sample_count::tsc_2:
-        return VK_SAMPLE_COUNT_2_BIT;
-        break;
-    case ant::gal::gal_texture_sample_count::tsc_4:
-        return VK_SAMPLE_COUNT_4_BIT;
-        break;
-    case ant::gal::gal_texture_sample_count::tsc_8:
-        return VK_SAMPLE_COUNT_8_BIT;
-        break;
-    default:
-        return VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM;
-        break;
-    }
-}
-
-//VkImageCreateFlags utils_to_vk_image_creation_flags(resource_types types) {
-//    VkImageCreateFlags flags = 0;
-//
-//    return flags;
-//}
-
-constexpr VkImageUsageFlags utils_to_vk_image_usage(gal_resource_types types, gal_memory_flag memory_flag) {
-    VkImageUsageFlags flags = 0;
-    if (memory_flag == gal_memory_flag::cpu_upload) {
-        flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    } else if (memory_flag == gal_memory_flag::gpu_download) {
-        flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-    }
-    if (types & gal_resource_type::rt_color_rt) {
-        flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    }
-    if (types & gal_resource_type::rt_depth_stencil_rt) {
-        flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-    }
-    if (types & gal_resource_type::rt_texture) {
-        flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
-    }
-    if (types & gal_resource_type::rt_rw_texture) {
-        flags |= VK_IMAGE_USAGE_STORAGE_BIT;
-        flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    }
-    // add copy usage for all resources
-    flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    return flags;
-}
-
-constexpr VkImageAspectFlags util_vk_determine_aspect_mask(VkFormat format, bool has_stencil) {
-    VkImageAspectFlags result = 0;
-    switch (format) {
-        // Depth
-    case VK_FORMAT_D16_UNORM:
-    case VK_FORMAT_X8_D24_UNORM_PACK32:
-    case VK_FORMAT_D32_SFLOAT:
-        result = VK_IMAGE_ASPECT_DEPTH_BIT;
-        break;
-        // Stencil
-    case VK_FORMAT_S8_UINT:
-        result = VK_IMAGE_ASPECT_STENCIL_BIT;
-        break;
-        // Depth/stencil
-    case VK_FORMAT_D16_UNORM_S8_UINT:
-    case VK_FORMAT_D24_UNORM_S8_UINT:
-    case VK_FORMAT_D32_SFLOAT_S8_UINT:
-        result = VK_IMAGE_ASPECT_DEPTH_BIT;
-        if (has_stencil)
-            result |= VK_IMAGE_ASPECT_STENCIL_BIT;
-        break;
-        // Assume everything else is Color
-    default:
-        result = VK_IMAGE_ASPECT_COLOR_BIT;
-        break;
-    }
-    return result;
-}
-constexpr VkFormatFeatureFlags util_vk_image_usage_to_format_features(VkImageUsageFlags usage) {
-    VkFormatFeatureFlags result = (VkFormatFeatureFlags)0;
-    if (VK_IMAGE_USAGE_SAMPLED_BIT == (usage & VK_IMAGE_USAGE_SAMPLED_BIT)) {
-        result |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
-    }
-    if (VK_IMAGE_USAGE_STORAGE_BIT == (usage & VK_IMAGE_USAGE_STORAGE_BIT)) {
-        result |= VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
-    }
-    if (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT == (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) {
-        result |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
-    }
-    if (VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT == (usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
-        result |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
-    }
-    return result;
-}
-
-constexpr VkQueueFlags util_to_vk_queue_flags(gal_queue_type queueType) {
-    switch (queueType) {
-    case gal_queue_type::graphcis:
-        return VK_QUEUE_GRAPHICS_BIT;
-    case gal_queue_type::transfer:
-        return VK_QUEUE_TRANSFER_BIT;
-    case gal_queue_type::compute:
-        return VK_QUEUE_COMPUTE_BIT;
-    default:
-        return VK_QUEUE_FLAG_BITS_MAX_ENUM;
-    }
-}
-
-constexpr gal_texture_format vkformat_to_galtextureformat(VkFormat fmt) {
-    switch (fmt) {
-
-    case VK_FORMAT_UNDEFINED:
-        return gal_texture_format::UNDEFINED;
-    case VK_FORMAT_R4G4_UNORM_PACK8:
-        return gal_texture_format::G4R4_UNORM;
-    case VK_FORMAT_R4G4B4A4_UNORM_PACK16:
-        return gal_texture_format::A4B4G4R4_UNORM;
-    case VK_FORMAT_B4G4R4A4_UNORM_PACK16:
-        return gal_texture_format::A4R4G4B4_UNORM;
-    case VK_FORMAT_R5G6B5_UNORM_PACK16:
-        return gal_texture_format::B5G6R5_UNORM;
-    case VK_FORMAT_B5G6R5_UNORM_PACK16:
-        return gal_texture_format::R5G6B5_UNORM;
-    case VK_FORMAT_R5G5B5A1_UNORM_PACK16:
-        return gal_texture_format::A1B5G5R5_UNORM;
-    case VK_FORMAT_B5G5R5A1_UNORM_PACK16:
-        return gal_texture_format::A1R5G5B5_UNORM;
-    case VK_FORMAT_A1R5G5B5_UNORM_PACK16:
-        return gal_texture_format::B5G5R5A1_UNORM;
-    case VK_FORMAT_R8_UNORM:
-        return gal_texture_format::R8_UNORM;
-    case VK_FORMAT_R8_SNORM:
-        return gal_texture_format::R8_SNORM;
-    case VK_FORMAT_R8_UINT:
-        return gal_texture_format::R8_UINT;
-    case VK_FORMAT_R8_SINT:
-        return gal_texture_format::R8_SINT;
-    case VK_FORMAT_R8_SRGB:
-        return gal_texture_format::R8_SRGB;
-    case VK_FORMAT_R8G8_UNORM:
-        return gal_texture_format::R8G8_UNORM;
-    case VK_FORMAT_R8G8_SNORM:
-        return gal_texture_format::R8G8_SNORM;
-    case VK_FORMAT_R8G8_UINT:
-        return gal_texture_format::R8G8_UINT;
-    case VK_FORMAT_R8G8_SINT:
-        return gal_texture_format::R8G8_SINT;
-    case VK_FORMAT_R8G8_SRGB:
-        return gal_texture_format::R8G8_SRGB;
-    case VK_FORMAT_R8G8B8_UNORM:
-        return gal_texture_format::R8G8B8_UNORM;
-    case VK_FORMAT_R8G8B8_SNORM:
-        return gal_texture_format::R8G8B8_SNORM;
-    case VK_FORMAT_R8G8B8_UINT:
-        return gal_texture_format::R8G8B8_UINT;
-    case VK_FORMAT_R8G8B8_SINT:
-        return gal_texture_format::R8G8B8_SINT;
-    case VK_FORMAT_R8G8B8_SRGB:
-        return gal_texture_format::R8G8B8_SRGB;
-    case VK_FORMAT_B8G8R8_UNORM:
-        return gal_texture_format::B8G8R8_UNORM;
-    case VK_FORMAT_B8G8R8_SNORM:
-        return gal_texture_format::B8G8R8_SNORM;
-    case VK_FORMAT_B8G8R8_UINT:
-        return gal_texture_format::B8G8R8_UINT;
-    case VK_FORMAT_B8G8R8_SINT:
-        return gal_texture_format::B8G8R8_SINT;
-    case VK_FORMAT_B8G8R8_SRGB:
-        return gal_texture_format::B8G8R8_SRGB;
-    case VK_FORMAT_R8G8B8A8_UNORM:
-        return gal_texture_format::R8G8B8A8_UNORM;
-    case VK_FORMAT_R8G8B8A8_SNORM:
-        return gal_texture_format::R8G8B8A8_SNORM;
-    case VK_FORMAT_R8G8B8A8_UINT:
-        return gal_texture_format::R8G8B8A8_UINT;
-    case VK_FORMAT_R8G8B8A8_SINT:
-        return gal_texture_format::R8G8B8A8_SINT;
-    case VK_FORMAT_R8G8B8A8_SRGB:
-        return gal_texture_format::R8G8B8A8_SRGB;
-    case VK_FORMAT_B8G8R8A8_UNORM:
-        return gal_texture_format::B8G8R8A8_UNORM;
-    case VK_FORMAT_B8G8R8A8_SNORM:
-        return gal_texture_format::B8G8R8A8_SNORM;
-    case VK_FORMAT_B8G8R8A8_UINT:
-        return gal_texture_format::B8G8R8A8_UINT;
-    case VK_FORMAT_B8G8R8A8_SINT:
-        return gal_texture_format::B8G8R8A8_SINT;
-    case VK_FORMAT_B8G8R8A8_SRGB:
-        return gal_texture_format::B8G8R8A8_SRGB;
-    case VK_FORMAT_A2R10G10B10_UNORM_PACK32:
-        return gal_texture_format::A2R10G10B10_UNORM;
-    case VK_FORMAT_A2R10G10B10_UINT_PACK32:
-        return gal_texture_format::A2R10G10B10_UINT;
-    case VK_FORMAT_A2B10G10R10_UNORM_PACK32:
-        return gal_texture_format::A2B10G10R10_UNORM;
-    case VK_FORMAT_A2B10G10R10_UINT_PACK32:
-        return gal_texture_format::A2B10G10R10_UINT;
-    case VK_FORMAT_R16_UNORM:
-        return gal_texture_format::R16_UNORM;
-    case VK_FORMAT_R16_SNORM:
-        return gal_texture_format::R16_SNORM;
-    case VK_FORMAT_R16_UINT:
-        return gal_texture_format::R16_UINT;
-    case VK_FORMAT_R16_SINT:
-        return gal_texture_format::R16_SINT;
-    case VK_FORMAT_R16_SFLOAT:
-        return gal_texture_format::R16_SFLOAT;
-    case VK_FORMAT_R16G16_UNORM:
-        return gal_texture_format::R16G16_UNORM;
-    case VK_FORMAT_R16G16_SNORM:
-        return gal_texture_format::R16G16_SNORM;
-    case VK_FORMAT_R16G16_UINT:
-        return gal_texture_format::R16G16_UINT;
-    case VK_FORMAT_R16G16_SINT:
-        return gal_texture_format::R16G16_SINT;
-    case VK_FORMAT_R16G16_SFLOAT:
-        return gal_texture_format::R16G16_SFLOAT;
-    case VK_FORMAT_R16G16B16_UNORM:
-        return gal_texture_format::R16G16B16_UNORM;
-    case VK_FORMAT_R16G16B16_SNORM:
-        return gal_texture_format::R16G16B16_SNORM;
-    case VK_FORMAT_R16G16B16_UINT:
-        return gal_texture_format::R16G16B16_UINT;
-    case VK_FORMAT_R16G16B16_SINT:
-        return gal_texture_format::R16G16B16_SINT;
-    case VK_FORMAT_R16G16B16_SFLOAT:
-        return gal_texture_format::R16G16B16_SFLOAT;
-    case VK_FORMAT_R16G16B16A16_UNORM:
-        return gal_texture_format::R16G16B16A16_UNORM;
-    case VK_FORMAT_R16G16B16A16_SNORM:
-        return gal_texture_format::R16G16B16A16_SNORM;
-    case VK_FORMAT_R16G16B16A16_UINT:
-        return gal_texture_format::R16G16B16A16_UINT;
-    case VK_FORMAT_R16G16B16A16_SINT:
-        return gal_texture_format::R16G16B16A16_SINT;
-    case VK_FORMAT_R16G16B16A16_SFLOAT:
-        return gal_texture_format::R16G16B16A16_SFLOAT;
-    case VK_FORMAT_R32_UINT:
-        return gal_texture_format::R32_UINT;
-    case VK_FORMAT_R32_SINT:
-        return gal_texture_format::R32_SINT;
-    case VK_FORMAT_R32_SFLOAT:
-        return gal_texture_format::R32_SFLOAT;
-    case VK_FORMAT_R32G32_UINT:
-        return gal_texture_format::R32G32_UINT;
-    case VK_FORMAT_R32G32_SINT:
-        return gal_texture_format::R32G32_SINT;
-    case VK_FORMAT_R32G32_SFLOAT:
-        return gal_texture_format::R32G32_SFLOAT;
-    case VK_FORMAT_R32G32B32_UINT:
-        return gal_texture_format::R32G32B32_UINT;
-    case VK_FORMAT_R32G32B32_SINT:
-        return gal_texture_format::R32G32B32_SINT;
-    case VK_FORMAT_R32G32B32_SFLOAT:
-        return gal_texture_format::R32G32B32_SFLOAT;
-    case VK_FORMAT_R32G32B32A32_UINT:
-        return gal_texture_format::R32G32B32A32_UINT;
-    case VK_FORMAT_R32G32B32A32_SINT:
-        return gal_texture_format::R32G32B32A32_SINT;
-    case VK_FORMAT_R32G32B32A32_SFLOAT:
-        return gal_texture_format::R32G32B32A32_SFLOAT;
-    case VK_FORMAT_R64_UINT:
-        return gal_texture_format::R64_UINT;
-    case VK_FORMAT_R64_SINT:
-        return gal_texture_format::R64_SINT;
-    case VK_FORMAT_R64_SFLOAT:
-        return gal_texture_format::R64_SFLOAT;
-    case VK_FORMAT_R64G64_UINT:
-        return gal_texture_format::R64G64_UINT;
-    case VK_FORMAT_R64G64_SINT:
-        return gal_texture_format::R64G64_SINT;
-    case VK_FORMAT_R64G64_SFLOAT:
-        return gal_texture_format::R64G64_SFLOAT;
-    case VK_FORMAT_R64G64B64_UINT:
-        return gal_texture_format::R64G64B64_UINT;
-    case VK_FORMAT_R64G64B64_SINT:
-        return gal_texture_format::R64G64B64_SINT;
-    case VK_FORMAT_R64G64B64_SFLOAT:
-        return gal_texture_format::R64G64B64_SFLOAT;
-    case VK_FORMAT_R64G64B64A64_UINT:
-        return gal_texture_format::R64G64B64A64_UINT;
-    case VK_FORMAT_R64G64B64A64_SINT:
-        return gal_texture_format::R64G64B64A64_SINT;
-    case VK_FORMAT_R64G64B64A64_SFLOAT:
-        return gal_texture_format::R64G64B64A64_SFLOAT;
-    case VK_FORMAT_B10G11R11_UFLOAT_PACK32:
-        return gal_texture_format::B10G11R11_UFLOAT;
-    case VK_FORMAT_E5B9G9R9_UFLOAT_PACK32:
-        return gal_texture_format::E5B9G9R9_UFLOAT;
-    case VK_FORMAT_D16_UNORM:
-        return gal_texture_format::D16_UNORM;
-    case VK_FORMAT_X8_D24_UNORM_PACK32:
-        return gal_texture_format::X8_D24_UNORM;
-    case VK_FORMAT_D32_SFLOAT:
-        return gal_texture_format::D32_SFLOAT;
-    case VK_FORMAT_S8_UINT:
-        return gal_texture_format::S8_UINT;
-    case VK_FORMAT_D16_UNORM_S8_UINT:
-        return gal_texture_format::D16_UNORM_S8_UINT;
-    case VK_FORMAT_D24_UNORM_S8_UINT:
-        return gal_texture_format::D24_UNORM_S8_UINT;
-    case VK_FORMAT_D32_SFLOAT_S8_UINT:
-        return gal_texture_format::D32_SFLOAT_S8_UINT;
-    case VK_FORMAT_BC1_RGB_UNORM_BLOCK:
-        return gal_texture_format::DXBC1_RGB_UNORM;
-    case VK_FORMAT_BC1_RGB_SRGB_BLOCK:
-        return gal_texture_format::DXBC1_RGB_SRGB;
-    case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
-        return gal_texture_format::DXBC1_RGBA_UNORM;
-    case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
-        return gal_texture_format::DXBC1_RGBA_SRGB;
-    case VK_FORMAT_BC2_UNORM_BLOCK:
-        return gal_texture_format::DXBC2_UNORM;
-    case VK_FORMAT_BC2_SRGB_BLOCK:
-        return gal_texture_format::DXBC2_SRGB;
-    case VK_FORMAT_BC3_UNORM_BLOCK:
-        return gal_texture_format::DXBC3_UNORM;
-    case VK_FORMAT_BC3_SRGB_BLOCK:
-        return gal_texture_format::DXBC3_SRGB;
-    case VK_FORMAT_BC4_UNORM_BLOCK:
-        return gal_texture_format::DXBC4_UNORM;
-    case VK_FORMAT_BC4_SNORM_BLOCK:
-        return gal_texture_format::DXBC4_SNORM;
-    case VK_FORMAT_BC5_UNORM_BLOCK:
-        return gal_texture_format::DXBC5_UNORM;
-    case VK_FORMAT_BC5_SNORM_BLOCK:
-        return gal_texture_format::DXBC5_SNORM;
-    case VK_FORMAT_BC6H_UFLOAT_BLOCK:
-        return gal_texture_format::DXBC6H_UFLOAT;
-    case VK_FORMAT_BC6H_SFLOAT_BLOCK:
-        return gal_texture_format::DXBC6H_SFLOAT;
-    case VK_FORMAT_BC7_UNORM_BLOCK:
-        return gal_texture_format::DXBC7_UNORM;
-    case VK_FORMAT_BC7_SRGB_BLOCK:
-        return gal_texture_format::DXBC7_SRGB;
-    case VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK:
-        return gal_texture_format::ETC2_R8G8B8_UNORM;
-    case VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK:
-        return gal_texture_format::ETC2_R8G8B8_SRGB;
-    case VK_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK:
-        return gal_texture_format::ETC2_R8G8B8A1_UNORM;
-    case VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK:
-        return gal_texture_format::ETC2_R8G8B8A1_SRGB;
-    case VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK:
-        return gal_texture_format::ETC2_R8G8B8A8_UNORM;
-    case VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK:
-        return gal_texture_format::ETC2_R8G8B8A8_SRGB;
-    case VK_FORMAT_EAC_R11_UNORM_BLOCK:
-        return gal_texture_format::ETC2_EAC_R11_UNORM;
-    case VK_FORMAT_EAC_R11_SNORM_BLOCK:
-        return gal_texture_format::ETC2_EAC_R11_SNORM;
-    case VK_FORMAT_EAC_R11G11_UNORM_BLOCK:
-        return gal_texture_format::ETC2_EAC_R11G11_UNORM;
-    case VK_FORMAT_EAC_R11G11_SNORM_BLOCK:
-        return gal_texture_format::ETC2_EAC_R11G11_SNORM;
-    case VK_FORMAT_ASTC_4x4_UNORM_BLOCK:
-        return gal_texture_format::ASTC_4x4_UNORM;
-    case VK_FORMAT_ASTC_4x4_SRGB_BLOCK:
-        return gal_texture_format::ASTC_4x4_SRGB;
-    case VK_FORMAT_ASTC_5x4_UNORM_BLOCK:
-        return gal_texture_format::ASTC_5x4_UNORM;
-    case VK_FORMAT_ASTC_5x4_SRGB_BLOCK:
-        return gal_texture_format::ASTC_5x4_SRGB;
-    case VK_FORMAT_ASTC_5x5_UNORM_BLOCK:
-        return gal_texture_format::ASTC_5x5_UNORM;
-    case VK_FORMAT_ASTC_5x5_SRGB_BLOCK:
-        return gal_texture_format::ASTC_5x5_SRGB;
-    case VK_FORMAT_ASTC_6x5_UNORM_BLOCK:
-        return gal_texture_format::ASTC_6x5_UNORM;
-    case VK_FORMAT_ASTC_6x5_SRGB_BLOCK:
-        return gal_texture_format::ASTC_6x5_SRGB;
-    case VK_FORMAT_ASTC_6x6_UNORM_BLOCK:
-        return gal_texture_format::ASTC_6x6_UNORM;
-    case VK_FORMAT_ASTC_6x6_SRGB_BLOCK:
-        return gal_texture_format::ASTC_6x6_SRGB;
-    case VK_FORMAT_ASTC_8x5_UNORM_BLOCK:
-        return gal_texture_format::ASTC_8x5_UNORM;
-    case VK_FORMAT_ASTC_8x5_SRGB_BLOCK:
-        return gal_texture_format::ASTC_8x5_SRGB;
-    case VK_FORMAT_ASTC_8x6_UNORM_BLOCK:
-        return gal_texture_format::ASTC_8x6_UNORM;
-    case VK_FORMAT_ASTC_8x6_SRGB_BLOCK:
-        return gal_texture_format::ASTC_8x6_SRGB;
-    case VK_FORMAT_ASTC_8x8_UNORM_BLOCK:
-        return gal_texture_format::ASTC_8x8_UNORM;
-    case VK_FORMAT_ASTC_8x8_SRGB_BLOCK:
-        return gal_texture_format::ASTC_8x8_SRGB;
-    case VK_FORMAT_ASTC_10x5_UNORM_BLOCK:
-        return gal_texture_format::ASTC_10x5_UNORM;
-    case VK_FORMAT_ASTC_10x5_SRGB_BLOCK:
-        return gal_texture_format::ASTC_10x5_SRGB;
-    case VK_FORMAT_ASTC_10x6_UNORM_BLOCK:
-        return gal_texture_format::ASTC_10x6_UNORM;
-    case VK_FORMAT_ASTC_10x6_SRGB_BLOCK:
-        return gal_texture_format::ASTC_10x6_SRGB;
-    case VK_FORMAT_ASTC_10x8_UNORM_BLOCK:
-        return gal_texture_format::ASTC_10x8_UNORM;
-    case VK_FORMAT_ASTC_10x8_SRGB_BLOCK:
-        return gal_texture_format::ASTC_10x8_SRGB;
-    case VK_FORMAT_ASTC_10x10_UNORM_BLOCK:
-        return gal_texture_format::ASTC_10x10_UNORM;
-    case VK_FORMAT_ASTC_10x10_SRGB_BLOCK:
-        return gal_texture_format::ASTC_10x10_SRGB;
-    case VK_FORMAT_ASTC_12x10_UNORM_BLOCK:
-        return gal_texture_format::ASTC_12x10_UNORM;
-    case VK_FORMAT_ASTC_12x10_SRGB_BLOCK:
-        return gal_texture_format::ASTC_12x10_SRGB;
-    case VK_FORMAT_ASTC_12x12_UNORM_BLOCK:
-        return gal_texture_format::ASTC_12x12_UNORM;
-    case VK_FORMAT_ASTC_12x12_SRGB_BLOCK:
-        return gal_texture_format::ASTC_12x12_SRGB;
-
-    case VK_FORMAT_PVRTC1_2BPP_UNORM_BLOCK_IMG:
-        return gal_texture_format::PVRTC1_2BPP_UNORM;
-    case VK_FORMAT_PVRTC1_4BPP_UNORM_BLOCK_IMG:
-        return gal_texture_format::PVRTC1_4BPP_UNORM;
-    case VK_FORMAT_PVRTC1_2BPP_SRGB_BLOCK_IMG:
-        return gal_texture_format::PVRTC1_2BPP_SRGB;
-    case VK_FORMAT_PVRTC1_4BPP_SRGB_BLOCK_IMG:
-        return gal_texture_format::PVRTC1_4BPP_SRGB;
-
-    case VK_FORMAT_G16B16G16R16_422_UNORM:
-        return gal_texture_format::G16B16G16R16_422_UNORM;
-    case VK_FORMAT_B16G16R16G16_422_UNORM:
-        return gal_texture_format::B16G16R16G16_422_UNORM;
-    case VK_FORMAT_R12X4G12X4B12X4A12X4_UNORM_4PACK16:
-        return gal_texture_format::R12X4G12X4B12X4A12X4_UNORM_4PACK16;
-    case VK_FORMAT_G12X4B12X4G12X4R12X4_422_UNORM_4PACK16:
-        return gal_texture_format::G12X4B12X4G12X4R12X4_422_UNORM_4PACK16;
-    case VK_FORMAT_B12X4G12X4R12X4G12X4_422_UNORM_4PACK16:
-        return gal_texture_format::B12X4G12X4R12X4G12X4_422_UNORM_4PACK16;
-    case VK_FORMAT_R10X6G10X6B10X6A10X6_UNORM_4PACK16:
-        return gal_texture_format::R10X6G10X6B10X6A10X6_UNORM_4PACK16;
-    case VK_FORMAT_G10X6B10X6G10X6R10X6_422_UNORM_4PACK16:
-        return gal_texture_format::G10X6B10X6G10X6R10X6_422_UNORM_4PACK16;
-    case VK_FORMAT_B10X6G10X6R10X6G10X6_422_UNORM_4PACK16:
-        return gal_texture_format::B10X6G10X6R10X6G10X6_422_UNORM_4PACK16;
-    case VK_FORMAT_G8B8G8R8_422_UNORM:
-        return gal_texture_format::G8B8G8R8_422_UNORM;
-    case VK_FORMAT_B8G8R8G8_422_UNORM:
-        return gal_texture_format::B8G8R8G8_422_UNORM;
-    case VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM:
-        return gal_texture_format::G8_B8_R8_3PLANE_420_UNORM;
-    case VK_FORMAT_G8_B8R8_2PLANE_420_UNORM:
-        return gal_texture_format::G8_B8R8_2PLANE_420_UNORM;
-    case VK_FORMAT_G8_B8_R8_3PLANE_422_UNORM:
-        return gal_texture_format::G8_B8_R8_3PLANE_422_UNORM;
-    case VK_FORMAT_G8_B8R8_2PLANE_422_UNORM:
-        return gal_texture_format::G8_B8R8_2PLANE_422_UNORM;
-    case VK_FORMAT_G8_B8_R8_3PLANE_444_UNORM:
-        return gal_texture_format::G8_B8_R8_3PLANE_444_UNORM;
-    case VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16:
-        return gal_texture_format::G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16;
-    case VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16:
-        return gal_texture_format::G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16;
-    case VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16:
-        return gal_texture_format::G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16;
-    case VK_FORMAT_G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16:
-        return gal_texture_format::G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16;
-    case VK_FORMAT_G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16:
-        return gal_texture_format::G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16;
-    case VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16:
-        return gal_texture_format::G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16;
-    case VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16:
-        return gal_texture_format::G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16;
-    case VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16:
-        return gal_texture_format::G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16;
-    case VK_FORMAT_G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16:
-        return gal_texture_format::G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16;
-    case VK_FORMAT_G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16:
-        return gal_texture_format::G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16;
-    case VK_FORMAT_G16_B16_R16_3PLANE_420_UNORM:
-        return gal_texture_format::G16_B16_R16_3PLANE_420_UNORM;
-    case VK_FORMAT_G16_B16_R16_3PLANE_422_UNORM:
-        return gal_texture_format::G16_B16_R16_3PLANE_422_UNORM;
-    case VK_FORMAT_G16_B16_R16_3PLANE_444_UNORM:
-        return gal_texture_format::G16_B16_R16_3PLANE_444_UNORM;
-    case VK_FORMAT_G16_B16R16_2PLANE_420_UNORM:
-        return gal_texture_format::G16_B16R16_2PLANE_420_UNORM;
-    case VK_FORMAT_G16_B16R16_2PLANE_422_UNORM:
-        return gal_texture_format::G16_B16R16_2PLANE_422_UNORM;
-
-    case VK_FORMAT_A8B8G8R8_UNORM_PACK32:
-    case VK_FORMAT_R8_USCALED:
-    case VK_FORMAT_R8_SSCALED:
-    case VK_FORMAT_R8G8_USCALED:
-    case VK_FORMAT_R8G8_SSCALED:
-    case VK_FORMAT_R8G8B8_USCALED:
-    case VK_FORMAT_R8G8B8_SSCALED:
-    case VK_FORMAT_B8G8R8_USCALED:
-    case VK_FORMAT_B8G8R8_SSCALED:
-    case VK_FORMAT_R8G8B8A8_USCALED:
-    case VK_FORMAT_R8G8B8A8_SSCALED:
-    case VK_FORMAT_B8G8R8A8_USCALED:
-    case VK_FORMAT_B8G8R8A8_SSCALED:
-    case VK_FORMAT_A8B8G8R8_SNORM_PACK32:
-    case VK_FORMAT_A8B8G8R8_USCALED_PACK32:
-    case VK_FORMAT_A8B8G8R8_SSCALED_PACK32:
-    case VK_FORMAT_A8B8G8R8_UINT_PACK32:
-    case VK_FORMAT_A8B8G8R8_SINT_PACK32:
-    case VK_FORMAT_A8B8G8R8_SRGB_PACK32:
-    case VK_FORMAT_A2R10G10B10_SNORM_PACK32:
-    case VK_FORMAT_A2R10G10B10_USCALED_PACK32:
-    case VK_FORMAT_A2R10G10B10_SSCALED_PACK32:
-    case VK_FORMAT_A2R10G10B10_SINT_PACK32:
-    case VK_FORMAT_A2B10G10R10_SNORM_PACK32:
-    case VK_FORMAT_A2B10G10R10_USCALED_PACK32:
-    case VK_FORMAT_A2B10G10R10_SSCALED_PACK32:
-    case VK_FORMAT_A2B10G10R10_SINT_PACK32:
-    case VK_FORMAT_R16_USCALED:
-    case VK_FORMAT_R16_SSCALED:
-    case VK_FORMAT_R16G16_USCALED:
-    case VK_FORMAT_R16G16_SSCALED:
-    case VK_FORMAT_R16G16B16_USCALED:
-    case VK_FORMAT_R16G16B16_SSCALED:
-    case VK_FORMAT_R16G16B16A16_USCALED:
-    case VK_FORMAT_R16G16B16A16_SSCALED:
-    case VK_FORMAT_R10X6_UNORM_PACK16:
-    case VK_FORMAT_R10X6G10X6_UNORM_2PACK16:
-    case VK_FORMAT_R12X4_UNORM_PACK16:
-    case VK_FORMAT_R12X4G12X4_UNORM_2PACK16:
-    case VK_FORMAT_PVRTC2_2BPP_UNORM_BLOCK_IMG:
-    case VK_FORMAT_PVRTC2_4BPP_UNORM_BLOCK_IMG:
-    case VK_FORMAT_PVRTC2_2BPP_SRGB_BLOCK_IMG:
-    case VK_FORMAT_PVRTC2_4BPP_SRGB_BLOCK_IMG:
-        return gal_texture_format::UNDEFINED;
-    }
-    return gal_texture_format::UNDEFINED;
-}
-
-constexpr VkFormat galtextureformat_to_vkformat(gal_texture_format fmt) {
-    switch (fmt) {
-
-    case gal_texture_format::UNDEFINED:
-        return VK_FORMAT_UNDEFINED;
-    case gal_texture_format::G4R4_UNORM:
-        return VK_FORMAT_R4G4_UNORM_PACK8;
-    case gal_texture_format::A4B4G4R4_UNORM:
-        return VK_FORMAT_R4G4B4A4_UNORM_PACK16;
-    case gal_texture_format::A4R4G4B4_UNORM:
-        return VK_FORMAT_B4G4R4A4_UNORM_PACK16;
-    case gal_texture_format::R5G6B5_UNORM:
-        return VK_FORMAT_B5G6R5_UNORM_PACK16;
-    case gal_texture_format::B5G6R5_UNORM:
-        return VK_FORMAT_R5G6B5_UNORM_PACK16;
-    case gal_texture_format::A1B5G5R5_UNORM:
-        return VK_FORMAT_R5G5B5A1_UNORM_PACK16;
-    case gal_texture_format::A1R5G5B5_UNORM:
-        return VK_FORMAT_B5G5R5A1_UNORM_PACK16;
-    case gal_texture_format::B5G5R5A1_UNORM:
-        return VK_FORMAT_A1R5G5B5_UNORM_PACK16;
-    case gal_texture_format::A2B10G10R10_UNORM:
-        return VK_FORMAT_A2B10G10R10_UNORM_PACK32;
-
-    case gal_texture_format::R8_UNORM:
-        return VK_FORMAT_R8_UNORM;
-    case gal_texture_format::R8_SNORM:
-        return VK_FORMAT_R8_SNORM;
-    case gal_texture_format::R8_UINT:
-        return VK_FORMAT_R8_UINT;
-    case gal_texture_format::R8_SINT:
-        return VK_FORMAT_R8_SINT;
-    case gal_texture_format::R8_SRGB:
-        return VK_FORMAT_R8_SRGB;
-    case gal_texture_format::R8G8_UNORM:
-        return VK_FORMAT_R8G8_UNORM;
-    case gal_texture_format::R8G8_SNORM:
-        return VK_FORMAT_R8G8_SNORM;
-    case gal_texture_format::R8G8_UINT:
-        return VK_FORMAT_R8G8_UINT;
-    case gal_texture_format::R8G8_SINT:
-        return VK_FORMAT_R8G8_SINT;
-    case gal_texture_format::R8G8_SRGB:
-        return VK_FORMAT_R8G8_SRGB;
-    case gal_texture_format::R8G8B8_UNORM:
-        return VK_FORMAT_R8G8B8_UNORM;
-    case gal_texture_format::R8G8B8_SNORM:
-        return VK_FORMAT_R8G8B8_SNORM;
-    case gal_texture_format::R8G8B8_UINT:
-        return VK_FORMAT_R8G8B8_UINT;
-    case gal_texture_format::R8G8B8_SINT:
-        return VK_FORMAT_R8G8B8_SINT;
-    case gal_texture_format::R8G8B8_SRGB:
-        return VK_FORMAT_R8G8B8_SRGB;
-    case gal_texture_format::B8G8R8_UNORM:
-        return VK_FORMAT_B8G8R8_UNORM;
-    case gal_texture_format::B8G8R8_SNORM:
-        return VK_FORMAT_B8G8R8_SNORM;
-    case gal_texture_format::B8G8R8_UINT:
-        return VK_FORMAT_B8G8R8_UINT;
-    case gal_texture_format::B8G8R8_SINT:
-        return VK_FORMAT_B8G8R8_SINT;
-    case gal_texture_format::B8G8R8_SRGB:
-        return VK_FORMAT_B8G8R8_SRGB;
-    case gal_texture_format::R8G8B8A8_UNORM:
-        return VK_FORMAT_R8G8B8A8_UNORM;
-    case gal_texture_format::R8G8B8A8_SNORM:
-        return VK_FORMAT_R8G8B8A8_SNORM;
-    case gal_texture_format::R8G8B8A8_UINT:
-        return VK_FORMAT_R8G8B8A8_UINT;
-    case gal_texture_format::R8G8B8A8_SINT:
-        return VK_FORMAT_R8G8B8A8_SINT;
-    case gal_texture_format::R8G8B8A8_SRGB:
-        return VK_FORMAT_R8G8B8A8_SRGB;
-    case gal_texture_format::B8G8R8A8_UNORM:
-        return VK_FORMAT_B8G8R8A8_UNORM;
-    case gal_texture_format::B8G8R8A8_SNORM:
-        return VK_FORMAT_B8G8R8A8_SNORM;
-    case gal_texture_format::B8G8R8A8_UINT:
-        return VK_FORMAT_B8G8R8A8_UINT;
-    case gal_texture_format::B8G8R8A8_SINT:
-        return VK_FORMAT_B8G8R8A8_SINT;
-    case gal_texture_format::B8G8R8A8_SRGB:
-        return VK_FORMAT_B8G8R8A8_SRGB;
-    case gal_texture_format::R16_UNORM:
-        return VK_FORMAT_R16_UNORM;
-    case gal_texture_format::R16_SNORM:
-        return VK_FORMAT_R16_SNORM;
-    case gal_texture_format::R16_UINT:
-        return VK_FORMAT_R16_UINT;
-    case gal_texture_format::R16_SINT:
-        return VK_FORMAT_R16_SINT;
-    case gal_texture_format::R16_SFLOAT:
-        return VK_FORMAT_R16_SFLOAT;
-    case gal_texture_format::R16G16_UNORM:
-        return VK_FORMAT_R16G16_UNORM;
-    case gal_texture_format::R16G16_SNORM:
-        return VK_FORMAT_R16G16_SNORM;
-    case gal_texture_format::R16G16_UINT:
-        return VK_FORMAT_R16G16_UINT;
-    case gal_texture_format::R16G16_SINT:
-        return VK_FORMAT_R16G16_SINT;
-    case gal_texture_format::R16G16_SFLOAT:
-        return VK_FORMAT_R16G16_SFLOAT;
-    case gal_texture_format::R16G16B16_UNORM:
-        return VK_FORMAT_R16G16B16_UNORM;
-    case gal_texture_format::R16G16B16_SNORM:
-        return VK_FORMAT_R16G16B16_SNORM;
-    case gal_texture_format::R16G16B16_UINT:
-        return VK_FORMAT_R16G16B16_UINT;
-    case gal_texture_format::R16G16B16_SINT:
-        return VK_FORMAT_R16G16B16_SINT;
-    case gal_texture_format::R16G16B16_SFLOAT:
-        return VK_FORMAT_R16G16B16_SFLOAT;
-    case gal_texture_format::R16G16B16A16_UNORM:
-        return VK_FORMAT_R16G16B16A16_UNORM;
-    case gal_texture_format::R16G16B16A16_SNORM:
-        return VK_FORMAT_R16G16B16A16_SNORM;
-    case gal_texture_format::R16G16B16A16_UINT:
-        return VK_FORMAT_R16G16B16A16_UINT;
-    case gal_texture_format::R16G16B16A16_SINT:
-        return VK_FORMAT_R16G16B16A16_SINT;
-    case gal_texture_format::R16G16B16A16_SFLOAT:
-        return VK_FORMAT_R16G16B16A16_SFLOAT;
-    case gal_texture_format::R32_UINT:
-        return VK_FORMAT_R32_UINT;
-    case gal_texture_format::R32_SINT:
-        return VK_FORMAT_R32_SINT;
-    case gal_texture_format::R32_SFLOAT:
-        return VK_FORMAT_R32_SFLOAT;
-    case gal_texture_format::R32G32_UINT:
-        return VK_FORMAT_R32G32_UINT;
-    case gal_texture_format::R32G32_SINT:
-        return VK_FORMAT_R32G32_SINT;
-    case gal_texture_format::R32G32_SFLOAT:
-        return VK_FORMAT_R32G32_SFLOAT;
-    case gal_texture_format::R32G32B32_UINT:
-        return VK_FORMAT_R32G32B32_UINT;
-    case gal_texture_format::R32G32B32_SINT:
-        return VK_FORMAT_R32G32B32_SINT;
-    case gal_texture_format::R32G32B32_SFLOAT:
-        return VK_FORMAT_R32G32B32_SFLOAT;
-    case gal_texture_format::R32G32B32A32_UINT:
-        return VK_FORMAT_R32G32B32A32_UINT;
-    case gal_texture_format::R32G32B32A32_SINT:
-        return VK_FORMAT_R32G32B32A32_SINT;
-    case gal_texture_format::R32G32B32A32_SFLOAT:
-        return VK_FORMAT_R32G32B32A32_SFLOAT;
-    case gal_texture_format::R64_UINT:
-        return VK_FORMAT_R64_UINT;
-    case gal_texture_format::R64_SINT:
-        return VK_FORMAT_R64_SINT;
-    case gal_texture_format::R64_SFLOAT:
-        return VK_FORMAT_R64_SFLOAT;
-    case gal_texture_format::R64G64_UINT:
-        return VK_FORMAT_R64G64_UINT;
-    case gal_texture_format::R64G64_SINT:
-        return VK_FORMAT_R64G64_SINT;
-    case gal_texture_format::R64G64_SFLOAT:
-        return VK_FORMAT_R64G64_SFLOAT;
-    case gal_texture_format::R64G64B64_UINT:
-        return VK_FORMAT_R64G64B64_UINT;
-    case gal_texture_format::R64G64B64_SINT:
-        return VK_FORMAT_R64G64B64_SINT;
-    case gal_texture_format::R64G64B64_SFLOAT:
-        return VK_FORMAT_R64G64B64_SFLOAT;
-    case gal_texture_format::R64G64B64A64_UINT:
-        return VK_FORMAT_R64G64B64A64_UINT;
-    case gal_texture_format::R64G64B64A64_SINT:
-        return VK_FORMAT_R64G64B64A64_SINT;
-    case gal_texture_format::R64G64B64A64_SFLOAT:
-        return VK_FORMAT_R64G64B64A64_SFLOAT;
-
-    case gal_texture_format::B10G10R10A2_UNORM:
-        return VK_FORMAT_A2R10G10B10_UNORM_PACK32;
-    case gal_texture_format::B10G10R10A2_UINT:
-        return VK_FORMAT_A2R10G10B10_UINT_PACK32;
-    case gal_texture_format::R10G10B10A2_UNORM:
-        return VK_FORMAT_A2B10G10R10_UNORM_PACK32;
-    case gal_texture_format::R10G10B10A2_UINT:
-        return VK_FORMAT_A2B10G10R10_UINT_PACK32;
-
-    case gal_texture_format::B10G11R11_UFLOAT:
-        return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
-    case gal_texture_format::E5B9G9R9_UFLOAT:
-        return VK_FORMAT_E5B9G9R9_UFLOAT_PACK32;
-
-    case gal_texture_format::G16B16G16R16_422_UNORM:
-        return VK_FORMAT_G16B16G16R16_422_UNORM;
-    case gal_texture_format::B16G16R16G16_422_UNORM:
-        return VK_FORMAT_B16G16R16G16_422_UNORM;
-    case gal_texture_format::R12X4G12X4B12X4A12X4_UNORM_4PACK16:
-        return VK_FORMAT_R12X4G12X4B12X4A12X4_UNORM_4PACK16;
-    case gal_texture_format::G12X4B12X4G12X4R12X4_422_UNORM_4PACK16:
-        return VK_FORMAT_G12X4B12X4G12X4R12X4_422_UNORM_4PACK16;
-    case gal_texture_format::B12X4G12X4R12X4G12X4_422_UNORM_4PACK16:
-        return VK_FORMAT_B12X4G12X4R12X4G12X4_422_UNORM_4PACK16;
-    case gal_texture_format::R10X6G10X6B10X6A10X6_UNORM_4PACK16:
-        return VK_FORMAT_R10X6G10X6B10X6A10X6_UNORM_4PACK16;
-    case gal_texture_format::G10X6B10X6G10X6R10X6_422_UNORM_4PACK16:
-        return VK_FORMAT_G10X6B10X6G10X6R10X6_422_UNORM_4PACK16;
-    case gal_texture_format::B10X6G10X6R10X6G10X6_422_UNORM_4PACK16:
-        return VK_FORMAT_B10X6G10X6R10X6G10X6_422_UNORM_4PACK16;
-    case gal_texture_format::G8B8G8R8_422_UNORM:
-        return VK_FORMAT_G8B8G8R8_422_UNORM;
-    case gal_texture_format::B8G8R8G8_422_UNORM:
-        return VK_FORMAT_B8G8R8G8_422_UNORM;
-    case gal_texture_format::G8_B8_R8_3PLANE_420_UNORM:
-        return VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM;
-    case gal_texture_format::G8_B8R8_2PLANE_420_UNORM:
-        return VK_FORMAT_G8_B8R8_2PLANE_420_UNORM;
-    case gal_texture_format::G8_B8_R8_3PLANE_422_UNORM:
-        return VK_FORMAT_G8_B8_R8_3PLANE_422_UNORM;
-    case gal_texture_format::G8_B8R8_2PLANE_422_UNORM:
-        return VK_FORMAT_G8_B8R8_2PLANE_422_UNORM;
-    case gal_texture_format::G8_B8_R8_3PLANE_444_UNORM:
-        return VK_FORMAT_G8_B8_R8_3PLANE_444_UNORM;
-    case gal_texture_format::G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16:
-        return VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16;
-    case gal_texture_format::G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16:
-        return VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16;
-    case gal_texture_format::G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16:
-        return VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16;
-    case gal_texture_format::G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16:
-        return VK_FORMAT_G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16;
-    case gal_texture_format::G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16:
-        return VK_FORMAT_G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16;
-    case gal_texture_format::G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16:
-        return VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16;
-    case gal_texture_format::G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16:
-        return VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16;
-    case gal_texture_format::G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16:
-        return VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16;
-    case gal_texture_format::G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16:
-        return VK_FORMAT_G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16;
-    case gal_texture_format::G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16:
-        return VK_FORMAT_G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16;
-    case gal_texture_format::G16_B16_R16_3PLANE_420_UNORM:
-        return VK_FORMAT_G16_B16_R16_3PLANE_420_UNORM;
-    case gal_texture_format::G16_B16_R16_3PLANE_422_UNORM:
-        return VK_FORMAT_G16_B16_R16_3PLANE_422_UNORM;
-    case gal_texture_format::G16_B16_R16_3PLANE_444_UNORM:
-        return VK_FORMAT_G16_B16_R16_3PLANE_444_UNORM;
-    case gal_texture_format::G16_B16R16_2PLANE_420_UNORM:
-        return VK_FORMAT_G16_B16R16_2PLANE_420_UNORM;
-    case gal_texture_format::G16_B16R16_2PLANE_422_UNORM:
-        return VK_FORMAT_G16_B16R16_2PLANE_422_UNORM;
-
-    case gal_texture_format::D16_UNORM:
-        return VK_FORMAT_D16_UNORM;
-    case gal_texture_format::X8_D24_UNORM:
-        return VK_FORMAT_X8_D24_UNORM_PACK32;
-    case gal_texture_format::D32_SFLOAT:
-        return VK_FORMAT_D32_SFLOAT;
-    case gal_texture_format::S8_UINT:
-        return VK_FORMAT_S8_UINT;
-    case gal_texture_format::D16_UNORM_S8_UINT:
-        return VK_FORMAT_D16_UNORM_S8_UINT;
-    case gal_texture_format::D24_UNORM_S8_UINT:
-        return VK_FORMAT_D24_UNORM_S8_UINT;
-    case gal_texture_format::D32_SFLOAT_S8_UINT:
-        return VK_FORMAT_D32_SFLOAT_S8_UINT;
-    case gal_texture_format::DXBC1_RGB_UNORM:
-        return VK_FORMAT_BC1_RGB_UNORM_BLOCK;
-    case gal_texture_format::DXBC1_RGB_SRGB:
-        return VK_FORMAT_BC1_RGB_SRGB_BLOCK;
-    case gal_texture_format::DXBC1_RGBA_UNORM:
-        return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
-    case gal_texture_format::DXBC1_RGBA_SRGB:
-        return VK_FORMAT_BC1_RGBA_SRGB_BLOCK;
-    case gal_texture_format::DXBC2_UNORM:
-        return VK_FORMAT_BC2_UNORM_BLOCK;
-    case gal_texture_format::DXBC2_SRGB:
-        return VK_FORMAT_BC2_SRGB_BLOCK;
-    case gal_texture_format::DXBC3_UNORM:
-        return VK_FORMAT_BC3_UNORM_BLOCK;
-    case gal_texture_format::DXBC3_SRGB:
-        return VK_FORMAT_BC3_SRGB_BLOCK;
-    case gal_texture_format::DXBC4_UNORM:
-        return VK_FORMAT_BC4_UNORM_BLOCK;
-    case gal_texture_format::DXBC4_SNORM:
-        return VK_FORMAT_BC4_SNORM_BLOCK;
-    case gal_texture_format::DXBC5_UNORM:
-        return VK_FORMAT_BC5_UNORM_BLOCK;
-    case gal_texture_format::DXBC5_SNORM:
-        return VK_FORMAT_BC5_SNORM_BLOCK;
-    case gal_texture_format::DXBC6H_UFLOAT:
-        return VK_FORMAT_BC6H_UFLOAT_BLOCK;
-    case gal_texture_format::DXBC6H_SFLOAT:
-        return VK_FORMAT_BC6H_SFLOAT_BLOCK;
-    case gal_texture_format::DXBC7_UNORM:
-        return VK_FORMAT_BC7_UNORM_BLOCK;
-    case gal_texture_format::DXBC7_SRGB:
-        return VK_FORMAT_BC7_SRGB_BLOCK;
-    case gal_texture_format::PVRTC1_2BPP_UNORM:
-        return VK_FORMAT_PVRTC1_2BPP_UNORM_BLOCK_IMG;
-    case gal_texture_format::PVRTC1_4BPP_UNORM:
-        return VK_FORMAT_PVRTC1_4BPP_UNORM_BLOCK_IMG;
-    case gal_texture_format::PVRTC1_2BPP_SRGB:
-        return VK_FORMAT_PVRTC1_2BPP_SRGB_BLOCK_IMG;
-    case gal_texture_format::PVRTC1_4BPP_SRGB:
-        return VK_FORMAT_PVRTC1_4BPP_SRGB_BLOCK_IMG;
-    case gal_texture_format::ETC2_R8G8B8_UNORM:
-        return VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK;
-    case gal_texture_format::ETC2_R8G8B8A1_UNORM:
-        return VK_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK;
-    case gal_texture_format::ETC2_R8G8B8A8_UNORM:
-        return VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK;
-    case gal_texture_format::ETC2_R8G8B8_SRGB:
-        return VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK;
-    case gal_texture_format::ETC2_R8G8B8A1_SRGB:
-        return VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK;
-    case gal_texture_format::ETC2_R8G8B8A8_SRGB:
-        return VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK;
-    case gal_texture_format::ETC2_EAC_R11_UNORM:
-        return VK_FORMAT_EAC_R11_UNORM_BLOCK;
-    case gal_texture_format::ETC2_EAC_R11G11_UNORM:
-        return VK_FORMAT_EAC_R11G11_UNORM_BLOCK;
-    case gal_texture_format::ETC2_EAC_R11_SNORM:
-        return VK_FORMAT_EAC_R11_SNORM_BLOCK;
-    case gal_texture_format::ETC2_EAC_R11G11_SNORM:
-        return VK_FORMAT_EAC_R11G11_SNORM_BLOCK;
-    case gal_texture_format::ASTC_4x4_UNORM:
-        return VK_FORMAT_ASTC_4x4_UNORM_BLOCK;
-    case gal_texture_format::ASTC_4x4_SRGB:
-        return VK_FORMAT_ASTC_4x4_SRGB_BLOCK;
-    case gal_texture_format::ASTC_5x4_UNORM:
-        return VK_FORMAT_ASTC_5x4_UNORM_BLOCK;
-    case gal_texture_format::ASTC_5x4_SRGB:
-        return VK_FORMAT_ASTC_5x4_SRGB_BLOCK;
-    case gal_texture_format::ASTC_5x5_UNORM:
-        return VK_FORMAT_ASTC_5x5_UNORM_BLOCK;
-    case gal_texture_format::ASTC_5x5_SRGB:
-        return VK_FORMAT_ASTC_5x5_SRGB_BLOCK;
-    case gal_texture_format::ASTC_6x5_UNORM:
-        return VK_FORMAT_ASTC_6x5_UNORM_BLOCK;
-    case gal_texture_format::ASTC_6x5_SRGB:
-        return VK_FORMAT_ASTC_6x5_SRGB_BLOCK;
-    case gal_texture_format::ASTC_6x6_UNORM:
-        return VK_FORMAT_ASTC_6x6_UNORM_BLOCK;
-    case gal_texture_format::ASTC_6x6_SRGB:
-        return VK_FORMAT_ASTC_6x6_SRGB_BLOCK;
-    case gal_texture_format::ASTC_8x5_UNORM:
-        return VK_FORMAT_ASTC_8x5_UNORM_BLOCK;
-    case gal_texture_format::ASTC_8x5_SRGB:
-        return VK_FORMAT_ASTC_8x5_SRGB_BLOCK;
-    case gal_texture_format::ASTC_8x6_UNORM:
-        return VK_FORMAT_ASTC_8x6_UNORM_BLOCK;
-    case gal_texture_format::ASTC_8x6_SRGB:
-        return VK_FORMAT_ASTC_8x6_SRGB_BLOCK;
-    case gal_texture_format::ASTC_8x8_UNORM:
-        return VK_FORMAT_ASTC_8x8_UNORM_BLOCK;
-    case gal_texture_format::ASTC_8x8_SRGB:
-        return VK_FORMAT_ASTC_8x8_SRGB_BLOCK;
-    case gal_texture_format::ASTC_10x5_UNORM:
-        return VK_FORMAT_ASTC_10x5_UNORM_BLOCK;
-    case gal_texture_format::ASTC_10x5_SRGB:
-        return VK_FORMAT_ASTC_10x5_SRGB_BLOCK;
-    case gal_texture_format::ASTC_10x6_UNORM:
-        return VK_FORMAT_ASTC_10x6_UNORM_BLOCK;
-    case gal_texture_format::ASTC_10x6_SRGB:
-        return VK_FORMAT_ASTC_10x6_SRGB_BLOCK;
-    case gal_texture_format::ASTC_10x8_UNORM:
-        return VK_FORMAT_ASTC_10x8_UNORM_BLOCK;
-    case gal_texture_format::ASTC_10x8_SRGB:
-        return VK_FORMAT_ASTC_10x8_SRGB_BLOCK;
-    case gal_texture_format::ASTC_10x10_UNORM:
-        return VK_FORMAT_ASTC_10x10_UNORM_BLOCK;
-    case gal_texture_format::ASTC_10x10_SRGB:
-        return VK_FORMAT_ASTC_10x10_SRGB_BLOCK;
-    case gal_texture_format::ASTC_12x10_UNORM:
-        return VK_FORMAT_ASTC_12x10_UNORM_BLOCK;
-    case gal_texture_format::ASTC_12x10_SRGB:
-        return VK_FORMAT_ASTC_12x10_SRGB_BLOCK;
-    case gal_texture_format::ASTC_12x12_UNORM:
-        return VK_FORMAT_ASTC_12x12_UNORM_BLOCK;
-    case gal_texture_format::ASTC_12x12_SRGB:
-        return VK_FORMAT_ASTC_12x12_SRGB_BLOCK;
-    case gal_texture_format::PVRTC2_2BPP_UNORM:
-        return VK_FORMAT_PVRTC2_2BPP_UNORM_BLOCK_IMG;
-    case gal_texture_format::PVRTC2_4BPP_UNORM:
-        return VK_FORMAT_PVRTC2_4BPP_UNORM_BLOCK_IMG;
-    case gal_texture_format::PVRTC2_2BPP_SRGB:
-        return VK_FORMAT_PVRTC2_2BPP_SRGB_BLOCK_IMG;
-    case gal_texture_format::PVRTC2_4BPP_SRGB:
-        return VK_FORMAT_PVRTC2_4BPP_SRGB_BLOCK_IMG;
-
-    default:
-        return VK_FORMAT_UNDEFINED;
-    }
-}
-
-constexpr void load_gal_vk_functions() {
-#define VK_LOAD_FUNCTION_PTRS
-#include "../helper/helper_macro.h"
-#undef VK_LOAD_FUNCTION_PTRS
-}
-
-constexpr void offload_gal_vk_functions(){
-#define VK_OFFLOAD_FUNCTION_PTRS
-#include "../helper/helper_macro.h"
-#undef VK_LOAD_FUNCTION_PTRS
-}
-
-gal_error_code vk_init_gal(gal_context *context) {
-    *context = reinterpret_cast<gal_handle>(new vk_context);
+gal_error_code vk_init_gal(gal_context *_context) {
+    *_context = reinterpret_cast<gal_context>(new vk_context);
     load_gal_vk_functions();
-    if (*context == gal_null) {
+    if (*_context == gal_null) {
         return gal_error_code::error;
     }
     return gal_error_code::success;
 }
 
-gal_error_code vk_destroy_gal(gal_context context) {
-    if (context != gal_null) {
-        vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
+gal_error_code vk_destroy_gal(gal_context _context) {
+    if (_context != gal_null) {
+        vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
         delete vk_ctx;
-        context = gal_null;
+        _context = gal_null;
         offload_gal_vk_functions();
     }
     return gal_error_code::success;
 }
 
-gal_error_code vk_create_instance(GalDesc *gal_desc, gal_context *context) {
-    vk_context *vk_ctx = reinterpret_cast<vk_context *>(*context);
+gal_error_code vk_create_instance(gal_desc *gal_desc, gal_context *_context) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(*_context);
 
     auto stack_memory = ant::get_stack_memory_resource(2048);
     ant::vector<const char *> required_instance_layers(&stack_memory);
@@ -1546,14 +129,14 @@ gal_error_code vk_create_instance(GalDesc *gal_desc, gal_context *context) {
         return gal_error_code::error;
     }
 }
-gal_error_code vk_destroy_instance(gal_context *context) {
-    vk_context *vk_ctx = reinterpret_cast<vk_context *>(*context);
+gal_error_code vk_destroy_instance(gal_context *_context) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(*_context);
 
     vkDestroyInstance(vk_ctx->instance, nullptr);
     return gal_error_code::success;
 }
-gal_error_code vk_create_device(GalDesc *gal_desc, gal_context *context) {
-    vk_context *vk_ctx = reinterpret_cast<vk_context *>(*context);
+gal_error_code vk_create_device(gal_desc *gal_desc, gal_context *_context) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(*_context);
 
     auto stack_memory = ant::get_stack_memory_resource(1024u);
     ant::vector<const char *> required_device_extensions(&stack_memory);
@@ -1613,7 +196,7 @@ gal_error_code vk_create_device(GalDesc *gal_desc, gal_context *context) {
                 // Dedicated queue for compute
                 // Try to find a queue family index that supports compute but not graphics
                 if (queue_type == gal_queue_type::compute) {
-                    for (uint32_t i = 0; i < static_cast<uint32_t>(queue_family_properties.size()); i++) {
+                    for (u32 i = 0; i < static_cast<u32>(queue_family_properties.size()); i++) {
                         if ((queue_family_properties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) &&
                             ((queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0)) {
                             return i;
@@ -1624,7 +207,7 @@ gal_error_code vk_create_device(GalDesc *gal_desc, gal_context *context) {
                 // Dedicated queue for transfer
                 // Try to find a queue family index that supports transfer but not graphics and compute
                 if (queue_type == gal_queue_type::transfer) {
-                    for (uint32_t i = 0; i < static_cast<uint32_t>(queue_family_properties.size()); i++) {
+                    for (u32 i = 0; i < static_cast<u32>(queue_family_properties.size()); i++) {
                         if ((queue_family_properties[i].queueFlags & VK_QUEUE_TRANSFER_BIT) &&
                             ((queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0) &&
                             ((queue_family_properties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) == 0)) {
@@ -1786,15 +369,15 @@ gal_error_code vk_create_device(GalDesc *gal_desc, gal_context *context) {
     return gal_error_code::success;
 }
 
-gal_error_code vk_destroy_device(gal_context *context) {
-    vk_context *vk_ctx = reinterpret_cast<vk_context *>(*context);
+gal_error_code vk_destroy_device(gal_context *_context) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(*_context);
 
     vkDestroyDevice(vk_ctx->device, nullptr);
     return gal_error_code::success;
 }
 
-gal_error_code vk_create_memory_allocator(gal_context *context) {
-    vk_context *vk_ctx = reinterpret_cast<vk_context *>(*context);
+gal_error_code vk_create_memory_allocator(gal_context *_context) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(*_context);
 
     VmaVulkanFunctions vulkan_functions{};
     vulkan_functions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
@@ -1808,48 +391,47 @@ gal_error_code vk_create_memory_allocator(gal_context *context) {
     vma_create_info.vulkanApiVersion = ANT_VK_API_VERSION;
     VkResult result = vmaCreateAllocator(&vma_create_info, &vk_ctx->vma_allocator);
 
-    if (result == VK_SUCCESS && vk_ctx->vma_allocator != nullptr) {
+    if (result == VK_SUCCESS && vk_ctx->vma_allocator != VK_NULL_HANDLE) {
         return gal_error_code::success;
     } else {
         return gal_error_code::error;
     }
 }
-gal_error_code vk_destroy_memory_allocator(gal_context *context) {
-    vk_context *vk_ctx = reinterpret_cast<vk_context *>(*context);
+gal_error_code vk_destroy_memory_allocator(gal_context *_context) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(*_context);
 
     vmaDestroyAllocator(vk_ctx->vma_allocator);
     return gal_error_code::success;
 }
 
-gal_error_code vk_create_buffer(gal_context context, gal_buffer_desc *desc, gal_buffer *buffer) {
-    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    *buffer = reinterpret_cast<gal_handle>(new ant::gal::vk_buffer);
+gal_error_code vk_create_buffer(gal_context _context, gal_buffer_desc *_desc, gal_buffer *buffer) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
+    *buffer = reinterpret_cast<gal_buffer>(new ant::gal::vk_buffer);
     vk_buffer *vk_buf = reinterpret_cast<vk_buffer *>(*buffer);
 
     reinterpret_cast<vk_buffer *>(buffer);
 
     VkBufferCreateInfo buffer_create_info{};
     buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buffer_create_info.size = desc->size;
-    buffer_create_info.usage = util_to_vk_buffer_usage(desc->resource_types);
+    buffer_create_info.size = _desc->size;
+    buffer_create_info.usage = util_to_vk_buffer_usage(_desc->resource_types);
 
     VmaAllocationCreateInfo alloc_info = {};
     alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
 
-    if (desc->memory_flag == gal_memory_flag::gpu_dedicated) {
+    if (_desc->memory_flags & gal_memory_flag::gpu_dedicated) {
         alloc_info.requiredFlags |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    } else if (desc->memory_flag == gal_memory_flag::cpu_upload) {
+    }
+    if (_desc->memory_flags & gal_memory_flag::cpu_upload) {
         alloc_info.requiredFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-
-    } else if (desc->memory_flag == gal_memory_flag::gpu_download) {
+    }
+    if (_desc->memory_flags & gal_memory_flag::gpu_download) {
         alloc_info.requiredFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-    } else {
-        return gal_error_code::invalid_parameter;
     }
 
-    if (desc->flags & gal_buffer_flag::bcf_own_memory) {
+    if (_desc->flags & gal_buffer_flag::bcf_own_memory) {
         alloc_info.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
-    } else if (desc->flags & gal_buffer_flag::bcf_persistent_map) {
+    } else if (_desc->flags & gal_buffer_flag::bcf_persistent_map) {
         alloc_info.flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
     }
 
@@ -1863,8 +445,8 @@ gal_error_code vk_create_buffer(gal_context context, gal_buffer_desc *desc, gal_
     return gal_error_code::success;
 }
 
-gal_error_code vk_destroy_buffer(gal_context context, gal_buffer buffer) {
-    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
+gal_error_code vk_destroy_buffer(gal_context _context, gal_buffer buffer) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
 
     if (buffer != gal_null) {
         vk_buffer *vk_buf = reinterpret_cast<vk_buffer *>(buffer);
@@ -1876,30 +458,30 @@ gal_error_code vk_destroy_buffer(gal_context context, gal_buffer buffer) {
     return gal_error_code::success;
 }
 
-gal_error_code vk_create_texture(gal_context context, gal_texture_desc *desc, gal_texture *texture) {
-    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    *texture = reinterpret_cast<gal_handle>(new ant::gal::vk_texture);
+gal_error_code vk_create_texture(gal_context _context, gal_texture_desc *_desc, gal_texture *texture) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
+    *texture = reinterpret_cast<gal_texture>(new ant::gal::vk_texture);
     vk_texture *vk_tex = reinterpret_cast<vk_texture *>(*texture);
 
-    u32 array_size = desc->array_size > 1u ? desc->array_size : 1u;
-    u32 depth = desc->depth > 1u ? desc->depth : 1u;
-    bool b_is_cubemap = (desc->resource_types & gal_resource_type::rt_texture_cube) && desc->array_size == 6;
+    u32 array_size = _desc->array_size > 1u ? _desc->array_size : 1u;
+    u32 depth = _desc->depth > 1u ? _desc->depth : 1u;
+    bool b_is_cubemap = (_desc->resource_types & gal_resource_type::rt_texture_cube) && _desc->array_size == 6;
     VkImageCreateInfo image_create_info{};
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_create_info.imageType = utils_to_vk_image_type(desc->dimension);
-    image_create_info.extent.width = desc->width;
-    image_create_info.extent.height = desc->height;
+    image_create_info.imageType = utils_to_vk_image_type(_desc->dimension);
+    image_create_info.extent.width = _desc->width;
+    image_create_info.extent.height = _desc->height;
     image_create_info.extent.depth = depth;
-    image_create_info.mipLevels = desc->mip_level;
+    image_create_info.mipLevels = _desc->mip_level;
     image_create_info.arrayLayers = array_size;
-    image_create_info.format = utils_to_vk_image_format(desc->format);
+    image_create_info.format = galtextureformat_to_vkformat(_desc->format);
     image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    image_create_info.flags = 0; //utils_to_vk_image_creation_flags(desc->resource_types);
-    image_create_info.usage = utils_to_vk_image_usage(desc->resource_types, desc->memory_flag);
-    image_create_info.samples = utils_to_vk_sample_count_flags(desc->sample_count);
+    image_create_info.flags = 0; //utils_to_vk_image_creation_flags(_desc->resource_types);
+    image_create_info.usage = utils_to_vk_image_usage(_desc->resource_types, _desc->memory_flags);
+    image_create_info.samples = utils_to_vk_sample_count_flags(_desc->sample_count);
 
-    if (desc->dimension == gal_texture_dimension::td_2D) {
+    if (_desc->dimension == gal_texture_dimension::td_2D) {
         image_create_info.flags |= VK_IMAGE_CREATE_2D_VIEW_COMPATIBLE_BIT_EXT;
     }
 
@@ -1920,20 +502,20 @@ gal_error_code vk_create_texture(gal_context context, gal_texture_desc *desc, ga
     // Verify that GPU supports this format
     VkFormatFeatureFlags format_features = util_vk_image_usage_to_format_features(image_create_info.usage);
 
-    if (format_props.optimalTilingFeatures & format_features) {
+    if (!(format_props.optimalTilingFeatures & format_features)) {
         return gal_error_code::error;
     }
     VmaAllocationCreateInfo allocation_create_info{};
     allocation_create_info.usage = VMA_MEMORY_USAGE_AUTO;
 
-    if (desc->memory_flag == gal_memory_flag::gpu_dedicated) {
+    if (_desc->memory_flags & gal_memory_flag::gpu_dedicated) {
         allocation_create_info.requiredFlags |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    } else if (desc->memory_flag == gal_memory_flag::cpu_upload) {
+    }
+    if (_desc->memory_flags & gal_memory_flag::cpu_upload) {
         allocation_create_info.requiredFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-    } else if (desc->memory_flag == gal_memory_flag::gpu_download) {
+    }
+    if (_desc->memory_flags & gal_memory_flag::gpu_download) {
         allocation_create_info.requiredFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-    } else {
-        return gal_error_code::invalid_parameter;
     }
 
     VkResult result = vmaCreateImage(vk_ctx->vma_allocator, &image_create_info, &allocation_create_info, &vk_tex->image,
@@ -1942,89 +524,123 @@ gal_error_code vk_create_texture(gal_context context, gal_texture_desc *desc, ga
         return gal_error_code::error;
     }
 
-    // create view form shader resources
-    if (desc->resource_types & gal_resource_type::rt_texture ||
-        desc->resource_types & gal_resource_type::rt_rw_texture) {
-
-        VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
-
-        if (array_size > 1) {
-            if (desc->dimension == gal_texture_dimension::td_1D) {
-                view_type = VK_IMAGE_VIEW_TYPE_1D_ARRAY;
-            }
-            if (desc->dimension == gal_texture_dimension::td_2D) {
-
-                view_type = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-            }
-            if (b_is_cubemap) {
-                view_type = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
-            }
-        } else {
-            if (desc->dimension == gal_texture_dimension::td_1D) {
-                view_type = VK_IMAGE_VIEW_TYPE_1D;
-            }
-            if (desc->dimension == gal_texture_dimension::td_2D) {
-
-                view_type = VK_IMAGE_VIEW_TYPE_2D;
-            }
-            if (desc->dimension == gal_texture_dimension::td_3D) {
-                view_type = VK_IMAGE_VIEW_TYPE_3D;
-            }
-            if (b_is_cubemap) {
-                view_type = VK_IMAGE_VIEW_TYPE_CUBE;
-            }
-        }
-
-        VkImageViewCreateInfo srvDesc = {};
-        // SRV
-        srvDesc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        srvDesc.pNext = nullptr;
-        srvDesc.flags = 0;
-        srvDesc.image = vk_tex->image;
-        srvDesc.viewType = view_type;
-        srvDesc.format = galtextureformat_to_vkformat(desc->format);
-        srvDesc.components.r = VK_COMPONENT_SWIZZLE_R;
-        srvDesc.components.g = VK_COMPONENT_SWIZZLE_G;
-        srvDesc.components.b = VK_COMPONENT_SWIZZLE_B;
-        srvDesc.components.a = VK_COMPONENT_SWIZZLE_A;
-        srvDesc.subresourceRange.aspectMask =
-            util_vk_determine_aspect_mask(srvDesc.format, gal_tf_has_stencil(desc->format));
-        srvDesc.subresourceRange.baseMipLevel = 0;
-        srvDesc.subresourceRange.levelCount = desc->mip_level;
-        srvDesc.subresourceRange.baseArrayLayer = 0;
-        srvDesc.subresourceRange.layerCount = array_size;
-
-        result = (vkCreateImageView(vk_ctx->device, &srvDesc, nullptr, &vk_tex->image_view));
-        if (result != VK_SUCCESS || vk_tex->image == VK_NULL_HANDLE || vk_tex->allocation == VK_NULL_HANDLE) {
-            return gal_error_code::error;
-        }
-    }
-
     return gal_error_code::success;
 }
+//gal_error_code vk_create_srvuav(gal_context _context, gal_texture texture)
+//gal_error_code vk_create_srvuav(gal_context _context, gal_buffer buffer)
+//{
+//    // create view form shader resources
+//    if (_desc->resource_types & gal_resource_type::rt_texture ||
+//        _desc->resource_types & gal_resource_type::rt_rw_texture) {
+//
+//        VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
+//
+//        if (array_size > 1) {
+//            if (_desc->dimension == gal_texture_dimension::td_1D) {
+//                view_type = VK_IMAGE_VIEW_TYPE_1D_ARRAY;
+//            }
+//            if (_desc->dimension == gal_texture_dimension::td_2D) {
+//
+//                view_type = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+//            }
+//            if (b_is_cubemap) {
+//                view_type = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+//            }
+//        } else {
+//            if (_desc->dimension == gal_texture_dimension::td_1D) {
+//                view_type = VK_IMAGE_VIEW_TYPE_1D;
+//            }
+//            if (_desc->dimension == gal_texture_dimension::td_2D) {
+//
+//                view_type = VK_IMAGE_VIEW_TYPE_2D;
+//            }
+//            if (_desc->dimension == gal_texture_dimension::td_3D) {
+//                view_type = VK_IMAGE_VIEW_TYPE_3D;
+//            }
+//            if (b_is_cubemap) {
+//                view_type = VK_IMAGE_VIEW_TYPE_CUBE;
+//            }
+//        }
+//
+//        VkImageViewCreateInfo srvDesc = {};
+//        // SRV
+//        srvDesc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+//        srvDesc.pNext = nullptr;
+//        srvDesc.flags = 0;
+//        srvDesc.image = vk_tex->image;
+//        srvDesc.viewType = view_type;
+//        srvDesc.format = galtextureformat_to_vkformat(_desc->format);
+//        srvDesc.components.r = VK_COMPONENT_SWIZZLE_R;
+//        srvDesc.components.g = VK_COMPONENT_SWIZZLE_G;
+//        srvDesc.components.b = VK_COMPONENT_SWIZZLE_B;
+//        srvDesc.components.a = VK_COMPONENT_SWIZZLE_A;
+//        srvDesc.subresourceRange.aspectMask =
+//            util_vk_determine_aspect_mask(srvDesc.format, gal_tf_has_stencil(_desc->format));
+//        srvDesc.subresourceRange.baseMipLevel = 0;
+//        srvDesc.subresourceRange.levelCount = _desc->mip_level;
+//        srvDesc.subresourceRange.baseArrayLayer = 0;
+//        srvDesc.subresourceRange.layerCount = array_size;
+//
+//        result = (vkCreateImageView(vk_ctx->device, &srvDesc, nullptr, &vk_tex->image_view));
+//        if (result != VK_SUCCESS || vk_tex->image == VK_NULL_HANDLE || vk_tex->allocation == VK_NULL_HANDLE) {
+//            return gal_error_code::error;
+//        }
+//    }
+//}
 
-gal_error_code vk_destroy_texture(gal_context context, gal_texture texture) {
-    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
+gal_error_code vk_destroy_texture(gal_context _context, gal_texture texture) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
     if (texture != gal_null) {
         vk_texture *vk_tex = reinterpret_cast<vk_texture *>(texture);
         vmaDestroyImage(vk_ctx->vma_allocator, vk_tex->image, vk_tex->allocation);
-        vkDestroyImageView(vk_ctx->device, vk_tex->image_view, nullptr);
+        //vkDestroyImageView(vk_ctx->device, vk_tex->image_view, nullptr);
         delete vk_tex;
         texture = gal_null;
     }
     return gal_error_code::success;
 }
 
-gal_error_code vk_create_sampler() {
-    //vkCreateSampler();
+gal_error_code vk_create_sampler(gal_context _context, gal_sampler_desc *sampler_desc, gal_sampler *sampler) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
+    *sampler = reinterpret_cast<gal_sampler>(new ant::gal::vk_sampler);
+    vk_sampler *vk_spl = reinterpret_cast<vk_sampler *>(*sampler);
+    VkSamplerCreateInfo sampler_create_info{};
+    sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sampler_create_info.flags = 0;
+    sampler_create_info.minFilter = utils_to_vk_filter(sampler_desc->min_filter);
+    sampler_create_info.magFilter = utils_to_vk_filter(sampler_desc->mag_filter);
+    sampler_create_info.mipmapMode = utils_to_vk_mip_map_mode(sampler_desc->mip_mode);
+    sampler_create_info.addressModeU = utils_to_vk_address_mode(sampler_desc->address_mode_u);
+    sampler_create_info.addressModeV = utils_to_vk_address_mode(sampler_desc->address_mode_v);
+    sampler_create_info.addressModeW = utils_to_vk_address_mode(sampler_desc->address_mode_w);
+    //sampler_create_info.borderColor; TODO(hyl5):border color
+
+    sampler_create_info.minLod = sampler_desc->min_lod;
+    sampler_create_info.maxLod = sampler_desc->max_lod;
+    sampler_create_info.maxAnisotropy = sampler_desc->max_anisotropy;
+    sampler_create_info.compareEnable = sampler_desc->compare_mode != gal_compare_mode::undefined;
+    sampler_create_info.compareOp = utils_to_vk_compare_op(sampler_desc->compare_mode);
+    sampler_create_info.mipLodBias = sampler_desc->mip_lod_bias;
+    VkResult result = vkCreateSampler(vk_ctx->device, &sampler_create_info, nullptr, &vk_spl->sampler);
+    if (result != VK_SUCCESS || vk_spl->sampler == VK_NULL_HANDLE) {
+
+        return gal_error_code::error;
+    }
     return gal_error_code::success;
 }
-gal_error_code vk_destroy_sampler() {
-    //vkDestroySampler();
+
+gal_error_code vk_destroy_sampler(gal_context _context, gal_sampler sampler) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
+    if (sampler != gal_null) {
+        vk_sampler *vk_spl = reinterpret_cast<vk_sampler *>(sampler);
+        vkDestroySampler(vk_ctx->device, vk_spl->sampler, nullptr);
+        delete vk_spl;
+        sampler = gal_null;
+    }
     return gal_error_code::success;
 }
 gal_error_code vk_create_rendertarget() {
-    // fill some rendertarget desc
+    // fill some rendertarget _desc
     //vk_create_texture();
     return gal_error_code::success;
 }
@@ -2059,19 +675,315 @@ gal_error_code vk_destroy_shader() {
     //vkDestroyShaderModule();
     return gal_error_code::success;
 }
-gal_error_code vk_create_pipeline() {
-    //vkCreateGraphicsPipelines();
-    //vkCreateComputePipelines();
+
+gal_error_code vk_create_pipelinecache(gal_context _context, gal_pipelinecache_desc *_desc,
+                                       gal_pipelinecache *pipelinecache) {
+    if (_context && _desc && pipelinecache) {
+
+        return gal_error_code::success;
+    }
+    return gal_error_code::success;
+#if 0
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
+    *pipelinecache = reinterpret_cast<gal_pipelinecache>(new ant::gal::vk_pipelinecache);
+    vk_pipelinecache *vk_pc = reinterpret_cast<vk_pipelinecache *>(*pipelinecache);
+
+    if (ant::io::is_file(_desc->filename)) {
+        ant::vector<u8> file_bin = ant::io::read_binary_file(_desc->filename);
+        VkPipelineCacheCreateInfo ci{};
+        ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+        ci.initialDataSize = file_bin.size();
+        ci.pInitialData = file_bin.data();
+        VkResult result = vkCreatePipelineCache(vk_ctx->device, &ci, nullptr, &vk_pc->pipeline_cache);
+        if (result != VK_SUCCESS || vk_pc->pipeline_cache == VK_NULL_HANDLE) {
+
+            return gal_error_code::error;
+        }
+    }
     return gal_error_code::success;
 }
+
+gal_error_code vk_create_compute_pipeline(gal_context _context, gal_compute_pipeline_desc *_desc,
+                                          gal_pipeline *pipeline) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
+    *pipeline = reinterpret_cast<gal_pipeline>(new ant::gal::vk_pipeline);
+    vk_pipeline *vk_pipe = reinterpret_cast<vk_pipeline *>(*pipeline);
+    vk_shader *vk_shader;
+
+    vk_rootsignature *vk_rootsignature;
+    VkPipelineShaderStageCreateInfo shader_stage_create_info{};
+    shader_stage_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shader_stage_create_info.flags = 0;
+    shader_stage_create_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    shader_stage_create_info.module = vk_shader->shader;
+    shader_stage_create_info.pName = vk_shader->entry.c_str();
+    shader_stage_create_info.pSpecializationInfo = nullptr;
+
+    VkComputePipelineCreateInfo pipeline_create_info{};
+    pipeline_create_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    pipeline_create_info.flags = 0;
+    pipeline_create_info.layout = vk_rootsignature->pipeline_layout;
+    pipeline_create_info.stage = shader_stage_create_info;
+
+    VkPipelineCache pipeline_cache = VK_NULL_HANDLE;
+
+    if (_desc->pipeline_cache != gal_null) {
+        pipeline_cache = reinterpret_cast<vk_pipelinecache *>(_desc->pipeline_cache)->pipeline_cache;
+    }
+
+    VkResult result =
+        vkCreateComputePipelines(vk_ctx->device, pipeline_cache, 1, &pipeline_create_info, nullptr, &vk_pipe->pipeline);
+    if (result != VK_SUCCESS || vk_pipe->pipeline == VK_NULL_HANDLE) {
+        return gal_error_code::error;
+    }
+    return gal_error_code::success;
+}
+gal_error_code vk_create_graphics_pipeline(gal_context _context, gal_graphics_pipeline_desc *_desc,
+                                           gal_pipeline *pipeline) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
+    *pipeline = reinterpret_cast<gal_pipeline>(new ant::gal::vk_pipeline);
+    vk_pipeline *vk_pipe = reinterpret_cast<vk_pipeline *>(*pipeline);
+    VkGraphicsPipelineCreateInfo pipeline_create_info{};
+    gal_shader *pShaderProgram = _desc->pShaderProgram;
+    VertexLayout *pVertexLayout = _desc->pVertexLayout;
+    u32 stage_count = 0;
+    VkPipelineShaderStageCreateInfo stages[5];
+    for (u32 i = 0; i < 5; ++i) {
+        ShaderStage stage_mask = (ShaderStage)(1 << i);
+        if (stage_mask == (pShaderProgram->mStages & stage_mask)) {
+            stages[stage_count].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+            stages[stage_count].pNext = NULL;
+            stages[stage_count].flags = 0;
+            stages[stage_count].pSpecializationInfo = nullptr;
+            switch (stage_mask) {
+            case SHADER_STAGE_VERT: {
+                stages[stage_count].pName =
+                    pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mVertexStageIndex]
+                        .pEntryPoint;
+                stages[stage_count].stage = VK_SHADER_STAGE_VERTEX_BIT;
+                stages[stage_count].module =
+                    pShaderProgram->mVulkan.pShaderModules[pShaderProgram->pReflection->mVertexStageIndex];
+            } break;
+            case SHADER_STAGE_TESC: {
+                stages[stage_count].pName =
+                    pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mHullStageIndex]
+                        .pEntryPoint;
+                stages[stage_count].stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+                stages[stage_count].module =
+                    pShaderProgram->mVulkan.pShaderModules[pShaderProgram->pReflection->mHullStageIndex];
+            } break;
+            case SHADER_STAGE_TESE: {
+                stages[stage_count].pName =
+                    pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mDomainStageIndex]
+                        .pEntryPoint;
+                stages[stage_count].stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+                stages[stage_count].module =
+                    pShaderProgram->mVulkan.pShaderModules[pShaderProgram->pReflection->mDomainStageIndex];
+            } break;
+            case SHADER_STAGE_GEOM: {
+                stages[stage_count].pName =
+                    pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mGeometryStageIndex]
+                        .pEntryPoint;
+                stages[stage_count].stage = VK_SHADER_STAGE_GEOMETRY_BIT;
+                stages[stage_count].module =
+                    pShaderProgram->mVulkan.pShaderModules[pShaderProgram->pReflection->mGeometryStageIndex];
+            } break;
+            case SHADER_STAGE_FRAG: {
+                stages[stage_count].pName =
+                    pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mPixelStageIndex]
+                        .pEntryPoint;
+                stages[stage_count].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+                stages[stage_count].module =
+                    pShaderProgram->mVulkan.pShaderModules[pShaderProgram->pReflection->mPixelStageIndex];
+            } break;
+            default:
+                assert(false && "Shader Stage not supported!");
+                break;
+            }
+            ++stage_count;
+        }
+    }
+
+    // Make sure there's a shader
+    assert(0 != stage_count);
+
+    u32 input_binding_count = 0;
+    VkVertexInputBindingDescription input_bindings[MAX_VERTEX_BINDINGS] = {{0}};
+    u32 input_attribute_count = 0;
+    VkVertexInputAttributeDescription input_attributes[MAX_VERTEX_ATTRIBS] = {{0}};
+
+    // Make sure there's attributes
+    if (pVertexLayout != NULL) {
+        // Ignore everything that's beyond max_vertex_attribs
+        u32 attrib_count =
+            pVertexLayout->mAttribCount > MAX_VERTEX_ATTRIBS ? MAX_VERTEX_ATTRIBS : pVertexLayout->mAttribCount;
+        u32 binding_value = UINT32_MAX;
+
+        // Initial values
+        for (u32 i = 0; i < attrib_count; ++i) {
+            const VertexAttrib *attrib = &(pVertexLayout->mAttribs[i]);
+
+            if (binding_value != attrib->mBinding) {
+                binding_value = attrib->mBinding;
+                ++input_binding_count;
+            }
+
+            input_bindings[input_binding_count - 1].binding = binding_value;
+            if (attrib->mRate == VERTEX_ATTRIB_RATE_INSTANCE) {
+                input_bindings[input_binding_count - 1].inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+            } else {
+                input_bindings[input_binding_count - 1].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+            }
+            input_bindings[input_binding_count - 1].stride += gal_tf_bit_size_of_block(attrib->mFormat) / 8;
+
+            input_attributes[input_attribute_count].location = attrib->mLocation;
+            input_attributes[input_attribute_count].binding = attrib->mBinding;
+            input_attributes[input_attribute_count].format = galtextureformat_to_vkformat(attrib->mFormat);
+            input_attributes[input_attribute_count].offset = attrib->mOffset;
+            ++input_attribute_count;
+        }
+    }
+
+    VkPipelineVertexInputStateCreateInfo vi{};
+    vi.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vi.pNext = NULL;
+    vi.flags = 0;
+    vi.vertexBindingDescriptionCount = input_binding_count;
+    vi.pVertexBindingDescriptions = input_bindings;
+    vi.vertexAttributeDescriptionCount = input_attribute_count;
+    vi.pVertexAttributeDescriptions = input_attributes;
+
+    VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    switch (_desc->mPrimitiveTopo) {
+    case PrimitiveTopology::PRIMITIVE_TOPO_POINT_LIST:
+        topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+        break;
+    case PrimitiveTopology::PRIMITIVE_TOPO_LINE_LIST:
+        topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+        break;
+    case PrimitiveTopology::PRIMITIVE_TOPO_LINE_STRIP:
+        topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+        break;
+    case PrimitiveTopology::PRIMITIVE_TOPO_TRI_STRIP:
+        topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+        break;
+    case PrimitiveTopology::PRIMITIVE_TOPO_PATCH_LIST:
+        topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
+        break;
+    case PrimitiveTopology::PRIMITIVE_TOPO_TRI_LIST:
+        topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        break;
+    default:
+        assert(false && "Primitive Topo not supported!");
+        break;
+    }
+    VkPipelineInputAssemblyStateCreateInfo ia{};
+    ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    ia.pNext = NULL;
+    ia.flags = 0;
+    ia.topology = topology;
+    ia.primitiveRestartEnable = VK_FALSE;
+
+    VkPipelineTessellationStateCreateInfo ts{};
+    if ((pShaderProgram->mStages & SHADER_STAGE_TESC) && (pShaderProgram->mStages & SHADER_STAGE_TESE)) {
+        ts.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+        ts.pNext = NULL;
+        ts.flags = 0;
+        ts.patchControlPoints =
+            pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mHullStageIndex]
+                .mNumControlPoint;
+    }
+
+    VkPipelineViewportStateCreateInfo vs{};
+    vs.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    vs.pNext = NULL;
+    vs.flags = 0;
+    // we are using dynamic viewports but we must set the count to 1
+    vs.viewportCount = 1;
+    vs.pViewports = NULL;
+    vs.scissorCount = 1;
+    vs.pScissors = NULL;
+    VkPipelineMultisampleStateCreateInfo ms{};
+    ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    ms.pNext = NULL;
+    ms.flags = 0;
+    ms.rasterizationSamples = util_to_vk_sample_count(_desc->mSampleCount);
+    ms.sampleShadingEnable = VK_FALSE;
+    ms.minSampleShading = 0.0f;
+    ms.pSampleMask = 0;
+    ms.alphaToCoverageEnable = VK_FALSE;
+    ms.alphaToOneEnable = VK_FALSE;
+
+    VkPipelineRasterizationStateCreateInfo rs;
+    rs = _desc->pRasterizerState ? util_to_rasterizer_desc(_desc->pRasterizerState) : gDefaultRasterizerDesc;
+
+    /// TODO: Dont create depth state if no depth stencil bound
+    VkPipelineDepthStencilStateCreateInfo ds{};
+    ds = _desc->pDepthState ? util_to_depth_desc(_desc->pDepthState) : gDefaultDepthDesc;
+
+    VkPipelineColorBlendStateCreateInfo cb{};
+    VkPipelineColorBlendAttachmentState cbAtt[MAX_RENDER_TARGET_ATTACHMENTS];
+    cb = _desc->pBlendState ? util_to_blend_desc(_desc->pBlendState, cbAtt) : gDefaultBlendDesc;
+    cb.attachmentCount = _desc->mRenderTargetCount;
+
+    VkDynamicState dyn_states[] = {
+        VK_DYNAMIC_STATE_VIEWPORT,     VK_DYNAMIC_STATE_SCISSOR,           VK_DYNAMIC_STATE_BLEND_CONSTANTS,
+        VK_DYNAMIC_STATE_DEPTH_BOUNDS, VK_DYNAMIC_STATE_STENCIL_REFERENCE,
+    };
+    VkPipelineDynamicStateCreateInfo dy{};
+    dy.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dy.pNext = NULL;
+    dy.flags = 0;
+    dy.dynamicStateCount = sizeof(dyn_states) / sizeof(dyn_states[0]);
+    dy.pDynamicStates = dyn_states;
+
+    VkGraphicsPipelineCreateInfo add_info{};
+    add_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    add_info.pNext = NULL;
+    add_info.flags = 0;
+    add_info.stageCount = stage_count;
+    add_info.pStages = stages;
+    add_info.pVertexInputState = &vi;
+    add_info.pInputAssemblyState = &ia;
+
+    if ((pShaderProgram->mStages & SHADER_STAGE_TESC) && (pShaderProgram->mStages & SHADER_STAGE_TESE))
+        add_info.pTessellationState = &ts;
+    else
+        add_info.pTessellationState = NULL; // set tessellation state to null if we have no tessellation
+
+    add_info.pViewportState = &vs;
+    add_info.pRasterizationState = &rs;
+    add_info.pMultisampleState = &ms;
+    add_info.pDepthStencilState = &ds;
+    add_info.pColorBlendState = &cb;
+    add_info.pDynamicState = &dy;
+    add_info.layout = _desc->pRootSignature->mVulkan.pPipelineLayout;
+    add_info.subpass = 0;
+    result = (vkCreateGraphicsPipelines(pRenderer->mVulkan.pVkDevice, psoCache, 1, &add_info, &gVkAllocationCallbacks,
+                                        &(pPipeline->mVulkan.pVkPipeline)));
+#endif
+}
+//gal_error_code vk_create_raytracing_pipeline(gal_context _context, gal_raytracing_pipeline_desc *_desc,
+//                                           gal_pipeline *pipeline) {
+//    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
+//    *pipeline = reinterpret_cast<gal_pipeline>(new ant::gal::vk_pipeline);
+//    vk_pipeline *vk_spl = reinterpret_cast<vk_pipeline *>(*pipeline);
+//    VkRayTracingPipelineCreateInfoKHR pipeline_create_info{};
+//    pipeline_create_info.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
+//    pipeline_create_info.
+//}
+
 gal_error_code vk_destroy_pipeline() {
     //vkDestroyPipeline();
     return gal_error_code::success;
 }
-gal_error_code vk_create_descriptorpool() {
-    //vkCreateDescriptorPool();
-    return gal_error_code::success;
-}
+
+struct vk_descriptorpool {
+    VkDescriptorPool pool;
+};
+//gal_error_code vk_create_descriptorpool(gal_context _context, gal_descriptorpool_desc* _desc, gal_descriptorpool* descriptorpool) {
+//    return gal_error_code::success;
+//}
 gal_error_code vk_destroy_descriptorpool() {
     //vkDestroyDescriptorPool();
     return gal_error_code::success;

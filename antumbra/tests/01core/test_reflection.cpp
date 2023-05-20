@@ -21,7 +21,7 @@ TEST_CASE("String to enum value") {
     ant::str color_name{"GREEN"};
     auto color = ant::enum_refl::enum_cast<Color>(color_name);
     REQUIRE(color.value() == Color::GREEN);
-    ant::str value{"none"};
+    ant::str value{"undefined"};
     auto color_or_default = ant::enum_refl::enum_cast<Color>(value).value_or(Color::NONE);
     REQUIRE(color_or_default == Color::NONE);
 }

@@ -101,22 +101,22 @@ constexpr D3D12_RESOURCE_STATES util_to_dx12_resource_state(gal_resource_states 
     return ret;
 }
 
-constexpr D3D12_RESOURCE_FLAGS util_to_dx12_resource_flags(gal_buffer_desc *desc) {
+constexpr D3D12_RESOURCE_FLAGS util_to_dx12_resource_flags(gal_buffer_desc *_desc) {
     D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE;
 
-    if (desc->resource_types & gal_resource_type::rt_rw_buffer) {
+    if (_desc->resource_types & gal_resource_type::rt_rw_buffer) {
         flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     }
-    if (desc->resource_types & gal_resource_type::rt_rw_texture) {
+    if (_desc->resource_types & gal_resource_type::rt_rw_texture) {
         flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     }
-    if (desc->resource_types & gal_resource_type::rt_color_rt) {
+    if (_desc->resource_types & gal_resource_type::rt_color_rt) {
         flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
     }
-    if (desc->resource_types & gal_resource_type::rt_depth_stencil_rt) {
+    if (_desc->resource_types & gal_resource_type::rt_depth_stencil_rt) {
         flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
     }
-    if (desc->memory_flag == gal_memory_flag::gpu_download) {
+    if (_desc->memory_flags & gal_memory_flag::gpu_download) {
         flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
     }
     return flags;
@@ -679,39 +679,40 @@ constexpr DXGI_FORMAT dxgiformat_to_typeless(DXGI_FORMAT fmt) {
 }
 
 constexpr void load_gal_d3d12_functions() {
-#define D3D12_LOAD_FUNCTION_PTRS
-#include "../helper/helper_macro.h"
-#undef D3D12_LOAD_FUNCTION_PTRS
+//#define D3D12_LOAD_FUNCTION_PTRS
+//#include "../helper/helper_macro.h"
+//#undef D3D12_LOAD_FUNCTION_PTRS
 }
 
 constexpr void offload_gal_d3d12_functions(){
-#define D3D12_OFFLOAD_FUNCTION_PTRS
-#include "../helper/helper_macro.h"
-#undef D3D12_OFFLOAD_FUNCTION_PTRS
+//#define D3D12_OFFLOAD_FUNCTION_PTRS
+//#include "../helper/helper_macro.h"
+//#undef D3D12_OFFLOAD_FUNCTION_PTRS
 }
 
-gal_error_code d3d12_init_gal(gal_context *context) {
-    *context = reinterpret_cast<gal_handle>(new d3d12_context);
+gal_error_code d3d12_init_gal(gal_context *_context) {
+    *_context = reinterpret_cast<gal_context>(new d3d12_context);
     load_gal_d3d12_functions();
-    if (*context == gal_null) {
+    if (*_context == gal_null) {
         return gal_error_code::error;
     }
     return gal_error_code::success;
 }
-gal_error_code d3d12_destroy_gal(gal_context context) {
-    if (context != gal_null) {
-        d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(context);
+gal_error_code d3d12_destroy_gal(gal_context _context) {
+    if (_context != gal_null) {
+        d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(_context);
         delete d3d12_ctx;
-        context = gal_null;
+        _context = gal_null;
         offload_gal_d3d12_functions();
     }
     return gal_error_code::success;
 }
-gal_error_code d3d12_create_instance(GalDesc *desc, gal_context *context) {
-    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(*context);
+#if 0
+gal_error_code d3d12_create_instance(gal_desc *_desc, gal_context *_context) {
+    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(*_context);
 
     u32 dxgi_factory_flags = 0;
-    if (desc->b_debug_layer) {
+    if (_desc->b_debug_layer) {
         ID3D12Debug1 *pDebugController;
         if (D3D12GetDebugInterface(IID_PPV_ARGS(&pDebugController)) == S_OK) {
             // Enabling GPU Validation without enabling the debug layer does nothing
@@ -733,9 +734,9 @@ gal_error_code d3d12_create_instance(GalDesc *desc, gal_context *context) {
     return gal_error_code::success;
 }
 
-gal_error_code d3d12_destroy_instance(gal_context *context) {
+gal_error_code d3d12_destroy_instance(gal_context *_context) {
 
-    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(*context);
+    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(*_context);
     if (d3d12_ctx->factory != nullptr) {
         d3d12_ctx->factory->Release();
         d3d12_ctx->factory = nullptr;
@@ -743,8 +744,8 @@ gal_error_code d3d12_destroy_instance(gal_context *context) {
     return gal_error_code::success;
 }
 
-gal_error_code d3d12_create_device(GalDesc *gal_desc, gal_context *context) {
-    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(*context);
+gal_error_code d3d12_create_device(gal_desc *gal_desc, gal_context *_context) {
+    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(*_context);
 
     auto pick_gpu = [&](IDXGIFactory6 *factory, IDXGIAdapter4 **gpu, ID3D12Device **device) -> gal_error_code {
         IDXGIAdapter4 *adapter = NULL;
@@ -763,8 +764,8 @@ gal_error_code d3d12_create_device(GalDesc *gal_desc, gal_context *context) {
         for (u32 i = 0; DXGI_ERROR_NOT_FOUND != factory6->EnumAdapterByGpuPreference(
                                                     i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&adapter));
              ++i) {
-            DXGI_ADAPTER_DESC3 desc;
-            adapter->GetDesc3(&desc);
+            DXGI_ADAPTER_DESC3 _desc;
+            adapter->GetDesc3(&_desc);
             ID3D12Device *t_device;
 
             if (SUCCEEDED(D3D12CreateDevice(adapter, ANT_DX12_API_VERSION, IID_PPV_ARGS(&t_device)))) {
@@ -952,16 +953,16 @@ gal_error_code d3d12_create_device(GalDesc *gal_desc, gal_context *context) {
     }
 }
 
-gal_error_code d3d12_destroy_device(gal_context *context) {
-    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(*context);
+gal_error_code d3d12_destroy_device(gal_context *_context) {
+    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(*_context);
     if (d3d12_ctx->device != nullptr) {
         d3d12_ctx->device->Release();
         d3d12_ctx->device = nullptr;
     }
     return gal_error_code::success;
 }
-gal_error_code d3d12_create_memory_allocator(gal_context *context) {
-    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(*context);
+gal_error_code d3d12_create_memory_allocator(gal_context *_context) {
+    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(*_context);
     D3D12MA::ALLOCATOR_DESC allocatorDesc{};
     allocatorDesc.pDevice = d3d12_ctx->device;
     allocatorDesc.pAdapter = d3d12_ctx->active_gpu;
@@ -974,8 +975,8 @@ gal_error_code d3d12_create_memory_allocator(gal_context *context) {
     return gal_error_code::success;
 }
 
-gal_error_code d3d12_destroy_memory_allocator(gal_context *context) {
-    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(*context);
+gal_error_code d3d12_destroy_memory_allocator(gal_context *_context) {
+    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(*_context);
     if (d3d12_ctx->d3dma_allocator != nullptr) {
         d3d12_ctx->d3dma_allocator->Release();
         d3d12_ctx->d3dma_allocator = nullptr;
@@ -983,32 +984,32 @@ gal_error_code d3d12_destroy_memory_allocator(gal_context *context) {
     return gal_error_code::success;
 }
 
-gal_error_code d3d12_create_buffer(gal_context context, gal_buffer_desc *desc, gal_buffer *buffer) {
-    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(context);
+gal_error_code d3d12_create_buffer(gal_context _context, gal_buffer_desc *_desc, gal_buffer *buffer) {
+    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(_context);
     *buffer = reinterpret_cast<gal_handle>(new ant::gal::d3d12_buffer);
     d3d12_buffer *d3d12_buf = reinterpret_cast<d3d12_buffer *>(*buffer);
 
     CD3DX12_RESOURCE_DESC buffer_desc =
-        CD3DX12_RESOURCE_DESC::Buffer(desc->size, D3D12_RESOURCE_FLAG_NONE, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+        CD3DX12_RESOURCE_DESC::Buffer(_desc->size, D3D12_RESOURCE_FLAG_NONE, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
 
-    buffer_desc.Flags = util_to_dx12_resource_flags(desc);
+    buffer_desc.Flags = util_to_dx12_resource_flags(_desc);
 
     D3D12MA::ALLOCATION_DESC allocation_desc{};
 
-    D3D12_RESOURCE_STATES initial_state = util_to_dx12_resource_state(desc->initial_state);
+    D3D12_RESOURCE_STATES initial_state = util_to_dx12_resource_state(_desc->initial_state);
 
-    if (desc->memory_flag == gal_memory_flag::gpu_dedicated) {
+    if (_desc->memory_flag == gal_memory_flag::gpu_dedicated) {
         allocation_desc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
-    } else if (desc->memory_flag == gal_memory_flag::cpu_upload) {
+    } else if (_desc->memory_flag == gal_memory_flag::cpu_upload) {
         allocation_desc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
         initial_state = D3D12_RESOURCE_STATE_GENERIC_READ; // genric read is a required start state for upload heap
-    } else if (desc->memory_flag == gal_memory_flag::gpu_download) {
+    } else if (_desc->memory_flag == gal_memory_flag::gpu_download) {
         allocation_desc.HeapType = D3D12_HEAP_TYPE_READBACK;
         initial_state = D3D12_RESOURCE_STATE_COPY_DEST;
     } else {
         return gal_error_code::invalid_parameter;
     }
-    if (desc->flags & gal_buffer_flag::bcf_own_memory) {
+    if (_desc->flags & gal_buffer_flag::bcf_own_memory) {
         allocation_desc.Flags |= D3D12MA::ALLOCATION_FLAGS::ALLOCATION_FLAG_COMMITTED;
     }
 
@@ -1020,14 +1021,14 @@ gal_error_code d3d12_create_buffer(gal_context context, gal_buffer_desc *desc, g
     }
 
     // create descriptor
-    //if (!desc->flags & buffer_creation_flag::bcf_no_descriptor_view_creation) {
+    //if (!_desc->flags & buffer_creation_flag::bcf_no_descriptor_view_creation) {
     //    //TODO(hyl5): create resource descriptor
     //}
 
     return gal_error_code::success;
 }
 
-gal_error_code d3d12_destroy_buffer([[maybe_unused]] gal_context context, gal_buffer buffer) {
+gal_error_code d3d12_destroy_buffer([[maybe_unused]] gal_context _context, gal_buffer buffer) {
     if (buffer != nullptr) {
         d3d12_buffer *d3d12_buf = reinterpret_cast<d3d12_buffer *>(buffer);
         d3d12_buf->buffer->Release();
@@ -1038,28 +1039,38 @@ gal_error_code d3d12_destroy_buffer([[maybe_unused]] gal_context context, gal_bu
     return gal_error_code::success;
 }
 
-gal_error_code d3d12_create_texture(gal_context context, gal_texture_desc *desc, gal_texture *texture) {
+gal_error_code d3d12_create_texture(gal_context _context, gal_texture_desc *_desc, gal_texture *texture) {
     // TODO(hyl5): finish this
-    if (context)
+    if (_context)
         return gal_error_code::success;
     else if (texture)
         return gal_error_code::success;
-    else if (desc)
+    else if (_desc)
         return gal_error_code::success;
     return gal_error_code::success;
 }
 
-gal_error_code d3d12_destroy_texture(gal_context context, gal_texture texture) {
+gal_error_code d3d12_destroy_texture(gal_context _context, gal_texture texture) {
     // TODO(hyl5): finish this
-    if (context)
+    if (_context)
         return gal_error_code::success;
     else if (texture)
         return gal_error_code::success;
     return gal_error_code::success;
 }
 
-gal_error_code d3d12_create_sampler() {
-    // d3d12_context *d3d12_ctx;
+gal_error_code d3d12_create_sampler(gal_context _context, gal_sampler_desc* sampler_desc, gal_sampler* sampler){
+    if (_context)
+        return gal_error_code::success;
+    else if (sampler)
+        return gal_error_code::success;
+    else if (sampler_desc)
+        return gal_error_code::success;
+    return gal_error_code::success;
+    //    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(_context);
+    //*sampler = reinterpret_cast<gal_handle>(new ant::gal::d3d12_sampler);
+    //d3d12_buffer *d3d12_spl = reinterpret_cast<d3d12_buffer *>(*sampler);
+    //// d3d12_context *d3d12_ctx;
     //d3d12_ctx->device->CreateSampler();
     return gal_error_code::success;
 }
@@ -1340,5 +1351,5 @@ gal_error_code d3d12_cmd_copy_texture_to_buffer() {
     //d3d12_cmd->commandlist->CopyTextureRegion();
     return gal_error_code::success;
 }
-
+#endif
 } // namespace ant::gal
