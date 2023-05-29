@@ -21,6 +21,14 @@ add_subdirectory(tracy)
 #add_subdirectory(JoltPhysics/Build)
 option(TINYGLTF_BUILD_LOADER_EXAMPLE "" OFF)
 add_subdirectory(tinygltf)
+
+#message("downloading dxc")
+#file(DOWNLOAD "https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.7.2212.1/dxc_2023_03_01.zip")
+
+
+
+ 
+
 if(ANTUMBRA_BUILD_VK)
     # prefer to use system installed vulkan sdk
     find_package(Vulkan REQUIRED)
@@ -112,3 +120,9 @@ if(ANTUMBRA_BUILD_D3D12)
     set_property(TARGET D3D12MemoryAllocator DirectXTK12
         PROPERTY FOLDER "third_party")
 endif(ANTUMBRA_BUILD_D3D12)
+
+
+ 
+
+
+

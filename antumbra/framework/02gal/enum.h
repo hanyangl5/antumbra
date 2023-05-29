@@ -1,5 +1,35 @@
+/*
+ * Code adapted from ConfettiFX The-Forge
+ * 
+ * Copyright (c) 2017-2022 The Forge Interactive Inc.
+ *
+ * This file is part of The-Forge
+ * (see https://github.com/ConfettiFX/The-Forge).
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+*/
+
 #pragma once
 
+#include <variant>
+#ifdef WIN32
+#include <Windows.h>
+#endif
 #include "framework/01core/utils/utils.h"
 
 namespace ant::gal {
@@ -13,9 +43,28 @@ inline constexpr u32 MAX_MIP_LEVELS = 0xFFFFFFFF;
 inline constexpr u32 MAX_SWAPCHAIN_IMAGES = 3;
 inline constexpr u32 MAX_GPU_VENDOR_STRING_LENGTH = 64; //max size for GPUVendorPreset strings
 
-enum class gal_error_code : u32 { success, unsupporte_platform, error, unsupported_device, invalid_parameter };
+#ifndef MAKE_ENUM_FLAG
+#define MAKE_ENUM_FLAG(TYPE, ENUM_TYPE)                                                                                \
+    inline constexpr ENUM_TYPE operator|(ENUM_TYPE a, ENUM_TYPE b) { return ENUM_TYPE(((TYPE)a) | ((TYPE)b)); }  \
+    inline ENUM_TYPE &operator|=(ENUM_TYPE &a, ENUM_TYPE b) { return (ENUM_TYPE &)(((TYPE &)a) |= ((TYPE)b)); }        \
+    inline constexpr ENUM_TYPE operator&(ENUM_TYPE a, ENUM_TYPE b) { return ENUM_TYPE(((TYPE)a) & ((TYPE)b)); }  \
+    inline ENUM_TYPE &operator&=(ENUM_TYPE &a, ENUM_TYPE b) { return (ENUM_TYPE &)(((TYPE &)a) &= ((TYPE)b)); }        \
+    inline constexpr ENUM_TYPE operator~(ENUM_TYPE a) { return ENUM_TYPE(~((TYPE)a)); }                          \
+    inline constexpr ENUM_TYPE operator^(ENUM_TYPE a, ENUM_TYPE b) { return ENUM_TYPE(((TYPE)a) ^ ((TYPE)b)); }  \
+    inline ENUM_TYPE &operator^=(ENUM_TYPE &a, ENUM_TYPE b) { return (ENUM_TYPE &)(((TYPE &)a) ^= ((TYPE)b)); }
+#else
+#define MAKE_ENUM_FLAG(TYPE, ENUM_TYPE)
+#endif
 
-enum class RenderApi { undefined, vulkan, d3d12 };
+enum class gal_error_code : u32 {
+    GAL_ERRORCODE_SUCCESS,
+    GAL_ERRORCODE_ERROR,
+    GAL_ERRORCODE_INVALID_PLATFORM,
+    GAL_ERRORCODE_INVALID_DEVICE,
+    GAL_ERRORCODE_INVALID_PARAMETER
+};
+
+enum class gal_api { UNDEFINED, VULKAN, D3D12 };
 
 #define DECLARE_GAL_HANDLE(name)                                                                                       \
     struct name##_T;                                                                                                   \
@@ -37,13 +86,15 @@ struct gal_desc {
     bool b_surface : 1;
 };
 
-enum class BlendMode {
+enum class gal_blend_mode {
     BM_ADD,
     BM_SUBTRACT,
     BM_REVERSE_SUBTRACT,
     BM_MIN,
     BM_MAX,
     MAX_BLEND_MODES,
+    ADD,
+    SUBSTRACT,
 };
 
 enum class StencilOp {
@@ -83,39 +134,42 @@ enum class PipelineType {
     PIPELINE_TYPE_COUNT,
 };
 
-enum class gal_texture_dimension { undefined, td_1D, td_2D, td_3D };
+enum class gal_texture_dimension { UNDEFINED, td_1D, td_2D, td_3D };
 
 enum class gal_texture_sample_count {
-    tsc_1,
-    tsc_2,
-    tsc_4,
-    tsc_8,
-    tsc_16,
-    tsc_32,
+    UNDEFINED,
+    SAMPLE_COUNT_1,
+    SAMPLE_COUNT_2,
+    SAMPLE_COUNT_4,
+    SAMPLE_COUNT_8,
+    SAMPLE_COUNT_16,
+    SAMPLE_COUNT_32,
+    SAMPLE_COUNT_64,
 };
 
 enum class gal_sampler_filter_mode {
-    point,
-    linear,
+    UNDEFINED,
+    POINT,
+    LINEAR,
     // cubic, anisotropic?
 };
 enum class gal_compare_mode {
-    undefined,
-    never,
-    less,
-    less_equal,
-    equal,
-    not_equal,
-    greater,
-    greater_equal,
-    always,
+    UNDEFINED,
+    NEVER,
+    LESS,
+    LESS_EQUAL,
+    EQUAL,
+    NOT_EQUAL,
+    GREATER,
+    GREATER_EQUAL,
+    ALWAYS
 };
 
-enum class gal_sampler_mip_mode { point, linear };
+enum class gal_sampler_mip_mode { UNDEFINED, POINT, LINEAR };
 
-enum class gal_sampler_address_mode { repeat, mirror, clamp, border };
+enum class gal_sampler_address_mode { UNDEFINED, REPEAT, MIRROR, CLAMP, BORDER };
 
-enum gal_texture_flag {
+enum class gal_texture_flag {
     TEXTURE_CREATION_FLAG_UNFEFINED = 0,
     /// Texture will allocate its own memory (COMMITTED resource)
     TEXTURE_CREATION_FLAG_OWN_MEMORY_BIT = 0x01,
@@ -143,6 +197,7 @@ enum gal_texture_flag {
     /// Fragment mask
     TEXTURE_CREATION_FLAG_FRAG_MASK = 0x2000,
 };
+MAKE_ENUM_FLAG(u32, gal_texture_flag)
 enum ShaderStage {
     SHADER_STAGE_NONE = 0,
     SHADER_STAGE_VERT = 0X00000001,
@@ -202,81 +257,77 @@ enum class ShaderSemantic {
     SEMANTIC_TEXCOORD9,
 };
 
-enum class gal_queue_type { undefined, graphcis, compute, transfer };
+enum class gal_queue_type { UNDEFINED, graphcis, compute, transfer };
 
 // Enum for descriptor types
-enum gal_resource_type : u32 {
-    rt_none = 0,
+enum class gal_resource_type : u32 {
+    UNDEFINED = 0,
     // constant buffer
-    rt_constant_buffer = 1 << 0,
+    CONSTANT_BUFFER = 1 << 0,
     // read write buffer
-    rt_rw_buffer = 1 << 1,
+    RW_BUFFER = 1 << 1,
     // read only texture
-    rt_texture = 1 << 2,
+    TEXTURE = 1 << 2,
     // read write texture
-    rt_rw_texture = 1 << 3,
-    rt_texture_cube = 1 << 4,
-    rt_sampler = 1 << 5,
-    rt_push_constant = 1 << 6,
-    rt_vertex_buffer = 1 << 7,
-    rt_index_buffer = 1 << 8,
-    rt_indirect_buffer = 1 << 9,
-    rt_color_rt = 1 << 10,
-    rt_depth_stencil_rt = 1 << 11,
+    RW_TEXTURE = 1 << 3,
+    TEXTURE_CUBE = 1 << 4,
+    SAMPLER = 1 << 5,
+    PUSH_CONSTANT = 1 << 6,
+    VERTEX_BUFFER = 1 << 7,
+    INDEX_BUFFER = 1 << 8,
+    INDIRECT_ARGUMENT = 1 << 9,
+    COLOR_RT = 1 << 10,
+    DEPTH_STENCIL_RT = 1 << 11,
 };
+MAKE_ENUM_FLAG(u32, gal_resource_type)
 
-using gal_resource_types = u32;
-
-enum gal_resource_state : u32 {
-    rs_none = 0,
+enum class gal_resource_state : u32 {
+    UNDEFINIED = 0,
     // Your application should transition to this state only for accessing a resource across differentgraphics engine
     // types.
-    rs_common = 1 << 0,
-    rs_vertex_buffer = 1 << 1,
-    rs_index_buffer = 1 << 2,
-    rs_indiret_buffer = 1 << 3,
+    COMMON = 1 << 0,
+    VERTEX_BUFFER = 1 << 1,
+    INDEX_BUFFER = 1 << 2,
+    INDIRECT_BUFFER = 1 << 3,
     // shader resource
-    rs_constant_buffer = 1 << 4,
-    rs_rw_buffer = 1 << 5,
-    rs_texture = 1 << 6,
-    rs_rw_texture = 1 << 7,
-    rs_copy_src = 1 << 8,
-    rs_copy_dst = 1 << 9,
-    rs_cpu_read = 1 << 10,
-    rs_cpu_write = 1 << 11,
-    rs_render_target = 1 << 12,
-    rs_present = 1 << 13,
-    rs_depth_read = 1 << 14,
-    rs_depth_write = 1 << 15,
+    CONSTANT_BUFFER = 1 << 4,
+    RW_BUFFER = 1 << 5,
+    TEXTURE = 1 << 6,
+    RW_TEXTURE = 1 << 7,
+    COPY_SRC = 1 << 8,
+    COPY_DST = 1 << 9,
+    CPU_READ = 1 << 10,
+    CPU_WRITE = 1 << 11,
+    RENDER_TARGET = 1 << 12,
+    PRESENT = 1 << 13,
+    DEPTH_READ = 1 << 14,
+    DEPTH_WRITE = 1 << 15,
     // rt_acce_structure,
     // shading_rate_src
 };
+MAKE_ENUM_FLAG(u32, gal_resource_state)
 
-using gal_resource_states = u32;
-
-enum gal_memory_flag {
-    undefined = 0,
-    gpu_dedicated = 1 << 0, // gpu dedicated memory
-    cpu_upload = 1 << 1,    // cpu upload memory
-    gpu_download = 1 << 2,  // gpu download
+enum class gal_memory_flag {
+    UNDEFINED = 0,
+    GPU_DEDICATED = 1 << 0, // gpu dedicated memory
+    CPU_UPLOAD = 1 << 1,    // cpu upload memory
+    GPU_DOWNLOAD = 1 << 2,  // gpu download
 };
+MAKE_ENUM_FLAG(u32, gal_memory_flag);
 
-using gal_memory_flags = u32;
-
-enum gal_buffer_flag {
+enum class gal_buffer_flag {
     /// Default flag (Buffer will use aliased memory, buffer will not be cpu accessible until mapBuffer is called)
-    bcf_none = 0,
+    UNDEFINED = 0,
     /// Buffer will allocate its own memory (COMMITTED resource)
-    bcf_own_memory = 1 << 0,
+    OWN_MEMORY = 1 << 0,
     /// Buffer will be persistently mapped
-    bcf_persistent_map = 1 << 1,
+    PERSISTENT_MAP = 1 << 1,
     /// Use ESRAM to store this buffer
-    bcf_esram = 1 << 2,
+    ESRAM = 1 << 2,
     /// Flag to specify not to allocate descriptors for the resource
-    bcf_no_descriptor_view_creation = 1 << 3
+    //NO_DESCRIPTOR_VIEW_CREATION = 1 << 3
 };
-
-using gal_buffer_flags = u32;
+MAKE_ENUM_FLAG(u32, gal_buffer_flag)
 
 enum class BlendConstant {
     BC_ZERO = 0,
@@ -307,9 +358,9 @@ struct BlendStateDesc {
     /// Destination alpha blend factor per render target.
     BlendConstant mDstAlphaFactors[MAX_RENDER_TARGET_ATTACHMENTS];
     /// Blend mode per render target.
-    BlendMode mBlendModes[MAX_RENDER_TARGET_ATTACHMENTS];
+    gal_blend_mode mBlendModes[MAX_RENDER_TARGET_ATTACHMENTS];
     /// Alpha blend mode per render target.
-    BlendMode mBlendAlphaModes[MAX_RENDER_TARGET_ATTACHMENTS];
+    gal_blend_mode mBlendAlphaModes[MAX_RENDER_TARGET_ATTACHMENTS];
     /// Write mask per render target.
     int32_t mMasks[MAX_RENDER_TARGET_ATTACHMENTS];
     /// Mask that identifies the render targets affected by the blend state.
@@ -370,38 +421,146 @@ struct ReadRange {
     uint64_t mSize;
 };
 
+struct gal_clear_value {
+    struct rgb{
+        float r;
+        float g;
+        float b;
+        float a;
+    };
+    struct ds{
+        float depth;
+        uint32_t stencil;
+    };
+    std::variant<std::monostate, rgb, ds> value;
+};
+
 DECLARE_GAL_HANDLE(gal_context) {
   protected:
     gal_desc m_gal_desc;
 };
+
+struct gal_buffer_desc {
+    u64 size;                          // size
+    gal_resource_type resource_types; // descriptor types of buffer
+    gal_resource_state initial_state; // initial state of buffer
+    gal_memory_flag memory_flags;
+    gal_buffer_flag flags;
+};
+
 DECLARE_GAL_HANDLE(gal_buffer) {
   protected:
-    gal_resource_states m_resource_states;
-    gal_memory_flags m_memory_flags;
-    u64 m_size;
+    gal_buffer_desc m_gal_buffer_desc;
 };
-DECLARE_GAL_HANDLE(gal_texture){};
 
-DECLARE_GAL_HANDLE(gal_sampler){};
-DECLARE_GAL_HANDLE(gal_rendertarget){};
+struct gal_texture_desc {
+    u32 width;
+    u32 height;
+    u32 depth = 1;
+    u32 array_size = 1;
+    u32 mip_level = 1;
+    gal_memory_flag memory_flags;
+    gal_texture_dimension dimension;
+    gal_texture_sample_count sample_count;
+    u32 texture_sample_quality;
+    gal_texture_format format;
+    gal_texture_flag texture_flags;
+    gal_resource_type resource_types; // descriptor types of buffer
+    gal_resource_state initial_state; // initial state of buffer
+    void *native_handle;
+};
+
+DECLARE_GAL_HANDLE(gal_texture) {
+  protected:
+    gal_texture_desc m_gal_texture_desc;
+};
+
+struct gal_sampler_desc {
+    gal_sampler_filter_mode mag_filter; // filter metho when texel is larger than pixel
+    gal_sampler_filter_mode min_filter; // filter method when texel is smaller than pixel
+    gal_sampler_mip_mode mip_mode;
+    gal_sampler_address_mode address_mode_u;
+    gal_sampler_address_mode address_mode_v;
+    gal_sampler_address_mode address_mode_w;
+    gal_compare_mode compare_mode;
+    f32 mip_lod_bias;
+    f32 min_lod;
+    f32 max_lod;
+    f32 max_anisotropy;
+    ant::fixed_array<f32, 4> border_color;
+};
+DECLARE_GAL_HANDLE(gal_sampler) {
+  protected:
+    gal_sampler_desc m_gal_sampler_desc;
+};
+DECLARE_GAL_HANDLE(gal_render_target) {
+  protected:
+    gal_texture *m_texture;
+};
+
+//enum class gal_descriptor_resource_type {
+//    UNDEFINED,
+//    BUFFER,
+//    TEXTURE
+//};
+//struct gal_buffer_srv_desc {
+//    gal_buffer buffer;
+//    u64 offste;
+//    u64 range;
+//};
+//using gal_buffer_uav_desc = gal_buffer_srv_desc;
+//struct gal_texture_srv_desc {};
+//using gal_texture_uav_desc = gal_texture_srv_desc;
+//struct gal_src_descriptor_view_desc {
+//    gal_descriptor_resource_type type;
+//    std::variant<std::monostate, gal_buffer_srv_desc, gal_texture_srv_desc> srv_desc;
+//};
+//
+//struct gal_uav_descriptor_view_desc {
+//    gal_descriptor_resource_type type;
+//    std::variant<std::monostate, gal_texture_uav_desc, gal_texture_uav_desc> srv_desc;
+//};
+//
+//DECLARE_GAL_HANDLE(gal_srv_descriptor_view) {
+//  protected:
+//    gal_src_descriptor_view_desc m_desc;
+//};
+//
+//DECLARE_GAL_HANDLE(gal_uav_descriptor_view) {
+//  protected:
+//    gal_uav_descriptor_view_desc m_desc;
+//};
+
 DECLARE_GAL_HANDLE(gal_fence){};
 DECLARE_GAL_HANDLE(gal_semaphore){};
-DECLARE_GAL_HANDLE(gal_swapchain){};
+
+struct gal_swapchain_desc {
+#ifdef WIN32
+    HWND hwnd_window;
+#endif
+    bool b_present;
+    u32 image_count;
+    u32 width;
+    u32 height;
+    gal_texture_format format;
+    u32 back_buffer_count;
+    gal_clear_value clear_value;
+    bool b_vsync;
+};
+
+DECLARE_GAL_HANDLE(gal_swapchain){ ant::vector<gal_render_target> m_render_targets; };
+
+struct gal_shader_desc {
+    u64 size;
+    void *data;
+};
 DECLARE_GAL_HANDLE(gal_shader){};
 DECLARE_GAL_HANDLE(gal_rootsignature){};
 DECLARE_GAL_HANDLE(gal_pipeline){};
 DECLARE_GAL_HANDLE(gal_pipelinecache){};
 DECLARE_GAL_HANDLE(gal_commandlist){};
 DECLARE_GAL_HANDLE(gal_descriptorpool){};
-using gal_texture_flags = u32;
 
-struct gal_buffer_desc {
-    u64 size;                          // size
-    gal_resource_types resource_types; // descriptor types of buffer
-    gal_resource_states initial_state; // initial state of buffer
-    gal_memory_flags memory_flags;
-    gal_buffer_flags flags;
-};
 struct BufferBarrier {
     gal_buffer *pBuffer;
     gal_resource_state mCurrentState;
@@ -429,7 +588,7 @@ struct TextureBarrier {
     uint16_t mArrayLayer;
 };
 struct RenderTargetBarrier {
-    gal_rendertarget *pRenderTarget;
+    gal_render_target *pRenderTarget;
     gal_resource_state mCurrentState;
     gal_resource_state mNewState;
     u8 mBeginOnly : 1;
@@ -444,37 +603,22 @@ struct RenderTargetBarrier {
     uint16_t mArrayLayer;
 };
 
-struct gal_texture_desc {
+
+struct gal_render_target_desc {
+    gal_texture_flag flags;
+    gal_texture_format format;
     u32 width;
     u32 height;
     u32 depth = 1;
-    u32 array_size = 1;
     u32 mip_level = 1;
-    gal_memory_flags memory_flags;
     gal_texture_dimension dimension;
     gal_texture_sample_count sample_count;
-    gal_texture_format format;
-    gal_texture_flag texture_flags;
-    gal_resource_types resource_types; // descriptor types of buffer
-    gal_resource_states initial_state; // initial state of buffer
+    u32 texture_sample_quality;
+    gal_clear_value clear_value;
+    gal_resource_type resource_types; // descriptor types of buffer
+    gal_resource_state initial_state; // initial state of buffer
+    void *native_handle;
 };
-
-struct gal_sampler_desc {
-    gal_sampler_filter_mode mag_filter; // filter metho when texel is larger than pixel
-    gal_sampler_filter_mode min_filter; // filter method when texel is smaller than pixel
-    gal_sampler_mip_mode mip_mode;
-    gal_sampler_address_mode address_mode_u;
-    gal_sampler_address_mode address_mode_v;
-    gal_sampler_address_mode address_mode_w;
-    gal_compare_mode compare_mode;
-    f32 mip_lod_bias;
-    f32 min_lod;
-    f32 max_lod;
-    f32 max_anisotropy;
-    ant::fixed_array<f32, 4> border_color;
-};
-
-struct gal_rendertarget_desc {};
 
 struct swapchain_desc {};
 

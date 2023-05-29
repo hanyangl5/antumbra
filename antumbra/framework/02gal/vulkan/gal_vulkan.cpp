@@ -1,7 +1,37 @@
+/*
+ * Code adapted from ConfettiFX The-Forge
+ * 
+ * Copyright (c) 2017-2022 The Forge Interactive Inc.
+ *
+ * This file is part of The-Forge
+ * (see https://github.com/ConfettiFX/The-Forge).
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+*/
+
 #include "gal_vulkan.h"
 
 #include <optional>
 
+#ifdef WIN32
+#define VK_USE_PLATFORM_WIN32_KHR
+#endif
+#include <vulkan/vulkan.h>
 #define VMA_RECORDING_ENABLED 1
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
@@ -32,9 +62,9 @@ gal_error_code vk_init_gal(gal_context *_context) {
     *_context = reinterpret_cast<gal_context>(new vk_context);
     load_gal_vk_functions();
     if (*_context == gal_null) {
-        return gal_error_code::error;
+        return gal_error_code::GAL_ERRORCODE_ERROR;
     }
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 
 gal_error_code vk_destroy_gal(gal_context _context) {
@@ -44,7 +74,7 @@ gal_error_code vk_destroy_gal(gal_context _context) {
         _context = gal_null;
         offload_gal_vk_functions();
     }
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 
 gal_error_code vk_create_instance(gal_desc *gal_desc, gal_context *_context) {
@@ -92,7 +122,7 @@ gal_error_code vk_create_instance(gal_desc *gal_desc, gal_context *_context) {
     }
 
     if (required_layer_count != 0) {
-        return gal_error_code::error;
+        return gal_error_code::GAL_ERRORCODE_ERROR;
     }
     for (u32 i = 0; i < available_extension_count; i++) {
         for (u32 j = 0; j < static_cast<u32>(required_instance_extensions.size()); j++) {
@@ -102,7 +132,7 @@ gal_error_code vk_create_instance(gal_desc *gal_desc, gal_context *_context) {
         }
     }
     if (required_extension_count != 0) {
-        return gal_error_code::error;
+        return gal_error_code::GAL_ERRORCODE_ERROR;
     }
 
     VkApplicationInfo app_info{};
@@ -124,16 +154,16 @@ gal_error_code vk_create_instance(gal_desc *gal_desc, gal_context *_context) {
 
     VkResult res = vkCreateInstance(&instance_create_info, nullptr, &(vk_ctx->instance));
     if (res == VK_SUCCESS && vk_ctx->instance != VK_NULL_HANDLE) {
-        return gal_error_code::success;
+        return gal_error_code::GAL_ERRORCODE_SUCCESS;
     } else {
-        return gal_error_code::error;
+        return gal_error_code::GAL_ERRORCODE_ERROR;
     }
 }
 gal_error_code vk_destroy_instance(gal_context *_context) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(*_context);
 
     vkDestroyInstance(vk_ctx->instance, nullptr);
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_create_device(gal_desc *gal_desc, gal_context *_context) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(*_context);
@@ -154,7 +184,7 @@ gal_error_code vk_create_device(gal_desc *gal_desc, gal_context *_context) {
     ant::vector<VkPhysicalDevice> physical_devices(physical_device_count, &stack_memory);
     if (physical_device_count == 0) {
         LOG_ERROR("no available device");
-        return gal_error_code::error;
+        return gal_error_code::GAL_ERRORCODE_ERROR;
     }
     vkEnumeratePhysicalDevices(vk_ctx->instance, &physical_device_count, physical_devices.data());
 
@@ -280,19 +310,19 @@ gal_error_code vk_create_device(gal_desc *gal_desc, gal_context *_context) {
             queue_family_indices = {graphics_queue_family_index.value(), compute_queue_family_index.value(),
                                     transfer_queue_family_index.value()};
 
-            return gal_error_code::success;
+            return gal_error_code::GAL_ERRORCODE_SUCCESS;
         }
-        return gal_error_code::error;
+        return gal_error_code::GAL_ERRORCODE_ERROR;
     };
 
     ant::fixed_array<u32, 3> queue_family_indices;
 
     gal_error_code result = pick_gpu(queue_family_indices);
-    if (result != gal_error_code::success) {
-        return gal_error_code::error;
+    if (result != gal_error_code::GAL_ERRORCODE_SUCCESS) {
+        return gal_error_code::GAL_ERRORCODE_ERROR;
     }
     if (vk_ctx->active_gpu == VK_NULL_HANDLE) {
-        return gal_error_code::error;
+        return gal_error_code::GAL_ERRORCODE_ERROR;
     }
     // TODO(hyl5): provide chain method to add features
     VkPhysicalDeviceShaderDrawParametersFeatures shader_draw_parameters_features{};
@@ -362,18 +392,18 @@ gal_error_code vk_create_device(gal_desc *gal_desc, gal_context *_context) {
     }
 
     if (res != VK_SUCCESS || vk_ctx->device == VK_NULL_HANDLE) {
-        return gal_error_code::error;
+        return gal_error_code::GAL_ERRORCODE_ERROR;
     }
 
     // TODO(hyl5): query supported memory type of gpu, platform differences
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 
 gal_error_code vk_destroy_device(gal_context *_context) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(*_context);
 
     vkDestroyDevice(vk_ctx->device, nullptr);
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 
 gal_error_code vk_create_memory_allocator(gal_context *_context) {
@@ -392,16 +422,16 @@ gal_error_code vk_create_memory_allocator(gal_context *_context) {
     VkResult result = vmaCreateAllocator(&vma_create_info, &vk_ctx->vma_allocator);
 
     if (result == VK_SUCCESS && vk_ctx->vma_allocator != VK_NULL_HANDLE) {
-        return gal_error_code::success;
+        return gal_error_code::GAL_ERRORCODE_SUCCESS;
     } else {
-        return gal_error_code::error;
+        return gal_error_code::GAL_ERRORCODE_ERROR;
     }
 }
 gal_error_code vk_destroy_memory_allocator(gal_context *_context) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(*_context);
 
     vmaDestroyAllocator(vk_ctx->vma_allocator);
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 
 gal_error_code vk_create_buffer(gal_context _context, gal_buffer_desc *_desc, gal_buffer *buffer) {
@@ -419,30 +449,30 @@ gal_error_code vk_create_buffer(gal_context _context, gal_buffer_desc *_desc, ga
     VmaAllocationCreateInfo alloc_info = {};
     alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
 
-    if (_desc->memory_flags & gal_memory_flag::gpu_dedicated) {
+    if ((_desc->memory_flags & gal_memory_flag::GPU_DEDICATED) != gal_memory_flag::UNDEFINED) {
         alloc_info.requiredFlags |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     }
-    if (_desc->memory_flags & gal_memory_flag::cpu_upload) {
+    if ((_desc->memory_flags & gal_memory_flag::CPU_UPLOAD) != gal_memory_flag::UNDEFINED) {
         alloc_info.requiredFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     }
-    if (_desc->memory_flags & gal_memory_flag::gpu_download) {
+    if ((_desc->memory_flags & gal_memory_flag::GPU_DOWNLOAD) != gal_memory_flag::UNDEFINED) {
         alloc_info.requiredFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     }
 
-    if (_desc->flags & gal_buffer_flag::bcf_own_memory) {
+    if ((_desc->flags & gal_buffer_flag::OWN_MEMORY) != gal_buffer_flag::UNDEFINED) {
         alloc_info.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
-    } else if (_desc->flags & gal_buffer_flag::bcf_persistent_map) {
+    } else if ((_desc->flags & gal_buffer_flag::PERSISTENT_MAP) != gal_buffer_flag::UNDEFINED) {
         alloc_info.flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
     }
 
-    VkResult result = vmaCreateBuffer(vk_ctx->vma_allocator, &buffer_create_info, &alloc_info, &vk_buf->buffer,
-                                      &vk_buf->allocation, nullptr);
+    VkResult result = vmaCreateBuffer(vk_ctx->vma_allocator, &buffer_create_info, &alloc_info, &vk_buf->m_buffer,
+                                      &vk_buf->m_allocation, nullptr);
 
-    if (result != VK_SUCCESS || vk_buf->buffer == VK_NULL_HANDLE || vk_buf->allocation == VK_NULL_HANDLE) {
-        return gal_error_code::error;
+    if (result != VK_SUCCESS || vk_buf->m_buffer == VK_NULL_HANDLE || vk_buf->m_allocation == VK_NULL_HANDLE) {
+        return gal_error_code::GAL_ERRORCODE_ERROR;
     }
 
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 
 gal_error_code vk_destroy_buffer(gal_context _context, gal_buffer buffer) {
@@ -451,11 +481,11 @@ gal_error_code vk_destroy_buffer(gal_context _context, gal_buffer buffer) {
     if (buffer != gal_null) {
         vk_buffer *vk_buf = reinterpret_cast<vk_buffer *>(buffer);
 
-        vmaDestroyBuffer(vk_ctx->vma_allocator, vk_buf->buffer, vk_buf->allocation);
+        vmaDestroyBuffer(vk_ctx->vma_allocator, vk_buf->m_buffer, vk_buf->m_allocation);
         delete vk_buf;
         buffer = gal_null;
     }
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 
 gal_error_code vk_create_texture(gal_context _context, gal_texture_desc *_desc, gal_texture *texture) {
@@ -465,7 +495,8 @@ gal_error_code vk_create_texture(gal_context _context, gal_texture_desc *_desc, 
 
     u32 array_size = _desc->array_size > 1u ? _desc->array_size : 1u;
     u32 depth = _desc->depth > 1u ? _desc->depth : 1u;
-    bool b_is_cubemap = (_desc->resource_types & gal_resource_type::rt_texture_cube) && _desc->array_size == 6;
+    bool b_is_cubemap = ((_desc->resource_types & gal_resource_type::TEXTURE_CUBE) != gal_resource_type::UNDEFINED) &&
+                        _desc->array_size == 6;
     VkImageCreateInfo image_create_info{};
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     image_create_info.imageType = utils_to_vk_image_type(_desc->dimension);
@@ -503,35 +534,35 @@ gal_error_code vk_create_texture(gal_context _context, gal_texture_desc *_desc, 
     VkFormatFeatureFlags format_features = util_vk_image_usage_to_format_features(image_create_info.usage);
 
     if (!(format_props.optimalTilingFeatures & format_features)) {
-        return gal_error_code::error;
+        return gal_error_code::GAL_ERRORCODE_ERROR;
     }
     VmaAllocationCreateInfo allocation_create_info{};
     allocation_create_info.usage = VMA_MEMORY_USAGE_AUTO;
 
-    if (_desc->memory_flags & gal_memory_flag::gpu_dedicated) {
+    if ((_desc->memory_flags & gal_memory_flag::GPU_DEDICATED) != gal_memory_flag::UNDEFINED) {
         allocation_create_info.requiredFlags |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     }
-    if (_desc->memory_flags & gal_memory_flag::cpu_upload) {
+    if ((_desc->memory_flags & gal_memory_flag::CPU_UPLOAD) != gal_memory_flag::UNDEFINED) {
         allocation_create_info.requiredFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     }
-    if (_desc->memory_flags & gal_memory_flag::gpu_download) {
+    if ((_desc->memory_flags & gal_memory_flag::GPU_DOWNLOAD) != gal_memory_flag::UNDEFINED) {
         allocation_create_info.requiredFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     }
 
-    VkResult result = vmaCreateImage(vk_ctx->vma_allocator, &image_create_info, &allocation_create_info, &vk_tex->image,
-                                     &vk_tex->allocation, nullptr);
-    if (result != VK_SUCCESS || vk_tex->image == VK_NULL_HANDLE || vk_tex->allocation == VK_NULL_HANDLE) {
-        return gal_error_code::error;
+    VkResult result = vmaCreateImage(vk_ctx->vma_allocator, &image_create_info, &allocation_create_info,
+                                     &vk_tex->m_image, &vk_tex->m_allocation, nullptr);
+    if (result != VK_SUCCESS || vk_tex->m_image == VK_NULL_HANDLE || vk_tex->m_allocation == VK_NULL_HANDLE) {
+        return gal_error_code::GAL_ERRORCODE_ERROR;
     }
 
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 //gal_error_code vk_create_srvuav(gal_context _context, gal_texture texture)
 //gal_error_code vk_create_srvuav(gal_context _context, gal_buffer buffer)
 //{
 //    // create view form shader resources
-//    if (_desc->resource_types & gal_resource_type::rt_texture ||
-//        _desc->resource_types & gal_resource_type::rt_rw_texture) {
+//    if (_desc->resource_types & gal_resource_type::TEXTURE ||
+//        _desc->resource_types & gal_resource_type::RW_TEXTURE) {
 //
 //        VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
 //
@@ -583,7 +614,7 @@ gal_error_code vk_create_texture(gal_context _context, gal_texture_desc *_desc, 
 //
 //        result = (vkCreateImageView(vk_ctx->device, &srvDesc, nullptr, &vk_tex->image_view));
 //        if (result != VK_SUCCESS || vk_tex->image == VK_NULL_HANDLE || vk_tex->allocation == VK_NULL_HANDLE) {
-//            return gal_error_code::error;
+//            return gal_error_code::GAL_ERRORCODE_ERROR;
 //        }
 //    }
 //}
@@ -592,12 +623,12 @@ gal_error_code vk_destroy_texture(gal_context _context, gal_texture texture) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
     if (texture != gal_null) {
         vk_texture *vk_tex = reinterpret_cast<vk_texture *>(texture);
-        vmaDestroyImage(vk_ctx->vma_allocator, vk_tex->image, vk_tex->allocation);
+        vmaDestroyImage(vk_ctx->vma_allocator, vk_tex->m_image, vk_tex->m_allocation);
         //vkDestroyImageView(vk_ctx->device, vk_tex->image_view, nullptr);
         delete vk_tex;
         texture = gal_null;
     }
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 
 gal_error_code vk_create_sampler(gal_context _context, gal_sampler_desc *sampler_desc, gal_sampler *sampler) {
@@ -618,72 +649,404 @@ gal_error_code vk_create_sampler(gal_context _context, gal_sampler_desc *sampler
     sampler_create_info.minLod = sampler_desc->min_lod;
     sampler_create_info.maxLod = sampler_desc->max_lod;
     sampler_create_info.maxAnisotropy = sampler_desc->max_anisotropy;
-    sampler_create_info.compareEnable = sampler_desc->compare_mode != gal_compare_mode::undefined;
+    sampler_create_info.compareEnable = sampler_desc->compare_mode != gal_compare_mode::UNDEFINED;
     sampler_create_info.compareOp = utils_to_vk_compare_op(sampler_desc->compare_mode);
     sampler_create_info.mipLodBias = sampler_desc->mip_lod_bias;
-    VkResult result = vkCreateSampler(vk_ctx->device, &sampler_create_info, nullptr, &vk_spl->sampler);
-    if (result != VK_SUCCESS || vk_spl->sampler == VK_NULL_HANDLE) {
+    VkResult result = vkCreateSampler(vk_ctx->device, &sampler_create_info, nullptr, &vk_spl->m_sampler);
+    if (result != VK_SUCCESS || vk_spl->m_sampler == VK_NULL_HANDLE) {
 
-        return gal_error_code::error;
+        return gal_error_code::GAL_ERRORCODE_ERROR;
     }
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 
 gal_error_code vk_destroy_sampler(gal_context _context, gal_sampler sampler) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
     if (sampler != gal_null) {
         vk_sampler *vk_spl = reinterpret_cast<vk_sampler *>(sampler);
-        vkDestroySampler(vk_ctx->device, vk_spl->sampler, nullptr);
+        vkDestroySampler(vk_ctx->device, vk_spl->m_sampler, nullptr);
         delete vk_spl;
         sampler = gal_null;
     }
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
-gal_error_code vk_create_rendertarget() {
-    // fill some rendertarget _desc
-    //vk_create_texture();
-    return gal_error_code::success;
+gal_error_code vk_create_render_target(gal_context _context, gal_render_target_desc *_desc,
+                                       gal_render_target *_render_target) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
+    *_render_target = reinterpret_cast<gal_render_target>(new vk_render_target);
+    vk_render_target *vk_rt = reinterpret_cast<vk_render_target *>(*_render_target);
+    bool const isDepth = gal_tf_is_depth_only(_desc->format) || gal_tf_is_depth_and_stencil(_desc->format);
+
+    assert(!((isDepth) && (_desc->resource_types & gal_resource_type::RW_TEXTURE) != gal_resource_type::UNDEFINED) &&
+           "Cannot use depth stencil as UAV");
+
+    _desc->mip_level = _max(1U, _desc->mip_level);
+
+    //pRenderTarget->mVulkan.pVkSliceDescriptors = (VkImageView *)(pRenderTarget + 1);
+
+    gal_texture_desc textureDesc = {};
+    textureDesc.array_size = 1;
+    textureDesc.depth = _desc->depth;
+    textureDesc.texture_flags = _desc->flags;
+    textureDesc.format = _desc->format;
+    textureDesc.width = _desc->width;
+    textureDesc.height = _desc->height;
+    textureDesc.mip_level = _desc->mip_level;
+    textureDesc.sample_count = _desc->sample_count;
+    textureDesc.texture_sample_quality = _desc->texture_sample_quality;
+
+    if (!isDepth)
+        textureDesc.initial_state |= gal_resource_state::RENDER_TARGET;
+    else
+        textureDesc.initial_state |= gal_resource_state::DEPTH_WRITE;
+
+    // Set this by default to be able to sample the rendertarget in shader
+    textureDesc.resource_types = _desc->resource_types;
+    // Create SRV by default for a render target unless this is on tile texture where SRV is not supported
+    if ((_desc->flags & gal_texture_flag::TEXTURE_CREATION_FLAG_ON_TILE) ==
+        gal_texture_flag::TEXTURE_CREATION_FLAG_UNFEFINED) {
+        textureDesc.resource_types |= gal_resource_type::TEXTURE;
+
+    } else {
+        if ((textureDesc.resource_types & gal_resource_type::TEXTURE) != gal_resource_type::UNDEFINED ||
+            (textureDesc.resource_types & gal_resource_type::RW_TEXTURE) != gal_resource_type::UNDEFINED) {
+            LOG_WARN("On tile textures do not support DESCRIPTOR_TYPE_TEXTURE or DESCRIPTOR_TYPE_RW_TEXTURE");
+        }
+        // On tile textures do not support SRV/UAV as there is no backing memory
+        // You can only read these textures as input attachments inside same render pass
+        textureDesc.resource_types &= ~(gal_resource_type::TEXTURE | gal_resource_type::RW_TEXTURE);
+    }
+
+    if (isDepth) {
+        // Make sure depth/stencil format is supported - fall back to VK_FORMAT_D16_UNORM if not
+        VkFormat vk_depth_stencil_format = galtextureformat_to_vkformat(_desc->format);
+        if (VK_FORMAT_UNDEFINED != vk_depth_stencil_format) {
+            VkImageFormatProperties properties{};
+            VkResult vk_res = vkGetPhysicalDeviceImageFormatProperties(
+                vk_ctx->active_gpu, vk_depth_stencil_format, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
+                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 0, &properties);
+            // Fall back to something that's guaranteed to work
+            if (VK_SUCCESS != vk_res) {
+                textureDesc.format = gal_texture_format::D32_SFLOAT;
+                LOG_WARN("Depth stencil format (%u) not supported. Falling back to D32 format", _desc->height);
+            }
+        }
+    }
+
+    // gal_create_texture
+    vk_create_texture(_context, &textureDesc, vk_rt->get_texture());
+
+    VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
+    if (_desc->dimension == gal_texture_dimension::td_1D) {
+        view_type = VK_IMAGE_VIEW_TYPE_1D;
+    }
+    if (_desc->dimension == gal_texture_dimension::td_2D) {
+
+        view_type = VK_IMAGE_VIEW_TYPE_2D;
+    }
+    if (_desc->dimension == gal_texture_dimension::td_3D) {
+        view_type = VK_IMAGE_VIEW_TYPE_3D;
+    }
+    vk_texture *vk_tex = reinterpret_cast<vk_texture *>(vk_rt->get_texture());
+    VkImageViewCreateInfo rtvDesc = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, NULL};
+    rtvDesc.flags = 0;
+    rtvDesc.image = vk_tex->m_image;
+    rtvDesc.viewType = view_type;
+    rtvDesc.format = galtextureformat_to_vkformat(textureDesc.format);
+    rtvDesc.components.r = VK_COMPONENT_SWIZZLE_R;
+    rtvDesc.components.g = VK_COMPONENT_SWIZZLE_G;
+    rtvDesc.components.b = VK_COMPONENT_SWIZZLE_B;
+    rtvDesc.components.a = VK_COMPONENT_SWIZZLE_A;
+    rtvDesc.subresourceRange.aspectMask = util_vk_determine_aspect_mask(rtvDesc.format, true);
+    rtvDesc.subresourceRange.baseMipLevel = 0;
+    rtvDesc.subresourceRange.levelCount = 1;
+    rtvDesc.subresourceRange.baseArrayLayer = 0;
+    rtvDesc.subresourceRange.layerCount = 1;
+
+    VkResult result = (vkCreateImageView(vk_ctx->device, &rtvDesc, nullptr, &vk_rt->pVkDescriptor));
+    if (result != VK_SUCCESS || vk_rt->pVkDescriptor == VK_NULL_HANDLE) {
+
+        return gal_error_code::GAL_ERRORCODE_ERROR;
+    }
+    
+    vk_rt->pVkSliceDescriptors = static_cast<VkImageView *>(malloc(_desc->mip_level * sizeof(VkImageView)));
+
+    for (uint32_t i = 0; i < _desc->mip_level; ++i) {
+        rtvDesc.subresourceRange.baseMipLevel = i;
+        //if ((_desc->resource_types & DESCRIPTOR_TYPE_RENDER_TARGET_ARRAY_SLICES) ||
+        //    (_desc->resource_types & DESCRIPTOR_TYPE_RENDER_TARGET_DEPTH_SLICES)) {
+        //    for (uint32_t j = 0; j < depthOrArraySize; ++j) {
+        //        rtvDesc.subresourceRange.layerCount = 1;
+        //        rtvDesc.subresourceRange.baseArrayLayer = j;
+        //        result = (vkCreateImageView(pRenderer->mVulkan.pVkDevice, &rtvDesc, nullptr,
+        //                                    &pRenderTarget->mVulkan.pVkSliceDescriptors[i * depthOrArraySize + j]));
+        //    }
+        //} else {
+        result = (vkCreateImageView(vk_ctx->device, &rtvDesc, nullptr, &vk_rt->pVkSliceDescriptors[i]));
+        if (result != VK_SUCCESS || vk_rt->pVkSliceDescriptors[i] == VK_NULL_HANDLE) {
+            return gal_error_code::GAL_ERRORCODE_ERROR;
+        }
+        //}
+    }
+
+    // Unlike DX12, Vulkan textures start in undefined layout.
+    // To keep in line with DX12, we transition them to the specified layout manually so app code doesn't have to worry about this
+    // Render targets wont be created during runtime so this overhead will be minimal
+    //util_initial_transition(pRenderer, pRenderTarget->pTexture, _desc->mStartState);
+
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
-gal_error_code vk_destroy_rendertarget() {
+gal_error_code vk_destroy_render_target() {
     //vk_destroy_texture();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
+
 // surface
-gal_error_code vk_create_swapchain() {
-    //vkCreateSwapchainKHR();
-    return gal_error_code::success;
+gal_error_code vk_create_swapchain(gal_context _context, gal_swapchain_desc *_desc, gal_swapchain *_swapchain) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
+    *_swapchain = reinterpret_cast<gal_swapchain>(new vk_swapchain);
+    vk_swapchain *vk_sc = reinterpret_cast<vk_swapchain *>(_swapchain);
+
+    VkResult result;
+#ifdef WIN32
+    VkWin32SurfaceCreateInfoKHR surface_create_info{};
+    surface_create_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    surface_create_info.hinstance = GetModuleHandle(nullptr);
+    surface_create_info.hwnd = _desc->hwnd_window;
+    result = vkCreateWin32SurfaceKHR(vk_ctx->instance, &surface_create_info, nullptr, &vk_sc->m_surface);
+    if (result == VK_SUCCESS || vk_sc->m_surface == VK_NULL_HANDLE) {
+        return gal_error_code::GAL_ERRORCODE_ERROR;
+    }
+#endif //  WIN32
+    auto stack_memory = ant::get_stack_memory_resource(256);
+
+    // Image count
+    if (0 == _desc->image_count) {
+        _desc->image_count = 2;
+    }
+
+    VkSurfaceCapabilitiesKHR caps;
+    result = (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vk_ctx->active_gpu, vk_sc->m_surface, &caps));
+    if (result != VK_SUCCESS) {
+        return gal_error_code::GAL_ERRORCODE_ERROR;
+    }
+    // fix invalid image count
+    if ((caps.maxImageCount > 0) && (_desc->image_count > caps.maxImageCount)) {
+        LOG_WARN("Changed requested SwapChain images {} to maximum allowed SwapChain images {}", _desc->image_count,
+                 caps.maxImageCount);
+        _desc->image_count = caps.maxImageCount;
+    }
+    if (_desc->image_count < caps.minImageCount) {
+        LOG_WARN("Changed requested SwapChain images {%u} to minimum required SwapChain images {%u}",
+                 _desc->image_count, caps.minImageCount);
+        _desc->image_count = caps.minImageCount;
+    }
+
+    // Surface format
+    // Select a surface format, depending on whether HDR is available.
+
+    VkSurfaceFormatKHR surface_format = {VK_FORMAT_UNDEFINED, VK_COLOR_SPACE_MAX_ENUM_KHR};
+    u32 surfaceFormatCount = 0;
+    ant::vector<VkSurfaceFormatKHR> formats(&stack_memory);
+
+    // Get surface formats count
+    result = vkGetPhysicalDeviceSurfaceFormatsKHR(vk_ctx->active_gpu, vk_sc->m_surface, &surfaceFormatCount, nullptr);
+
+    // Allocate and get surface formats
+    formats.resize(surfaceFormatCount);
+    result = (vkGetPhysicalDeviceSurfaceFormatsKHR(vk_ctx->active_gpu, vk_sc->m_surface, &surfaceFormatCount,
+                                                   formats.data()));
+
+    if ((1 == surfaceFormatCount) && (VK_FORMAT_UNDEFINED == formats[0].format)) {
+        surface_format.format = VK_FORMAT_B8G8R8A8_UNORM;
+        surface_format.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+    } else {
+        VkSurfaceFormatKHR hdrSurfaceFormat = {VK_FORMAT_A2B10G10R10_UNORM_PACK32, VK_COLOR_SPACE_HDR10_ST2084_EXT};
+        VkFormat requested_format = galtextureformat_to_vkformat(_desc->format);
+        VkColorSpaceKHR requested_color_space = requested_format == hdrSurfaceFormat.format
+                                                    ? hdrSurfaceFormat.colorSpace
+                                                    : VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+        for (u32 i = 0; i < surfaceFormatCount; ++i) {
+            if ((requested_format == formats[i].format) && (requested_color_space == formats[i].colorSpace)) {
+                surface_format.format = requested_format;
+                surface_format.colorSpace = requested_color_space;
+                break;
+            }
+        }
+
+        // Default to VK_FORMAT_B8G8R8A8_UNORM if requested format isn't found
+        if (VK_FORMAT_UNDEFINED == surface_format.format) {
+            surface_format.format = VK_FORMAT_B8G8R8A8_UNORM;
+            surface_format.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+        }
+    }
+
+    // Free formats
+
+    // The VK_PRESENT_MODE_FIFO_KHR mode must always be present as per spec
+    // This mode waits for the vertical blank ("v-sync")
+    VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
+    u32 swapChainImageCount = 0;
+    VkPresentModeKHR *modes = NULL;
+    // Get present mode count
+    result =
+        (vkGetPhysicalDeviceSurfacePresentModesKHR(vk_ctx->active_gpu, vk_sc->m_surface, &swapChainImageCount, NULL));
+
+    // Allocate and get present modes
+    modes = (VkPresentModeKHR *)alloca(swapChainImageCount * sizeof(*modes));
+    result =
+        (vkGetPhysicalDeviceSurfacePresentModesKHR(vk_ctx->active_gpu, vk_sc->m_surface, &swapChainImageCount, modes));
+
+    const u32 preferredModeCount = 4;
+    VkPresentModeKHR preferredModeList[preferredModeCount] = {
+        VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR,
+        VK_PRESENT_MODE_FIFO_KHR};
+    u32 preferredModeStartIndex = _desc->b_vsync ? 2 : 0;
+
+    for (u32 j = preferredModeStartIndex; j < preferredModeCount; ++j) {
+        VkPresentModeKHR mode = preferredModeList[j];
+        u32 i = 0;
+        for (; i < swapChainImageCount; ++i) {
+            if (modes[i] == mode) {
+                break;
+            }
+        }
+        if (i < swapChainImageCount) {
+            present_mode = mode;
+            break;
+        }
+    }
+
+    // Swapchain
+    VkExtent2D extent = {0};
+    extent.width = std::clamp(_desc->width, caps.minImageExtent.width, caps.maxImageExtent.width);
+    extent.height = std::clamp(_desc->height, caps.minImageExtent.height, caps.maxImageExtent.height);
+
+    VkSurfaceTransformFlagBitsKHR pre_transform;
+    // #TODO: Add more if necessary but identity should be enough for now
+    if (caps.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
+        pre_transform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+    } else {
+        pre_transform = caps.currentTransform;
+    }
+
+    VkCompositeAlphaFlagBitsKHR compositeAlphaFlags[] = {
+        VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
+        VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+        VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
+        VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
+    };
+    VkCompositeAlphaFlagBitsKHR composite_alpha = VK_COMPOSITE_ALPHA_FLAG_BITS_MAX_ENUM_KHR;
+    for (VkCompositeAlphaFlagBitsKHR flag : compositeAlphaFlags) {
+        if (caps.supportedCompositeAlpha & flag) {
+            composite_alpha = flag;
+            break;
+        }
+    }
+
+    assert(composite_alpha != VK_COMPOSITE_ALPHA_FLAG_BITS_MAX_ENUM_KHR);
+
+    VkSwapchainCreateInfoKHR swapChainCreateInfo{};
+    swapChainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    swapChainCreateInfo.pNext = NULL;
+    swapChainCreateInfo.flags = 0;
+    swapChainCreateInfo.surface = vk_sc->m_surface;
+    swapChainCreateInfo.minImageCount = _desc->image_count;
+    swapChainCreateInfo.imageFormat = surface_format.format;
+    swapChainCreateInfo.imageColorSpace = surface_format.colorSpace;
+    swapChainCreateInfo.imageExtent = extent;
+    swapChainCreateInfo.imageArrayLayers = 1;
+    swapChainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    swapChainCreateInfo.queueFamilyIndexCount = 0;
+    swapChainCreateInfo.preTransform = pre_transform;
+    swapChainCreateInfo.compositeAlpha = composite_alpha;
+    swapChainCreateInfo.presentMode = present_mode;
+    swapChainCreateInfo.clipped = VK_TRUE;
+    swapChainCreateInfo.oldSwapchain = 0;
+    result = (vkCreateSwapchainKHR(vk_ctx->device, &swapChainCreateInfo, nullptr, &vk_sc->swap_chain));
+    if (result != VK_SUCCESS || vk_sc->swap_chain == VK_NULL_HANDLE) {
+    }
+    _desc->format = vkformat_to_galtextureformat(surface_format.format);
+
+    // Create rendertargets from swapchain
+    u32 imageCount = 0;
+    result = (vkGetSwapchainImagesKHR(vk_ctx->device, vk_sc->swap_chain, &imageCount, NULL));
+
+    assert(imageCount >= _desc->image_count);
+
+    ant::vector<VkImage> images(imageCount, &stack_memory);
+    result = (vkGetSwapchainImagesKHR(vk_ctx->device, vk_sc->swap_chain, &imageCount, images.data()));
+
+
+    
+    //SwapChain *pSwapChain =
+    //    (SwapChain *)tf_calloc(1, sizeof(SwapChain) + imageCount * sizeof(RenderTarget *) + sizeof(SwapChainDesc));
+    //pSwapChain->ppRenderTargets = (RenderTarget **)(pSwapChain + 1);
+    //pSwapChain->mVulkan._desc = (SwapChainDesc *)(pSwapChain->ppRenderTargets + imageCount);
+   // assert(pSwapChain);
+
+    gal_render_target_desc descColor = {};
+    descColor.width = _desc->width;
+    descColor.height = _desc->height;
+    descColor.depth = 1;
+    descColor.format = _desc->format;
+    descColor.clear_value = _desc->clear_value;
+    descColor.sample_count = gal_texture_sample_count::SAMPLE_COUNT_1;
+    descColor.texture_sample_quality = 0;
+    descColor.initial_state = gal_resource_state::PRESENT;
+
+    // Populate the vk_image field and add the Vulkan texture objects
+    for (u32 i = 0; i < imageCount; ++i) {
+        descColor.native_handle = (void *)images[i];
+        vk_create_render_target(_context, &descColor, &vk_sc->get_render_targets()[i]);
+    }
+    /************************************************************************/
+    /************************************************************************/
+
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
-gal_error_code vk_destroy_swapchain() {
-    //vkDestroySwapchainKHR();
-    return gal_error_code::success;
+gal_error_code vk_destroy_swapchain(gal_context _context, gal_swapchain _swapchain) {
+    if (_swapchain != gal_null) {
+        vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
+        vk_swapchain *vk_sc = reinterpret_cast<vk_swapchain *>(_swapchain);
+        vkDestroySwapchainKHR(vk_ctx->device, vk_sc->m_swapchain, nullptr);
+        vkDestroySurfaceKHR(vk_ctx->instance, vk_sc->m_surface, nullptr);
+        delete vk_sc;
+        _swapchain = gal_null;
+    }
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
-gal_error_code vk_create_surface() {
-    // //#include <GLFW/glfw3.h>
-    //glfwCreateWindowSurface();
-    return gal_error_code::success;
-}
-gal_error_code vk_destroy_surface() {
-    //vkDestroySurfaceKHR();
-    return gal_error_code::success;
-}
+
 // pipeline
-gal_error_code vk_create_shader() {
-    //vkCreateShaderModule();
-    return gal_error_code::success;
+gal_error_code vk_create_shader(gal_context _context, gal_shader_desc *_desc, gal_shader *_shader) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
+    *_shader = reinterpret_cast<gal_shader>(new vk_shader);
+    vk_shader *vk_s = reinterpret_cast<vk_shader *>(*_shader);
+    VkShaderModuleCreateInfo create_info{};
+    create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    create_info.codeSize = _desc->size;
+    create_info.pCode = reinterpret_cast<u32 *>(_desc->data);
+    VkResult result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_s->shader);
+
+    if (result != VK_SUCCESS || vk_s->shader == VK_NULL_HANDLE) {
+        return gal_error_code::GAL_ERRORCODE_ERROR;
+    }
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
-gal_error_code vk_destroy_shader() {
-    //vkDestroyShaderModule();
-    return gal_error_code::success;
+gal_error_code vk_destroy_shader(gal_context _context, gal_shader _shader) {
+    if (_shader != gal_null) {
+        vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
+        vk_shader *vk_s = reinterpret_cast<vk_shader *>(_shader);
+        vkDestroyShaderModule(vk_ctx->device, vk_s->shader, nullptr);
+        delete vk_s;
+        _shader = gal_null;
+    }
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 
 gal_error_code vk_create_pipelinecache(gal_context _context, gal_pipelinecache_desc *_desc,
                                        gal_pipelinecache *pipelinecache) {
-    if (_context && _desc && pipelinecache) {
-
-        return gal_error_code::success;
-    }
-    return gal_error_code::success;
-#if 0
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
     *pipelinecache = reinterpret_cast<gal_pipelinecache>(new ant::gal::vk_pipelinecache);
     vk_pipelinecache *vk_pc = reinterpret_cast<vk_pipelinecache *>(*pipelinecache);
@@ -697,272 +1060,293 @@ gal_error_code vk_create_pipelinecache(gal_context _context, gal_pipelinecache_d
         VkResult result = vkCreatePipelineCache(vk_ctx->device, &ci, nullptr, &vk_pc->pipeline_cache);
         if (result != VK_SUCCESS || vk_pc->pipeline_cache == VK_NULL_HANDLE) {
 
-            return gal_error_code::error;
+            return gal_error_code::GAL_ERRORCODE_ERROR;
         }
     }
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
-
-gal_error_code vk_create_compute_pipeline(gal_context _context, gal_compute_pipeline_desc *_desc,
-                                          gal_pipeline *pipeline) {
+gal_error_code vk_destroy_pipelinecache(gal_context _context, gal_pipelinecache _pipeline_cache) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
-    *pipeline = reinterpret_cast<gal_pipeline>(new ant::gal::vk_pipeline);
-    vk_pipeline *vk_pipe = reinterpret_cast<vk_pipeline *>(*pipeline);
-    vk_shader *vk_shader;
-
-    vk_rootsignature *vk_rootsignature;
-    VkPipelineShaderStageCreateInfo shader_stage_create_info{};
-    shader_stage_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shader_stage_create_info.flags = 0;
-    shader_stage_create_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-    shader_stage_create_info.module = vk_shader->shader;
-    shader_stage_create_info.pName = vk_shader->entry.c_str();
-    shader_stage_create_info.pSpecializationInfo = nullptr;
-
-    VkComputePipelineCreateInfo pipeline_create_info{};
-    pipeline_create_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-    pipeline_create_info.flags = 0;
-    pipeline_create_info.layout = vk_rootsignature->pipeline_layout;
-    pipeline_create_info.stage = shader_stage_create_info;
-
-    VkPipelineCache pipeline_cache = VK_NULL_HANDLE;
-
-    if (_desc->pipeline_cache != gal_null) {
-        pipeline_cache = reinterpret_cast<vk_pipelinecache *>(_desc->pipeline_cache)->pipeline_cache;
+    if (_pipeline_cache != gal_null) {
+        vk_pipelinecache *vk_pc = reinterpret_cast<vk_pipelinecache *>(_pipeline_cache);
+        vkDestroyPipelineCache(vk_ctx->device, vk_pc->pipeline_cache, nullptr);
+        delete vk_pc;
+        _pipeline_cache = gal_null;
     }
-
-    VkResult result =
-        vkCreateComputePipelines(vk_ctx->device, pipeline_cache, 1, &pipeline_create_info, nullptr, &vk_pipe->pipeline);
-    if (result != VK_SUCCESS || vk_pipe->pipeline == VK_NULL_HANDLE) {
-        return gal_error_code::error;
-    }
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
-gal_error_code vk_create_graphics_pipeline(gal_context _context, gal_graphics_pipeline_desc *_desc,
-                                           gal_pipeline *pipeline) {
+gal_error_code vk_get_pipelinecache_data(gal_context _context, gal_pipelinecache _pipeline_cache, u64 *_size,
+                                         void *_data) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
-    *pipeline = reinterpret_cast<gal_pipeline>(new ant::gal::vk_pipeline);
-    vk_pipeline *vk_pipe = reinterpret_cast<vk_pipeline *>(*pipeline);
-    VkGraphicsPipelineCreateInfo pipeline_create_info{};
-    gal_shader *pShaderProgram = _desc->pShaderProgram;
-    VertexLayout *pVertexLayout = _desc->pVertexLayout;
-    u32 stage_count = 0;
-    VkPipelineShaderStageCreateInfo stages[5];
-    for (u32 i = 0; i < 5; ++i) {
-        ShaderStage stage_mask = (ShaderStage)(1 << i);
-        if (stage_mask == (pShaderProgram->mStages & stage_mask)) {
-            stages[stage_count].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-            stages[stage_count].pNext = NULL;
-            stages[stage_count].flags = 0;
-            stages[stage_count].pSpecializationInfo = nullptr;
-            switch (stage_mask) {
-            case SHADER_STAGE_VERT: {
-                stages[stage_count].pName =
-                    pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mVertexStageIndex]
-                        .pEntryPoint;
-                stages[stage_count].stage = VK_SHADER_STAGE_VERTEX_BIT;
-                stages[stage_count].module =
-                    pShaderProgram->mVulkan.pShaderModules[pShaderProgram->pReflection->mVertexStageIndex];
-            } break;
-            case SHADER_STAGE_TESC: {
-                stages[stage_count].pName =
-                    pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mHullStageIndex]
-                        .pEntryPoint;
-                stages[stage_count].stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-                stages[stage_count].module =
-                    pShaderProgram->mVulkan.pShaderModules[pShaderProgram->pReflection->mHullStageIndex];
-            } break;
-            case SHADER_STAGE_TESE: {
-                stages[stage_count].pName =
-                    pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mDomainStageIndex]
-                        .pEntryPoint;
-                stages[stage_count].stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-                stages[stage_count].module =
-                    pShaderProgram->mVulkan.pShaderModules[pShaderProgram->pReflection->mDomainStageIndex];
-            } break;
-            case SHADER_STAGE_GEOM: {
-                stages[stage_count].pName =
-                    pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mGeometryStageIndex]
-                        .pEntryPoint;
-                stages[stage_count].stage = VK_SHADER_STAGE_GEOMETRY_BIT;
-                stages[stage_count].module =
-                    pShaderProgram->mVulkan.pShaderModules[pShaderProgram->pReflection->mGeometryStageIndex];
-            } break;
-            case SHADER_STAGE_FRAG: {
-                stages[stage_count].pName =
-                    pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mPixelStageIndex]
-                        .pEntryPoint;
-                stages[stage_count].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-                stages[stage_count].module =
-                    pShaderProgram->mVulkan.pShaderModules[pShaderProgram->pReflection->mPixelStageIndex];
-            } break;
-            default:
-                assert(false && "Shader Stage not supported!");
-                break;
-            }
-            ++stage_count;
-        }
+    vk_pipelinecache *vk_pc = reinterpret_cast<vk_pipelinecache *>(_pipeline_cache);
+    VkResult result = vkGetPipelineCacheData(vk_ctx->device, vk_pc->pipeline_cache, _size, _data);
+    if (result != VK_SUCCESS || _size == nullptr || _data == nullptr) {
+        return gal_error_code::GAL_ERRORCODE_ERROR;
     }
-
-    // Make sure there's a shader
-    assert(0 != stage_count);
-
-    u32 input_binding_count = 0;
-    VkVertexInputBindingDescription input_bindings[MAX_VERTEX_BINDINGS] = {{0}};
-    u32 input_attribute_count = 0;
-    VkVertexInputAttributeDescription input_attributes[MAX_VERTEX_ATTRIBS] = {{0}};
-
-    // Make sure there's attributes
-    if (pVertexLayout != NULL) {
-        // Ignore everything that's beyond max_vertex_attribs
-        u32 attrib_count =
-            pVertexLayout->mAttribCount > MAX_VERTEX_ATTRIBS ? MAX_VERTEX_ATTRIBS : pVertexLayout->mAttribCount;
-        u32 binding_value = UINT32_MAX;
-
-        // Initial values
-        for (u32 i = 0; i < attrib_count; ++i) {
-            const VertexAttrib *attrib = &(pVertexLayout->mAttribs[i]);
-
-            if (binding_value != attrib->mBinding) {
-                binding_value = attrib->mBinding;
-                ++input_binding_count;
-            }
-
-            input_bindings[input_binding_count - 1].binding = binding_value;
-            if (attrib->mRate == VERTEX_ATTRIB_RATE_INSTANCE) {
-                input_bindings[input_binding_count - 1].inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
-            } else {
-                input_bindings[input_binding_count - 1].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-            }
-            input_bindings[input_binding_count - 1].stride += gal_tf_bit_size_of_block(attrib->mFormat) / 8;
-
-            input_attributes[input_attribute_count].location = attrib->mLocation;
-            input_attributes[input_attribute_count].binding = attrib->mBinding;
-            input_attributes[input_attribute_count].format = galtextureformat_to_vkformat(attrib->mFormat);
-            input_attributes[input_attribute_count].offset = attrib->mOffset;
-            ++input_attribute_count;
-        }
-    }
-
-    VkPipelineVertexInputStateCreateInfo vi{};
-    vi.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vi.pNext = NULL;
-    vi.flags = 0;
-    vi.vertexBindingDescriptionCount = input_binding_count;
-    vi.pVertexBindingDescriptions = input_bindings;
-    vi.vertexAttributeDescriptionCount = input_attribute_count;
-    vi.pVertexAttributeDescriptions = input_attributes;
-
-    VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    switch (_desc->mPrimitiveTopo) {
-    case PrimitiveTopology::PRIMITIVE_TOPO_POINT_LIST:
-        topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-        break;
-    case PrimitiveTopology::PRIMITIVE_TOPO_LINE_LIST:
-        topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-        break;
-    case PrimitiveTopology::PRIMITIVE_TOPO_LINE_STRIP:
-        topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
-        break;
-    case PrimitiveTopology::PRIMITIVE_TOPO_TRI_STRIP:
-        topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-        break;
-    case PrimitiveTopology::PRIMITIVE_TOPO_PATCH_LIST:
-        topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
-        break;
-    case PrimitiveTopology::PRIMITIVE_TOPO_TRI_LIST:
-        topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        break;
-    default:
-        assert(false && "Primitive Topo not supported!");
-        break;
-    }
-    VkPipelineInputAssemblyStateCreateInfo ia{};
-    ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    ia.pNext = NULL;
-    ia.flags = 0;
-    ia.topology = topology;
-    ia.primitiveRestartEnable = VK_FALSE;
-
-    VkPipelineTessellationStateCreateInfo ts{};
-    if ((pShaderProgram->mStages & SHADER_STAGE_TESC) && (pShaderProgram->mStages & SHADER_STAGE_TESE)) {
-        ts.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
-        ts.pNext = NULL;
-        ts.flags = 0;
-        ts.patchControlPoints =
-            pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mHullStageIndex]
-                .mNumControlPoint;
-    }
-
-    VkPipelineViewportStateCreateInfo vs{};
-    vs.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    vs.pNext = NULL;
-    vs.flags = 0;
-    // we are using dynamic viewports but we must set the count to 1
-    vs.viewportCount = 1;
-    vs.pViewports = NULL;
-    vs.scissorCount = 1;
-    vs.pScissors = NULL;
-    VkPipelineMultisampleStateCreateInfo ms{};
-    ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    ms.pNext = NULL;
-    ms.flags = 0;
-    ms.rasterizationSamples = util_to_vk_sample_count(_desc->mSampleCount);
-    ms.sampleShadingEnable = VK_FALSE;
-    ms.minSampleShading = 0.0f;
-    ms.pSampleMask = 0;
-    ms.alphaToCoverageEnable = VK_FALSE;
-    ms.alphaToOneEnable = VK_FALSE;
-
-    VkPipelineRasterizationStateCreateInfo rs;
-    rs = _desc->pRasterizerState ? util_to_rasterizer_desc(_desc->pRasterizerState) : gDefaultRasterizerDesc;
-
-    /// TODO: Dont create depth state if no depth stencil bound
-    VkPipelineDepthStencilStateCreateInfo ds{};
-    ds = _desc->pDepthState ? util_to_depth_desc(_desc->pDepthState) : gDefaultDepthDesc;
-
-    VkPipelineColorBlendStateCreateInfo cb{};
-    VkPipelineColorBlendAttachmentState cbAtt[MAX_RENDER_TARGET_ATTACHMENTS];
-    cb = _desc->pBlendState ? util_to_blend_desc(_desc->pBlendState, cbAtt) : gDefaultBlendDesc;
-    cb.attachmentCount = _desc->mRenderTargetCount;
-
-    VkDynamicState dyn_states[] = {
-        VK_DYNAMIC_STATE_VIEWPORT,     VK_DYNAMIC_STATE_SCISSOR,           VK_DYNAMIC_STATE_BLEND_CONSTANTS,
-        VK_DYNAMIC_STATE_DEPTH_BOUNDS, VK_DYNAMIC_STATE_STENCIL_REFERENCE,
-    };
-    VkPipelineDynamicStateCreateInfo dy{};
-    dy.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dy.pNext = NULL;
-    dy.flags = 0;
-    dy.dynamicStateCount = sizeof(dyn_states) / sizeof(dyn_states[0]);
-    dy.pDynamicStates = dyn_states;
-
-    VkGraphicsPipelineCreateInfo add_info{};
-    add_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    add_info.pNext = NULL;
-    add_info.flags = 0;
-    add_info.stageCount = stage_count;
-    add_info.pStages = stages;
-    add_info.pVertexInputState = &vi;
-    add_info.pInputAssemblyState = &ia;
-
-    if ((pShaderProgram->mStages & SHADER_STAGE_TESC) && (pShaderProgram->mStages & SHADER_STAGE_TESE))
-        add_info.pTessellationState = &ts;
-    else
-        add_info.pTessellationState = NULL; // set tessellation state to null if we have no tessellation
-
-    add_info.pViewportState = &vs;
-    add_info.pRasterizationState = &rs;
-    add_info.pMultisampleState = &ms;
-    add_info.pDepthStencilState = &ds;
-    add_info.pColorBlendState = &cb;
-    add_info.pDynamicState = &dy;
-    add_info.layout = _desc->pRootSignature->mVulkan.pPipelineLayout;
-    add_info.subpass = 0;
-    result = (vkCreateGraphicsPipelines(pRenderer->mVulkan.pVkDevice, psoCache, 1, &add_info, &gVkAllocationCallbacks,
-                                        &(pPipeline->mVulkan.pVkPipeline)));
-#endif
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
+//gal_error_code vk_create_compute_pipeline(gal_context _context, gal_compute_pipeline_desc *_desc,
+//                                          gal_pipeline *pipeline) {
+//    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
+//    *pipeline = reinterpret_cast<gal_pipeline>(new ant::gal::vk_pipeline);
+//    vk_pipeline *vk_pipe = reinterpret_cast<vk_pipeline *>(*pipeline);
+//    vk_shader *vk_shader;
+//
+//    vk_rootsignature *vk_rs = reinterpret_cast<vk_rootsignature *>(_desc->root_signature);
+//    VkPipelineShaderStageCreateInfo shader_stage_create_info{};
+//    shader_stage_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+//    shader_stage_create_info.flags = 0;
+//    shader_stage_create_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+//    shader_stage_create_info.module = vk_shader->shader;
+//    shader_stage_create_info.pName = vk_shader->entry.c_str();
+//    shader_stage_create_info.pSpecializationInfo = nullptr;
+//
+//    VkComputePipelineCreateInfo pipeline_create_info{};
+//    pipeline_create_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+//    pipeline_create_info.flags = 0;
+//    pipeline_create_info.layout = vk_rs->pipeline_layout;
+//    pipeline_create_info.stage = shader_stage_create_info;
+//
+//    VkPipelineCache pipeline_cache = VK_NULL_HANDLE;
+//
+//    if (_desc->pipeline_cache != gal_null) {
+//        pipeline_cache = reinterpret_cast<vk_pipelinecache *>(_desc->pipeline_cache)->pipeline_cache;
+//    }
+//
+//    VkResult result =
+//        vkCreateComputePipelines(vk_ctx->device, pipeline_cache, 1, &pipeline_create_info, nullptr, &vk_pipe->pipeline);
+//    if (result != VK_SUCCESS || vk_pipe->pipeline == VK_NULL_HANDLE) {
+//        return gal_error_code::GAL_ERRORCODE_ERROR;
+//    }
+//    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+//}
+
+//gal_error_code vk_create_graphics_pipeline(gal_context _context, gal_graphics_pipeline_desc *_desc,
+//                                           gal_pipeline *pipeline) {
+//#if 0
+//    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
+//    *pipeline = reinterpret_cast<gal_pipeline>(new ant::gal::vk_pipeline);
+//    vk_pipeline *vk_pipe = reinterpret_cast<vk_pipeline *>(*pipeline);
+//    VkGraphicsPipelineCreateInfo pipeline_create_info{};
+//    gal_shader *pShaderProgram = _desc->pShaderProgram;
+//    VertexLayout *pVertexLayout = _desc->pVertexLayout;
+//    u32 stage_count = 0;
+//    VkPipelineShaderStageCreateInfo stages[5];
+//    for (u32 i = 0; i < 5; ++i) {
+//        ShaderStage stage_mask = (ShaderStage)(1 << i);
+//        if (stage_mask == (pShaderProgram->mStages & stage_mask)) {
+//            stages[stage_count].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+//            stages[stage_count].pNext = NULL;
+//            stages[stage_count].flags = 0;
+//            stages[stage_count].pSpecializationInfo = nullptr;
+//            switch (stage_mask) {
+//            case SHADER_STAGE_VERT: {
+//                stages[stage_count].pName =
+//                    pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mVertexStageIndex]
+//                        .pEntryPoint;
+//                stages[stage_count].stage = VK_SHADER_STAGE_VERTEX_BIT;
+//                stages[stage_count].module =
+//                    pShaderProgram->mVulkan.pShaderModules[pShaderProgram->pReflection->mVertexStageIndex];
+//            } break;
+//            case SHADER_STAGE_TESC: {
+//                stages[stage_count].pName =
+//                    pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mHullStageIndex]
+//                        .pEntryPoint;
+//                stages[stage_count].stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+//                stages[stage_count].module =
+//                    pShaderProgram->mVulkan.pShaderModules[pShaderProgram->pReflection->mHullStageIndex];
+//            } break;
+//            case SHADER_STAGE_TESE: {
+//                stages[stage_count].pName =
+//                    pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mDomainStageIndex]
+//                        .pEntryPoint;
+//                stages[stage_count].stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+//                stages[stage_count].module =
+//                    pShaderProgram->mVulkan.pShaderModules[pShaderProgram->pReflection->mDomainStageIndex];
+//            } break;
+//            case SHADER_STAGE_GEOM: {
+//                stages[stage_count].pName =
+//                    pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mGeometryStageIndex]
+//                        .pEntryPoint;
+//                stages[stage_count].stage = VK_SHADER_STAGE_GEOMETRY_BIT;
+//                stages[stage_count].module =
+//                    pShaderProgram->mVulkan.pShaderModules[pShaderProgram->pReflection->mGeometryStageIndex];
+//            } break;
+//            case SHADER_STAGE_FRAG: {
+//                stages[stage_count].pName =
+//                    pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mPixelStageIndex]
+//                        .pEntryPoint;
+//                stages[stage_count].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+//                stages[stage_count].module =
+//                    pShaderProgram->mVulkan.pShaderModules[pShaderProgram->pReflection->mPixelStageIndex];
+//            } break;
+//            default:
+//                assert(false && "Shader Stage not supported!");
+//                break;
+//            }
+//            ++stage_count;
+//        }
+//    }
+//
+//    // Make sure there's a shader
+//    assert(0 != stage_count);
+//
+//    u32 input_binding_count = 0;
+//    VkVertexInputBindingDescription input_bindings[MAX_VERTEX_BINDINGS] = {{0}};
+//    u32 input_attribute_count = 0;
+//    VkVertexInputAttributeDescription input_attributes[MAX_VERTEX_ATTRIBS] = {{0}};
+//
+//    // Make sure there's attributes
+//    if (pVertexLayout != NULL) {
+//        // Ignore everything that's beyond max_vertex_attribs
+//        u32 attrib_count =
+//            pVertexLayout->mAttribCount > MAX_VERTEX_ATTRIBS ? MAX_VERTEX_ATTRIBS : pVertexLayout->mAttribCount;
+//        u32 binding_value = UINT32_MAX;
+//
+//        // Initial values
+//        for (u32 i = 0; i < attrib_count; ++i) {
+//            const VertexAttrib *attrib = &(pVertexLayout->mAttribs[i]);
+//
+//            if (binding_value != attrib->mBinding) {
+//                binding_value = attrib->mBinding;
+//                ++input_binding_count;
+//            }
+//
+//            input_bindings[input_binding_count - 1].binding = binding_value;
+//            if (attrib->mRate == VERTEX_ATTRIB_RATE_INSTANCE) {
+//                input_bindings[input_binding_count - 1].inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+//            } else {
+//                input_bindings[input_binding_count - 1].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+//            }
+//            input_bindings[input_binding_count - 1].stride += gal_tf_bit_size_of_block(attrib->mFormat) / 8;
+//
+//            input_attributes[input_attribute_count].location = attrib->mLocation;
+//            input_attributes[input_attribute_count].binding = attrib->mBinding;
+//            input_attributes[input_attribute_count].format = galtextureformat_to_vkformat(attrib->mFormat);
+//            input_attributes[input_attribute_count].offset = attrib->mOffset;
+//            ++input_attribute_count;
+//        }
+//    }
+//
+//    VkPipelineVertexInputStateCreateInfo vi{};
+//    vi.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+//    vi.pNext = NULL;
+//    vi.flags = 0;
+//    vi.vertexBindingDescriptionCount = input_binding_count;
+//    vi.pVertexBindingDescriptions = input_bindings;
+//    vi.vertexAttributeDescriptionCount = input_attribute_count;
+//    vi.pVertexAttributeDescriptions = input_attributes;
+//
+//    VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+//    switch (_desc->mPrimitiveTopo) {
+//    case PrimitiveTopology::PRIMITIVE_TOPO_POINT_LIST:
+//        topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+//        break;
+//    case PrimitiveTopology::PRIMITIVE_TOPO_LINE_LIST:
+//        topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+//        break;
+//    case PrimitiveTopology::PRIMITIVE_TOPO_LINE_STRIP:
+//        topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+//        break;
+//    case PrimitiveTopology::PRIMITIVE_TOPO_TRI_STRIP:
+//        topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+//        break;
+//    case PrimitiveTopology::PRIMITIVE_TOPO_PATCH_LIST:
+//        topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
+//        break;
+//    case PrimitiveTopology::PRIMITIVE_TOPO_TRI_LIST:
+//        topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+//        break;
+//    default:
+//        assert(false && "Primitive Topo not supported!");
+//        break;
+//    }
+//    VkPipelineInputAssemblyStateCreateInfo ia{};
+//    ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+//    ia.pNext = NULL;
+//    ia.flags = 0;
+//    ia.topology = topology;
+//    ia.primitiveRestartEnable = VK_FALSE;
+//
+//    VkPipelineTessellationStateCreateInfo ts{};
+//    if ((pShaderProgram->mStages & SHADER_STAGE_TESC) && (pShaderProgram->mStages & SHADER_STAGE_TESE)) {
+//        ts.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+//        ts.pNext = NULL;
+//        ts.flags = 0;
+//        ts.patchControlPoints =
+//            pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mHullStageIndex]
+//                .mNumControlPoint;
+//    }
+//
+//    VkPipelineViewportStateCreateInfo vs{};
+//    vs.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+//    vs.pNext = NULL;
+//    vs.flags = 0;
+//    // we are using dynamic viewports but we must set the count to 1
+//    vs.viewportCount = 1;
+//    vs.pViewports = NULL;
+//    vs.scissorCount = 1;
+//    vs.pScissors = NULL;
+//    VkPipelineMultisampleStateCreateInfo ms{};
+//    ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+//    ms.pNext = NULL;
+//    ms.flags = 0;
+//    ms.rasterizationSamples = util_to_vk_sample_count(_desc->mSampleCount);
+//    ms.sampleShadingEnable = VK_FALSE;
+//    ms.minSampleShading = 0.0f;
+//    ms.pSampleMask = 0;
+//    ms.alphaToCoverageEnable = VK_FALSE;
+//    ms.alphaToOneEnable = VK_FALSE;
+//
+//    VkPipelineRasterizationStateCreateInfo rs;
+//    rs = _desc->pRasterizerState ? util_to_rasterizer_desc(_desc->pRasterizerState) : gDefaultRasterizerDesc;
+//
+//    /// TODO: Dont create depth state if no depth stencil bound
+//    VkPipelineDepthStencilStateCreateInfo ds{};
+//    ds = _desc->pDepthState ? util_to_depth_desc(_desc->pDepthState) : gDefaultDepthDesc;
+//
+//    VkPipelineColorBlendStateCreateInfo cb{};
+//    VkPipelineColorBlendAttachmentState cbAtt[MAX_RENDER_TARGET_ATTACHMENTS];
+//    cb = _desc->pBlendState ? util_to_blend_desc(_desc->pBlendState, cbAtt) : gDefaultBlendDesc;
+//    cb.attachmentCount = _desc->mRenderTargetCount;
+//
+//    VkDynamicState dyn_states[] = {
+//        VK_DYNAMIC_STATE_VIEWPORT,     VK_DYNAMIC_STATE_SCISSOR,           VK_DYNAMIC_STATE_BLEND_CONSTANTS,
+//        VK_DYNAMIC_STATE_DEPTH_BOUNDS, VK_DYNAMIC_STATE_STENCIL_REFERENCE,
+//    };
+//    VkPipelineDynamicStateCreateInfo dy{};
+//    dy.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+//    dy.pNext = NULL;
+//    dy.flags = 0;
+//    dy.dynamicStateCount = sizeof(dyn_states) / sizeof(dyn_states[0]);
+//    dy.pDynamicStates = dyn_states;
+//
+//    VkGraphicsPipelineCreateInfo add_info{};
+//    add_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+//    add_info.pNext = NULL;
+//    add_info.flags = 0;
+//    add_info.stageCount = stage_count;
+//    add_info.pStages = stages;
+//    add_info.pVertexInputState = &vi;
+//    add_info.pInputAssemblyState = &ia;
+//
+//    if ((pShaderProgram->mStages & SHADER_STAGE_TESC) && (pShaderProgram->mStages & SHADER_STAGE_TESE))
+//        add_info.pTessellationState = &ts;
+//    else
+//        add_info.pTessellationState = NULL; // set tessellation state to null if we have no tessellation
+//
+//    add_info.pViewportState = &vs;
+//    add_info.pRasterizationState = &rs;
+//    add_info.pMultisampleState = &ms;
+//    add_info.pDepthStencilState = &ds;
+//    add_info.pColorBlendState = &cb;
+//    add_info.pDynamicState = &dy;
+//    add_info.layout = _desc->pRootSignature->mVulkan.pPipelineLayout;
+//    add_info.subpass = 0;
+//    result = (vkCreateGraphicsPipelines(vk_ctx->device, psoCache, 1, &add_info, nullptr,
+//                                        &(pPipeline->mVulkan.pVkPipeline)));
+//#endif
+//}
 //gal_error_code vk_create_raytracing_pipeline(gal_context _context, gal_raytracing_pipeline_desc *_desc,
 //                                           gal_pipeline *pipeline) {
 //    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
@@ -975,183 +1359,183 @@ gal_error_code vk_create_graphics_pipeline(gal_context _context, gal_graphics_pi
 
 gal_error_code vk_destroy_pipeline() {
     //vkDestroyPipeline();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 
 struct vk_descriptorpool {
     VkDescriptorPool pool;
 };
 //gal_error_code vk_create_descriptorpool(gal_context _context, gal_descriptorpool_desc* _desc, gal_descriptorpool* descriptorpool) {
-//    return gal_error_code::success;
+//    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
 gal_error_code vk_destroy_descriptorpool() {
     //vkDestroyDescriptorPool();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_consume_descriptorset() {
     //vkAllocateDescriptorSets();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_free_descriptorset() {
     //vkFreeDescriptorSets()
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_create_rootsignature() {
     //vkCreatePipelineLayout();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_destroy_rootsignature() {
     //vkDestroyPipelineLayout();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 // sync
 gal_error_code vk_create_fence() {
     //vkCreateFence();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_wait_fence() {
     //vkWaitForFences();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_destroy_fence() {
     //vkDestroyFence();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_wait_gpu() {
     //vkDeviceWaitIdle();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_create_semaphore() {
     //vkCreateSemaphore();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_destroy_semaphore() {
     //vkDestroySemaphore();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 // cmds
 gal_error_code vk_create_commandpool() {
     //vkCreateCommandPool();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_reset_commandpool() {
     //vkResetCommandPool();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_destroy_commandpool() {
     //vkDestroyCommandPool();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_allocate_commandlist() {
     //vkAllocateCommandBuffers();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_free_commandlist() {
     //vkFreeCommandBuffers();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_cmd_begin_recording() {
     //vkBeginCommandBuffer();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_cmd_end_recording() {
     //vkEndCommandBuffer();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_cmd_resource_barrier() {
     //vkCmdPipelineBarrier();
     //vkCmdPipelineBarrier2();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 
 gal_error_code vk_cmd_bind_index_buffer() {
     //vkCmdBindIndexBuffer();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_cmd_bind_vertex_buffer() {
     //vkCmdBindVertexBuffers();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_cmd_bind_descriptorset() {
     //vkCmdBindDescriptorSets();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_cmd_bind_pipeline() {
     //vkCmdBindPipeline();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_cmd_begin_renderpass() {
     // using dynamic rendering
     //vkCmdBeginRendering();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_cmd_end_renderpass() {
     //vkCmdEndRendering();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_cmd_dispatch() {
     //vkCmdDispatch();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_cmd_dispatch_indirect() {
     //vkCmdDispatchIndirect();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_cmd_draw_instanced() {
     //vkCmdDraw();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_cmd_draw_indexed_instanced() {
     //vkCmdDrawIndexed();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_cmd_draw_indirect_instanced() {
     //vkCmdDrawIndirect();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_cmd_draw_indirect_indexed_instanced() {
     //vkCmdDrawIndexedIndirect();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_cmd_draw_mesh_task() {
     // vkCmdDrawMeshTasksEXT
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_cmd_draw_indirect_mesh_task() {
     // vkCmdDrawMeshTasksEXT
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_cmd_copy_texture() {
     //vkCmdCopyImage();
     //vkCmdCopyImage2();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_cmd_copy_buffer() {
     //vkCmdCopyBuffer();
     // vkCmdCopyBuffer2()
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_cmd_fill_buffer() {
     //vkCmdFillBuffer();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_cmd_fill_texture() {
     //vkCmdClearColorImage();
     //vkCmdClearDepthStencilImage();
     //vkCmdClearAttachments();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
-gal_error_code vk_cmd_upload_buffer() { return gal_error_code::success; }
-gal_error_code vk_cmd_upload_texture() { return gal_error_code::success; }
+gal_error_code vk_cmd_upload_buffer() { return gal_error_code::GAL_ERRORCODE_SUCCESS; }
+gal_error_code vk_cmd_upload_texture() { return gal_error_code::GAL_ERRORCODE_SUCCESS; }
 gal_error_code vk_cmd_copy_buffer_to_texture() {
     //vkCmdCopyBufferToImage();
     //vkCmdCopyBufferToImage2();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_cmd_copy_texture_to_buffer() {
     //vkCmdCopyImageToBuffer();
     //vkCmdCopyImageToBuffer2();
-    return gal_error_code::success;
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 
 } // namespace ant::gal

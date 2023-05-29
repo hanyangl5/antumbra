@@ -1,3 +1,29 @@
+/*
+ * Code adapted from ConfettiFX The-Forge
+ * 
+ * Copyright (c) 2017-2022 The Forge Interactive Inc.
+ *
+ * This file is part of The-Forge
+ * (see https://github.com/ConfettiFX/The-Forge).
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+*/
+
 #pragma once
 
 #include "../gal.h"
@@ -21,32 +47,32 @@ constexpr void offload_gal_vk_functions() {
 
 constexpr VkFilter utils_to_vk_filter(gal_sampler_filter_mode filter) {
     switch (filter) {
-    case gal_sampler_filter_mode::point:
+    case gal_sampler_filter_mode::POINT:
         return VK_FILTER_NEAREST;
-    case gal_sampler_filter_mode::linear:
+    case gal_sampler_filter_mode::LINEAR:
         return VK_FILTER_LINEAR;
     default:
-        return VK_FILTER_NEAREST;
+        return VK_FILTER_MAX_ENUM;
     }
 }
 
-constexpr VkBufferUsageFlags util_to_vk_buffer_usage(gal_resource_types types) {
+constexpr VkBufferUsageFlags util_to_vk_buffer_usage(gal_resource_type types) {
     VkBufferUsageFlags flags = 0;
 
-    if (types & gal_resource_type::rt_constant_buffer) {
+    if ((types & gal_resource_type::CONSTANT_BUFFER) != gal_resource_type::UNDEFINED) {
         flags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     }
-    if (types & gal_resource_type::rt_rw_buffer) {
+    if ((types & gal_resource_type::RW_BUFFER) != gal_resource_type::UNDEFINED) {
         flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
     }
 
-    if (types & gal_resource_type::rt_vertex_buffer) {
+    if ((types & gal_resource_type::VERTEX_BUFFER) != gal_resource_type::UNDEFINED) {
         flags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     }
-    if (types & gal_resource_type::rt_index_buffer) {
+    if ((types & gal_resource_type::INDEX_BUFFER) != gal_resource_type::UNDEFINED) {
         flags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
     }
-    if (types & gal_resource_type::rt_indirect_buffer) {
+    if ((types & gal_resource_type::INDIRECT_ARGUMENT) != gal_resource_type::UNDEFINED) {
         flags |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
     }
 
@@ -69,18 +95,20 @@ constexpr VkImageType utils_to_vk_image_type(gal_texture_dimension dimension) {
 
 constexpr VkSampleCountFlagBits utils_to_vk_sample_count_flags(gal_texture_sample_count samples) {
     switch (samples) {
-    case ant::gal::gal_texture_sample_count::tsc_1:
+    case ant::gal::gal_texture_sample_count::SAMPLE_COUNT_1:
         return VK_SAMPLE_COUNT_1_BIT;
-        break;
-    case ant::gal::gal_texture_sample_count::tsc_2:
+    case ant::gal::gal_texture_sample_count::SAMPLE_COUNT_2:
         return VK_SAMPLE_COUNT_2_BIT;
-        break;
-    case ant::gal::gal_texture_sample_count::tsc_4:
+    case ant::gal::gal_texture_sample_count::SAMPLE_COUNT_4:
         return VK_SAMPLE_COUNT_4_BIT;
-        break;
-    case ant::gal::gal_texture_sample_count::tsc_8:
+    case ant::gal::gal_texture_sample_count::SAMPLE_COUNT_8:
         return VK_SAMPLE_COUNT_8_BIT;
-        break;
+    case ant::gal::gal_texture_sample_count::SAMPLE_COUNT_16:
+        return VK_SAMPLE_COUNT_16_BIT;
+    case ant::gal::gal_texture_sample_count::SAMPLE_COUNT_32:
+        return VK_SAMPLE_COUNT_32_BIT;
+    case ant::gal::gal_texture_sample_count::SAMPLE_COUNT_64:
+        return VK_SAMPLE_COUNT_64_BIT;
     default:
         return VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM;
         break;
@@ -93,23 +121,23 @@ constexpr VkSampleCountFlagBits utils_to_vk_sample_count_flags(gal_texture_sampl
 //    return flags;
 //}
 
-constexpr VkImageUsageFlags utils_to_vk_image_usage(gal_resource_types types, gal_memory_flags memory_flag) {
+constexpr VkImageUsageFlags utils_to_vk_image_usage(gal_resource_type types, gal_memory_flag memory_flag) {
     VkImageUsageFlags flags = 0;
-    if (memory_flag & gal_memory_flag::cpu_upload) {
+    if ((memory_flag & gal_memory_flag::CPU_UPLOAD) != gal_memory_flag::UNDEFINED) {
         flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    } else if (memory_flag & gal_memory_flag::gpu_download) {
+    } else if ((memory_flag & gal_memory_flag::GPU_DOWNLOAD) != gal_memory_flag::UNDEFINED) {
         flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     }
-    if (types & gal_resource_type::rt_color_rt) {
+    if ((types & gal_resource_type::COLOR_RT) != gal_resource_type::UNDEFINED) {
         flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     }
-    if (types & gal_resource_type::rt_depth_stencil_rt) {
+    if ((types & gal_resource_type::DEPTH_STENCIL_RT) != gal_resource_type::UNDEFINED) {
         flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     }
-    if (types & gal_resource_type::rt_texture) {
+    if ((types & gal_resource_type::TEXTURE) != gal_resource_type::UNDEFINED) {
         flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
     }
-    if (types & gal_resource_type::rt_rw_texture) {
+    if ((types & gal_resource_type::RW_TEXTURE) != gal_resource_type::UNDEFINED) {
         flags |= VK_IMAGE_USAGE_STORAGE_BIT;
         flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     }
@@ -992,13 +1020,13 @@ constexpr VkFormat galtextureformat_to_vkformat(gal_texture_format fmt) {
 
 constexpr VkSamplerAddressMode utils_to_vk_address_mode(gal_sampler_address_mode address_mode) {
     switch (address_mode) {
-    case gal_sampler_address_mode::repeat:
+    case gal_sampler_address_mode::REPEAT:
         return VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    case gal_sampler_address_mode::mirror:
+    case gal_sampler_address_mode::MIRROR:
         return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
-    case gal_sampler_address_mode::clamp:
+    case gal_sampler_address_mode::CLAMP:
         return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    case gal_sampler_address_mode::border:
+    case gal_sampler_address_mode::BORDER:
         return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
     default:
         return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -1007,21 +1035,21 @@ constexpr VkSamplerAddressMode utils_to_vk_address_mode(gal_sampler_address_mode
 
 constexpr VkCompareOp utils_to_vk_compare_op(gal_compare_mode compare_mode) {
     switch (compare_mode) {
-    case gal_compare_mode::never:
+    case gal_compare_mode::NEVER:
         return VK_COMPARE_OP_NEVER;
-    case gal_compare_mode::less:
+    case gal_compare_mode::LESS:
         return VK_COMPARE_OP_LESS;
-    case gal_compare_mode::equal:
+    case gal_compare_mode::EQUAL:
         return VK_COMPARE_OP_EQUAL;
-    case gal_compare_mode::less_equal:
+    case gal_compare_mode::LESS_EQUAL:
         return VK_COMPARE_OP_LESS_OR_EQUAL;
-    case gal_compare_mode::greater:
+    case gal_compare_mode::GREATER:
         return VK_COMPARE_OP_GREATER;
-    case gal_compare_mode::not_equal:
+    case gal_compare_mode::NOT_EQUAL:
         return VK_COMPARE_OP_NOT_EQUAL;
-    case gal_compare_mode::greater_equal:
+    case gal_compare_mode::GREATER_EQUAL:
         return VK_COMPARE_OP_GREATER_OR_EQUAL;
-    case gal_compare_mode::always:
+    case gal_compare_mode::ALWAYS:
         return VK_COMPARE_OP_ALWAYS;
     default:
         return VK_COMPARE_OP_NEVER;
@@ -1030,9 +1058,9 @@ constexpr VkCompareOp utils_to_vk_compare_op(gal_compare_mode compare_mode) {
 
 constexpr VkSamplerMipmapMode utils_to_vk_mip_map_mode(gal_sampler_mip_mode mip_mode) {
     switch (mip_mode) {
-    case gal_sampler_mip_mode::point:
+    case gal_sampler_mip_mode::POINT:
         return VK_SAMPLER_MIPMAP_MODE_NEAREST;
-    case gal_sampler_mip_mode::linear:
+    case gal_sampler_mip_mode::LINEAR:
         return VK_SAMPLER_MIPMAP_MODE_LINEAR;
     default:
         return VK_SAMPLER_MIPMAP_MODE_NEAREST;

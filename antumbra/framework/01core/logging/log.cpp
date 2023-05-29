@@ -9,7 +9,6 @@
 #endif // WIN32
 
 #include <spdlog/sinks/stdout_color_sinks.h> // or "../stdout_sinks.h" if no colors needed
-#include <vulkan/vulkan.h>
 
 // project headers
 

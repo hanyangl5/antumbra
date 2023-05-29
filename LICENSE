@@ -7,3 +7,65 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+This project includes the following third-party code libraries
+
+- nothings/stb
+	url: https://github.com/nothings/stb
+    license: The MIT License (MIT), https://github.com/nothings/stb/blob/master/LICENSE
+- nlohmann/json
+	url: https://github.com/nlohmann/json
+    license: The MIT License (MIT), https://github.com/nlohmann/json/blob/develop/LICENSE.MIT
+- SanderMertens/flecs
+	url: https://github.com/SanderMertens/flecs
+    license: The MIT License, https://github.com/SanderMertens/flecs/blob/master/LICENSE
+- catchorg/Catch2
+	url: https://github.com/catchorg/Catch2
+    license: Boost Software License 1.0, https://github.com/catchorg/Catch2/blob/devel/LICENSE.txt
+- g-truc/glm
+	url: https://github.com/g-truc/glm
+    license: The Happy Bunny License, https://github.com/g-truc/glm/blob/master/copying.txt
+- gabime/spdlog
+	url: https://github.com/gabime/spdlog
+    license: The MIT License (MIT), https://github.com/gabime/spdlog/blob/v1.x/LICENSE
+
+
+- KhronosGroup/SPIRV-Cross-Cross
+	url: https://github.com/KhronosGroup/SPIRV-Cross
+
+- microsoft/mimalloc
+	url: https://github.com/microsoft/mimalloc
+
+- microsoft/DirectXTK12
+	url: https://github.com/microsoft/DirectXTK12
+
+- GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
+	url: https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
+
+- GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator
+	url: https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator
+
+- wolfpld/tracy
+	url: https://github.com/wolfpld/tracy
+
+- Vulkan-KhronosGroup/Vulkan-Headers
+	url: https://github.com/KhronosGroup/Vulkan-Headers
+
+- glfw/glfw
+	url: https://github.com/glfw/glfw
+- ThePhD/sol2
+	url: https://github.com/ThePhD/sol2
+
+- syoyo/tinygltf
+	url: https://github.com/syoyo/tinygltf
+
+- walterschell/Lua
+	url: https://github.com/walterschell/Lua
+- lua/lua
+	url: https://github.com/lua/lua
+- ConfettiFX/The-Forge-Forge
+    license: Apache License 2.0, https://github.com/ConfettiFX/The-Forge/blob/master/LICENSE
+    (modification files are under 
+    antumbra\framework\02gal\enum.h, 
+    antumbra\framework\02gal\vulkan\gal_vulkan_utils.h
+    antumbra\framework\02gal\vulkan\gal_vulkan.cpp)
