@@ -1,6 +1,6 @@
 project(ant_third_party)
 
-add_library(${PROJECT_NAME} third_party_dummy.cpp)
+add_library(${PROJECT_NAME} third_party_dummy.cpp TracyClient.cpp)
 
 add_subdirectory(glfw) # CMakeLists of glfw added some useless projects/folders in root directory
 add_subdirectory(json)

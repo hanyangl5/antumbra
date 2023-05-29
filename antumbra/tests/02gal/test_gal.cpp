@@ -105,7 +105,7 @@ TEST_CASE("test gal render target") {
         desc.initial_state = gal_resource_state::RENDER_TARGET;
         desc.sample_count = gal_texture_sample_count::SAMPLE_COUNT_1;
         desc.clear_value.value = gal_clear_value::rgb{0.0f, 0.0f, 0.0f, 1.0f};
-        gal::gal_render_target rt{};
+        gal::gal_render_target rt;
         gal::gal_error_code result = gal::create_render_target(context, &desc, &rt);
         REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
         result = gal::destroy_render_target(context, rt);
@@ -126,8 +126,8 @@ TEST_CASE("test gal swapchain") {
         window_desc.width = 256;
         ant::create_window(&window_desc, &window);
         gal::gal_context context = initialize(api);
-        gal_swapchain sc;
-        gal_swapchain_desc desc{};
+        gal_swap_chain sc;
+        gal_swap_chain_desc desc{};
         desc.b_present = true;
         desc.b_vsync = true;
         desc.width = 256;
@@ -136,9 +136,9 @@ TEST_CASE("test gal swapchain") {
         desc.image_count = 3;
         desc.clear_value.value = gal_clear_value::rgb{0.0f, 0.0f, 0.0f, 1.0f};
         desc.hwnd_window = ant::get_hwnd_window(window);
-        gal::gal_error_code result = gal::create_swapchain(context, &desc, &sc);
+        gal::gal_error_code result = gal::create_swap_chain(context, &desc, &sc);
         REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
-        result = gal::destroy_swapchain(context, sc);
+        result = gal::destroy_swap_chain(context, sc);
         REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
         destroy(context);
 

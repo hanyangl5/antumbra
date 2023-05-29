@@ -36,6 +36,16 @@
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
 #define VMA_IMPLEMENTATION 1
+
+//#ifndef NDEBUG
+
+#define VMA_DEBUG_LOG(format, ...)                                                                                     \
+    do {                                                                                                               \
+        printf(format, __VA_ARGS__);                                                                                   \
+        printf("\n");                                                                                                  \
+    } while (false)
+
+//#endif // !NDEBUG
 #include <vk_mem_alloc.h>
 
 #include "framework/01core/io/file_system.h"
@@ -548,13 +558,15 @@ gal_error_code vk_create_texture(gal_context _context, gal_texture_desc *_desc, 
     if ((_desc->memory_flags & gal_memory_flag::GPU_DOWNLOAD) != gal_memory_flag::UNDEFINED) {
         allocation_create_info.requiredFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     }
-
-    VkResult result = vmaCreateImage(vk_ctx->vma_allocator, &image_create_info, &allocation_create_info,
-                                     &vk_tex->m_image, &vk_tex->m_allocation, nullptr);
-    if (result != VK_SUCCESS || vk_tex->m_image == VK_NULL_HANDLE || vk_tex->m_allocation == VK_NULL_HANDLE) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+    if (_desc->native_handle) {
+        vk_tex->m_image = reinterpret_cast<VkImage>(_desc->native_handle);
+    } else {
+        VkResult result = vmaCreateImage(vk_ctx->vma_allocator, &image_create_info, &allocation_create_info,
+                                         &vk_tex->m_image, &vk_tex->m_allocation, nullptr);
+        if (result != VK_SUCCESS || vk_tex->m_image == VK_NULL_HANDLE || vk_tex->m_allocation == VK_NULL_HANDLE) {
+            return gal_error_code::GAL_ERRORCODE_ERROR;
+        }
     }
-
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 
@@ -562,8 +574,11 @@ gal_error_code vk_destroy_texture(gal_context _context, gal_texture texture) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
     if (texture != gal_null) {
         vk_texture *vk_tex = reinterpret_cast<vk_texture *>(texture);
-        vmaDestroyImage(vk_ctx->vma_allocator, vk_tex->m_image, vk_tex->m_allocation);
-        //vkDestroyImageView(vk_ctx->device, vk_tex->image_view, nullptr);
+        if ((vk_tex->get_flags() & gal_texture_flag::TEXTURE_CREATION_FLAG_IMPORT_BIT) ==
+            gal_texture_flag::TEXTURE_CREATION_FLAG_UNFEFINED) {
+            vmaDestroyImage(vk_ctx->vma_allocator, vk_tex->m_image, vk_tex->m_allocation);
+            //vkDestroyImageView(vk_ctx->device, vk_tex->image_view, nullptr);
+        }
         ant::ant_free(vk_tex);
         texture = gal_null;
     }
@@ -610,6 +625,7 @@ gal_error_code vk_destroy_sampler(gal_context _context, gal_sampler sampler) {
     }
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
+
 gal_error_code vk_create_render_target(gal_context _context, gal_render_target_desc *_desc,
                                        gal_render_target *_render_target) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
@@ -673,13 +689,12 @@ gal_error_code vk_create_render_target(gal_context _context, gal_render_target_d
             }
         }
     }
-    if (_desc->native_handle == nullptr) {
-        // gal_create_texture
-        gal_error_code result = vk_create_texture(_context, &textureDesc, vk_rt->get_texture());
-        if (result != gal_error_code::GAL_ERRORCODE_SUCCESS) {
-            return  gal_error_code::GAL_ERRORCODE_ERROR;
-        }
+    // gal_create_texture
+    gal_error_code gal_result = vk_create_texture(_context, &textureDesc, vk_rt->get_texture());
+    if (gal_result != gal_error_code::GAL_ERRORCODE_SUCCESS) {
+        return gal_error_code::GAL_ERRORCODE_ERROR;
     }
+
     VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
     if (_desc->dimension == gal_texture_dimension::td_1D) {
         view_type = VK_IMAGE_VIEW_TYPE_1D;
@@ -739,11 +754,12 @@ gal_error_code vk_create_render_target(gal_context _context, gal_render_target_d
 
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
+
 gal_error_code vk_destroy_render_target(gal_context _context, gal_render_target _render_target) {
     if (_render_target != gal_null) {
         vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
         vk_render_target *vk_rt = reinterpret_cast<vk_render_target *>(_render_target);
-        vk_destroy_texture(_context, *vk_rt->get_texture());
+        destroy_texture(_context, *vk_rt->get_texture());
         vkDestroyImageView(vk_ctx->device, vk_rt->pVkDescriptor, nullptr);
 
         for (u32 i = 0; i < vk_rt->get_render_target_desc()->mip_level; ++i) {
@@ -756,13 +772,12 @@ gal_error_code vk_destroy_render_target(gal_context _context, gal_render_target 
 }
 
 // surface
-gal_error_code vk_create_swapchain(gal_context _context, gal_swapchain_desc *_desc, gal_swapchain *_swapchain) {
+gal_error_code vk_create_swap_chain(gal_context _context, gal_swap_chain_desc *_desc, gal_swap_chain *_swap_chain) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
-    *_swapchain = reinterpret_cast<gal_swapchain>(ant::ant_alloc<vk_swapchain>());
-    vk_swapchain *vk_sc = reinterpret_cast<vk_swapchain *>(_swapchain);
+    *_swap_chain = reinterpret_cast<gal_swap_chain>(ant::ant_alloc<vk_swap_chain>());
+    vk_swap_chain *vk_sc = reinterpret_cast<vk_swap_chain *>(*_swap_chain);
     vk_sc->initialize(_desc);
     VkResult result;
-
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
     VkWin32SurfaceCreateInfoKHR add_info{};
     add_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
@@ -969,25 +984,25 @@ gal_error_code vk_create_swapchain(gal_context _context, gal_swapchain_desc *_de
     swapChainCreateInfo.presentMode = present_mode;
     swapChainCreateInfo.clipped = VK_TRUE;
     swapChainCreateInfo.oldSwapchain = 0;
-    result = (vkCreateSwapchainKHR(vk_ctx->device, &swapChainCreateInfo, nullptr, &vk_sc->swap_chain));
-    if (result != VK_SUCCESS || vk_sc->swap_chain == VK_NULL_HANDLE) {
+    result = (vkCreateSwapchainKHR(vk_ctx->device, &swapChainCreateInfo, nullptr, &vk_sc->m_swap_chain));
+    if (result != VK_SUCCESS || vk_sc->m_swap_chain == VK_NULL_HANDLE) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
     }
     _desc->format = vkformat_to_galtextureformat(surface_format.format);
 
-    // Create rendertargets from swapchain
+    // Create rendertargets from swap chain
     u32 imageCount = 0;
-    result = (vkGetSwapchainImagesKHR(vk_ctx->device, vk_sc->swap_chain, &imageCount, NULL));
+    result = (vkGetSwapchainImagesKHR(vk_ctx->device, vk_sc->m_swap_chain, &imageCount, NULL));
     if (result != VK_SUCCESS) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
     }
     assert(imageCount >= _desc->image_count);
 
-    result = (vkGetSwapchainImagesKHR(vk_ctx->device, vk_sc->swap_chain, &imageCount, vk_sc->swap_chain_images.data()));
+    result =
+        (vkGetSwapchainImagesKHR(vk_ctx->device, vk_sc->m_swap_chain, &imageCount, vk_sc->swap_chain_images.data()));
     if (result != VK_SUCCESS) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
     }
-    vk_sc->get_render_targets().resize(imageCount);
 
     gal_render_target_desc descColor = {};
     descColor.width = _desc->width;
@@ -998,6 +1013,9 @@ gal_error_code vk_create_swapchain(gal_context _context, gal_swapchain_desc *_de
     descColor.sample_count = gal_texture_sample_count::SAMPLE_COUNT_1;
     descColor.texture_sample_quality = 0;
     descColor.initial_state = gal_resource_state::PRESENT;
+    descColor.dimension = gal_texture_dimension::td_2D;
+    // texture image are imported from swapchain
+    descColor.flags |= gal_texture_flag::TEXTURE_CREATION_FLAG_IMPORT_BIT;
 
     // Populate the vk_image field and add the Vulkan texture objects
     for (u32 i = 0; i < imageCount; ++i) {
@@ -1009,21 +1027,24 @@ gal_error_code vk_create_swapchain(gal_context _context, gal_swapchain_desc *_de
 
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
-gal_error_code vk_destroy_swapchain(gal_context _context, gal_swapchain _swapchain) {
-    if (_swapchain != gal_null) {
+gal_error_code vk_destroy_swap_chain(gal_context _context, gal_swap_chain _swap_chain) {
+    if (_swap_chain != gal_null) {
         vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
-        vk_swapchain *vk_sc = reinterpret_cast<vk_swapchain *>(_swapchain);
+        vk_swap_chain *vk_sc = reinterpret_cast<vk_swap_chain *>(_swap_chain);
 
         auto &rts = vk_sc->get_render_targets();
         for (auto &rt : rts) {
-            vk_destroy_render_target(_context, rt);
+            if (rt) {
+                destroy_render_target(_context, rt);
+            }
         }
-        rts.clear();
 
-        vkDestroySwapchainKHR(vk_ctx->device, vk_sc->m_swapchain, nullptr);
+        vkDestroySwapchainKHR(vk_ctx->device, vk_sc->m_swap_chain, nullptr);
         vkDestroySurfaceKHR(vk_ctx->instance, vk_sc->m_surface, nullptr);
+
+        // resources are freed automatically
         ant::ant_free(vk_sc);
-        _swapchain = gal_null;
+        _swap_chain = gal_null;
     }
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }

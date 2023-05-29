@@ -61,13 +61,15 @@ __GAL_HELPER_MACRO__(gal_error_code, destroy_texture, gal_context _context, gal_
 __GAL_HELPER_MACRO__(gal_error_code, create_sampler, gal_context _context, gal_sampler_desc *sampler_desc,
                      gal_sampler *sampler);
 __GAL_HELPER_MACRO__(gal_error_code, destroy_sampler, gal_context _context, gal_sampler sampler);
+
 __GAL_HELPER_MACRO__(gal_error_code, create_render_target, gal_context _context, gal_render_target_desc *_desc,
                      gal_render_target *_render_target);
+
 __GAL_HELPER_MACRO__(gal_error_code, destroy_render_target, gal_context _context, gal_render_target _render_target);
 // surface
-__GAL_HELPER_MACRO__(gal_error_code, create_swapchain, gal_context _context, gal_swapchain_desc *_desc,
-                     gal_swapchain *_swapchain);
-__GAL_HELPER_MACRO__(gal_error_code, destroy_swapchain, gal_context _context, gal_swapchain _swapchain);
+__GAL_HELPER_MACRO__(gal_error_code, create_swap_chain, gal_context _context, gal_swap_chain_desc *_desc,
+                     gal_swap_chain *_swap_chain);
+__GAL_HELPER_MACRO__(gal_error_code, destroy_swap_chain, gal_context _context, gal_swap_chain _swap_chain);
 // pipeline
 __GAL_HELPER_MACRO__(gal_error_code, create_shader, gal_context _context, gal_shader_desc *_desc, gal_shader *_shader);
 __GAL_HELPER_MACRO__(gal_error_code, destroy_shader, gal_context _context, gal_shader _shader);

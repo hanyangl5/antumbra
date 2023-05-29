@@ -39,7 +39,7 @@
 //
 //struct d3d12_rendertargte {};
 //
-//struct d3d12_swapchain {
+//struct d3d12_swap_chain {
 //    IDXGISwapChain3 *gpu_swap_chain;
 //};
 //
@@ -1087,7 +1087,7 @@
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
 //// surface
-//gal_error_code d3d12_create_swapchain() {
+//gal_error_code d3d12_create_swap_chain() {
 //    //d3d12_context *d3d12_ctx;
 //    //d3d12_ctx->factory->CreateSwapChain();
 ////    
@@ -1101,7 +1101,7 @@
 ////	DXGI_SWAP_CHAIN_DESC1 desc = {};
 ////	desc.Width = pDesc->mWidth;
 ////	desc.Height = pDesc->mHeight;
-////	desc.Format = util_to_dx12_swapchain_format(pDesc->mColorFormat);
+////	desc.Format = util_to_dx12_swap_chain_format(pDesc->mColorFormat);
 ////	desc.Stereo = false;
 ////	desc.SampleDesc.Count = 1;    // If multisampling is needed, we'll resolve it later
 ////	desc.SampleDesc.Quality = 0;
@@ -1118,22 +1118,22 @@
 ////
 ////	pSwapChain->mD3D12.mFlags |= (!pDesc->mEnableVsync && allowTearing) ? DXGI_PRESENT_ALLOW_TEARING : 0;
 ////
-////	IDXGISwapChain1* swapchain;
+////	IDXGISwapChain1* swap_chain;
 ////
 ////	HWND hwnd = (HWND)pDesc->mWindowHandle.window;
 ////
 ////	(pRenderer->mD3D12.pDXGIFactory->CreateSwapChainForHwnd(
-////		pDesc->ppPresentQueues[0]->mD3D12.pDxQueue, hwnd, &desc, NULL, NULL, &swapchain));
+////		pDesc->ppPresentQueues[0]->mD3D12.pDxQueue, hwnd, &desc, NULL, NULL, &swap_chain));
 ////
 ////	CHECK_HRESULT(pRenderer->mD3D12.pDXGIFactory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER));
 ////
-////	CHECK_HRESULT(swapchain->QueryInterface(IID_ARGS(&pSwapChain->mD3D12.pDxSwapChain)));
-////	swapchain->Release();
+////	CHECK_HRESULT(swap_chain->QueryInterface(IID_ARGS(&pSwapChain->mD3D12.pDxSwapChain)));
+////	swap_chain->Release();
 ////
 ////
 ////	ID3D12Resource** buffers = (ID3D12Resource**)alloca(pDesc->mImageCount * sizeof(ID3D12Resource*));
 ////
-////	// Create rendertargets from swapchain
+////	// Create rendertargets from swap_chain
 ////	for (uint32_t i = 0; i < pDesc->mImageCount; ++i)
 ////	{
 ////		(pSwapChain->mD3D12.pDxSwapChain->GetBuffer(i, IID_ARGS(&buffers[i])));
@@ -1167,7 +1167,7 @@
 //
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
-//gal_error_code d3d12_destroy_swapchain() { return gal_error_code::GAL_ERRORCODE_SUCCESS; }
+//gal_error_code d3d12_destroy_swap_chain() { return gal_error_code::GAL_ERRORCODE_SUCCESS; }
 //gal_error_code d3d12_create_surface() {
 //    //d3d12_context *d3d12_ctx;
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;

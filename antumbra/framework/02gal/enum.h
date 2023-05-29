@@ -475,6 +475,28 @@ DECLARE_GAL_HANDLE(gal_texture) {
     gal_texture_desc m_gal_texture_desc;
 };
 
+struct gal_render_target_desc {
+    gal_texture_flag flags;
+    gal_texture_format format;
+    u32 width;
+    u32 height;
+    u32 depth = 1;
+    u32 mip_level = 1;
+    gal_texture_dimension dimension;
+    gal_texture_sample_count sample_count;
+    u32 texture_sample_quality;
+    gal_clear_value clear_value;
+    gal_resource_type resource_types; // descriptor types of buffer
+    gal_resource_state initial_state; // initial state of buffer
+    void *native_handle;
+};
+
+DECLARE_GAL_HANDLE(gal_render_target) {
+  protected:
+    gal_render_target_desc m_desc;
+    gal_texture m_texture;
+};
+
 struct gal_sampler_desc {
     gal_sampler_filter_mode mag_filter; // filter metho when texel is larger than pixel
     gal_sampler_filter_mode min_filter; // filter method when texel is smaller than pixel
@@ -494,33 +516,11 @@ DECLARE_GAL_HANDLE(gal_sampler) {
     gal_sampler_desc m_gal_sampler_desc;
 };
 
-struct gal_render_target_desc {
-    gal_texture_flag flags;
-    gal_texture_format format;
-    u32 width;
-    u32 height;
-    u32 depth = 1;
-    u32 mip_level = 1;
-    gal_texture_dimension dimension;
-    gal_texture_sample_count sample_count;
-    u32 texture_sample_quality;
-    gal_clear_value clear_value;
-    gal_resource_type resource_types; // descriptor types of buffer
-    gal_resource_state initial_state; // initial state of buffer
-    void *native_handle;
-};
-
-
-DECLARE_GAL_HANDLE(gal_render_target) {
-  protected:
-    gal_render_target_desc m_desc;
-    gal_texture m_texture;
-};
-
 DECLARE_GAL_HANDLE(gal_fence){};
 DECLARE_GAL_HANDLE(gal_semaphore){};
 
-struct gal_swapchain_desc {
+struct gal_swap_chain_desc {
+    gal_clear_value clear_value;
 #ifdef WIN32
     HWND hwnd_window;
 #endif
@@ -529,13 +529,13 @@ struct gal_swapchain_desc {
     u32 width;
     u32 height;
     gal_texture_format format;
-    gal_clear_value clear_value;
     bool b_vsync;
 };
 
-DECLARE_GAL_HANDLE(gal_swapchain){ 
-    gal_swapchain_desc m_desc;
-    ant::vector<gal_render_target> m_render_targets; };
+DECLARE_GAL_HANDLE(gal_swap_chain){ 
+    gal_swap_chain_desc m_desc;
+    ant::fixed_array<gal_render_target, MAX_SWAPCHAIN_IMAGES> m_render_targets;
+};
 
 struct gal_shader_desc {
     u64 size;
@@ -547,11 +547,6 @@ DECLARE_GAL_HANDLE(gal_pipeline){};
 DECLARE_GAL_HANDLE(gal_pipelinecache){};
 DECLARE_GAL_HANDLE(gal_commandlist){};
 DECLARE_GAL_HANDLE(gal_descriptorpool){};
-
-
-struct swapchain_desc {};
-
-struct shader_desc {};
 
 struct gal_pipelinecache_desc {
     ant::str filename;
