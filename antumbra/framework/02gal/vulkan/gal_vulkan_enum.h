@@ -47,8 +47,11 @@ DECLARE_VK_HANDLE(sampler) {
     constexpr void initialize(gal_sampler_desc * _desc) { m_gal_sampler_desc = *_desc; }
     VkSampler m_sampler;
 };
+
 DECLARE_VK_HANDLE(render_target) {
-    gal_texture *get_texture() { return m_texture; }
+    constexpr void initialize(gal_render_target_desc * _desc) { m_desc = *_desc; }
+    gal_texture *get_texture() { return &m_texture; }
+    gal_render_target_desc *get_render_target_desc() { return &m_desc; }
     VkImageView pVkDescriptor;
     VkImageView *pVkSliceDescriptors;
 };
@@ -74,14 +77,18 @@ DECLARE_VK_HANDLE(render_target) {
 struct vk_fence {};
 struct vk_semaphore {};
 DECLARE_VK_HANDLE(swapchain) {
-    gal_render_target *get_render_targets() { return m_render_targets.data(); }
+    constexpr void initialize(gal_swapchain_desc * _desc) { 
+        m_desc = *_desc;
+    }
+    ant::vector<gal_render_target> &get_render_targets() { return m_render_targets; }
     VkSwapchainKHR m_swapchain;
     VkSurfaceKHR m_surface;
     VkSurfaceFormatKHR optimal_surface_format{};
     VkSwapchainKHR swap_chain{};
-    ant::vector<VkImage> swap_chain_images{};
+    ant::fixed_array<VkImage, MAX_SWAPCHAIN_IMAGES> swap_chain_images{};
     ant::fixed_array<VkImageView, MAX_SWAPCHAIN_IMAGES> swap_chain_image_views{};
 };
+
 struct vk_commandlist {};
 struct vk_shader {
     ant::str entry;

@@ -493,116 +493,6 @@ DECLARE_GAL_HANDLE(gal_sampler) {
   protected:
     gal_sampler_desc m_gal_sampler_desc;
 };
-DECLARE_GAL_HANDLE(gal_render_target) {
-  protected:
-    gal_texture *m_texture;
-};
-
-//enum class gal_descriptor_resource_type {
-//    UNDEFINED,
-//    BUFFER,
-//    TEXTURE
-//};
-//struct gal_buffer_srv_desc {
-//    gal_buffer buffer;
-//    u64 offste;
-//    u64 range;
-//};
-//using gal_buffer_uav_desc = gal_buffer_srv_desc;
-//struct gal_texture_srv_desc {};
-//using gal_texture_uav_desc = gal_texture_srv_desc;
-//struct gal_src_descriptor_view_desc {
-//    gal_descriptor_resource_type type;
-//    std::variant<std::monostate, gal_buffer_srv_desc, gal_texture_srv_desc> srv_desc;
-//};
-//
-//struct gal_uav_descriptor_view_desc {
-//    gal_descriptor_resource_type type;
-//    std::variant<std::monostate, gal_texture_uav_desc, gal_texture_uav_desc> srv_desc;
-//};
-//
-//DECLARE_GAL_HANDLE(gal_srv_descriptor_view) {
-//  protected:
-//    gal_src_descriptor_view_desc m_desc;
-//};
-//
-//DECLARE_GAL_HANDLE(gal_uav_descriptor_view) {
-//  protected:
-//    gal_uav_descriptor_view_desc m_desc;
-//};
-
-DECLARE_GAL_HANDLE(gal_fence){};
-DECLARE_GAL_HANDLE(gal_semaphore){};
-
-struct gal_swapchain_desc {
-#ifdef WIN32
-    HWND hwnd_window;
-#endif
-    bool b_present;
-    u32 image_count;
-    u32 width;
-    u32 height;
-    gal_texture_format format;
-    u32 back_buffer_count;
-    gal_clear_value clear_value;
-    bool b_vsync;
-};
-
-DECLARE_GAL_HANDLE(gal_swapchain){ ant::vector<gal_render_target> m_render_targets; };
-
-struct gal_shader_desc {
-    u64 size;
-    void *data;
-};
-DECLARE_GAL_HANDLE(gal_shader){};
-DECLARE_GAL_HANDLE(gal_rootsignature){};
-DECLARE_GAL_HANDLE(gal_pipeline){};
-DECLARE_GAL_HANDLE(gal_pipelinecache){};
-DECLARE_GAL_HANDLE(gal_commandlist){};
-DECLARE_GAL_HANDLE(gal_descriptorpool){};
-
-struct BufferBarrier {
-    gal_buffer *pBuffer;
-    gal_resource_state mCurrentState;
-    gal_resource_state mNewState;
-    u8 mBeginOnly : 1;
-    u8 mEndOnly : 1;
-    u8 mAcquire : 1;
-    u8 mRelease : 1;
-    u8 mQueueType : 5;
-};
-
-struct TextureBarrier {
-    gal_texture *pTexture;
-    gal_resource_state mCurrentState;
-    gal_resource_state mNewState;
-    u8 mBeginOnly : 1;
-    u8 mEndOnly : 1;
-    u8 mAcquire : 1;
-    u8 mRelease : 1;
-    u8 mQueueType : 5;
-    /// Specifiy whether following barrier targets particular subresource
-    u8 mSubresourceBarrier : 1;
-    /// Following values are ignored if mSubresourceBarrier is false
-    u8 mMipLevel : 7;
-    uint16_t mArrayLayer;
-};
-struct RenderTargetBarrier {
-    gal_render_target *pRenderTarget;
-    gal_resource_state mCurrentState;
-    gal_resource_state mNewState;
-    u8 mBeginOnly : 1;
-    u8 mEndOnly : 1;
-    u8 mAcquire : 1;
-    u8 mRelease : 1;
-    u8 mQueueType : 5;
-    /// Specifiy whether following barrier targets particular subresource
-    u8 mSubresourceBarrier : 1;
-    /// Following values are ignored if mSubresourceBarrier is false
-    u8 mMipLevel : 7;
-    uint16_t mArrayLayer;
-};
-
 
 struct gal_render_target_desc {
     gal_texture_flag flags;
@@ -619,6 +509,45 @@ struct gal_render_target_desc {
     gal_resource_state initial_state; // initial state of buffer
     void *native_handle;
 };
+
+
+DECLARE_GAL_HANDLE(gal_render_target) {
+  protected:
+    gal_render_target_desc m_desc;
+    gal_texture m_texture;
+};
+
+DECLARE_GAL_HANDLE(gal_fence){};
+DECLARE_GAL_HANDLE(gal_semaphore){};
+
+struct gal_swapchain_desc {
+#ifdef WIN32
+    HWND hwnd_window;
+#endif
+    bool b_present;
+    u32 image_count;
+    u32 width;
+    u32 height;
+    gal_texture_format format;
+    gal_clear_value clear_value;
+    bool b_vsync;
+};
+
+DECLARE_GAL_HANDLE(gal_swapchain){ 
+    gal_swapchain_desc m_desc;
+    ant::vector<gal_render_target> m_render_targets; };
+
+struct gal_shader_desc {
+    u64 size;
+    void *data;
+};
+DECLARE_GAL_HANDLE(gal_shader){};
+DECLARE_GAL_HANDLE(gal_rootsignature){};
+DECLARE_GAL_HANDLE(gal_pipeline){};
+DECLARE_GAL_HANDLE(gal_pipelinecache){};
+DECLARE_GAL_HANDLE(gal_commandlist){};
+DECLARE_GAL_HANDLE(gal_descriptorpool){};
+
 
 struct swapchain_desc {};
 
@@ -688,4 +617,82 @@ struct gal_command_pool_desc {};
 struct gal_commandlist_desc {};
 
 struct gal_renderpass_begin_desc {};
+
+
+struct BufferBarrier {
+    gal_buffer *pBuffer;
+    gal_resource_state mCurrentState;
+    gal_resource_state mNewState;
+    u8 mBeginOnly : 1;
+    u8 mEndOnly : 1;
+    u8 mAcquire : 1;
+    u8 mRelease : 1;
+    u8 mQueueType : 5;
+};
+
+struct TextureBarrier {
+    gal_texture *pTexture;
+    gal_resource_state mCurrentState;
+    gal_resource_state mNewState;
+    u8 mBeginOnly : 1;
+    u8 mEndOnly : 1;
+    u8 mAcquire : 1;
+    u8 mRelease : 1;
+    u8 mQueueType : 5;
+    /// Specifiy whether following barrier targets particular subresource
+    u8 mSubresourceBarrier : 1;
+    /// Following values are ignored if mSubresourceBarrier is false
+    u8 mMipLevel : 7;
+    uint16_t mArrayLayer;
+};
+struct RenderTargetBarrier {
+    gal_render_target *pRenderTarget;
+    gal_resource_state mCurrentState;
+    gal_resource_state mNewState;
+    u8 mBeginOnly : 1;
+    u8 mEndOnly : 1;
+    u8 mAcquire : 1;
+    u8 mRelease : 1;
+    u8 mQueueType : 5;
+    /// Specifiy whether following barrier targets particular subresource
+    u8 mSubresourceBarrier : 1;
+    /// Following values are ignored if mSubresourceBarrier is false
+    u8 mMipLevel : 7;
+    uint16_t mArrayLayer;
+};
+
+
+//enum class gal_descriptor_resource_type {
+//    UNDEFINED,
+//    BUFFER,
+//    TEXTURE
+//};
+//struct gal_buffer_srv_desc {
+//    gal_buffer buffer;
+//    u64 offste;
+//    u64 range;
+//};
+//using gal_buffer_uav_desc = gal_buffer_srv_desc;
+//struct gal_texture_srv_desc {};
+//using gal_texture_uav_desc = gal_texture_srv_desc;
+//struct gal_src_descriptor_view_desc {
+//    gal_descriptor_resource_type type;
+//    std::variant<std::monostate, gal_buffer_srv_desc, gal_texture_srv_desc> srv_desc;
+//};
+//
+//struct gal_uav_descriptor_view_desc {
+//    gal_descriptor_resource_type type;
+//    std::variant<std::monostate, gal_texture_uav_desc, gal_texture_uav_desc> srv_desc;
+//};
+//
+//DECLARE_GAL_HANDLE(gal_srv_descriptor_view) {
+//  protected:
+//    gal_src_descriptor_view_desc m_desc;
+//};
+//
+//DECLARE_GAL_HANDLE(gal_uav_descriptor_view) {
+//  protected:
+//    gal_uav_descriptor_view_desc m_desc;
+//};
+
 } // namespace ant::gal

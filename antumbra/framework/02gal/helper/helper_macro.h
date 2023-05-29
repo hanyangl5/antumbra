@@ -63,7 +63,7 @@ __GAL_HELPER_MACRO__(gal_error_code, create_sampler, gal_context _context, gal_s
 __GAL_HELPER_MACRO__(gal_error_code, destroy_sampler, gal_context _context, gal_sampler sampler);
 __GAL_HELPER_MACRO__(gal_error_code, create_render_target, gal_context _context, gal_render_target_desc *_desc,
                      gal_render_target *_render_target);
-__GAL_HELPER_MACRO__(gal_error_code, destroy_render_target);
+__GAL_HELPER_MACRO__(gal_error_code, destroy_render_target, gal_context _context, gal_render_target _render_target);
 // surface
 __GAL_HELPER_MACRO__(gal_error_code, create_swapchain, gal_context _context, gal_swapchain_desc *_desc,
                      gal_swapchain *_swapchain);

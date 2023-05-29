@@ -1,8 +1,21 @@
-#include <catch2/catch_test_macros.hpp>
 #include "framework/01core/memory/memory.h"
 #include "framework/01core/utils/utils.h"
+#include <catch2/catch_test_macros.hpp>
 
 using namespace ant;
+
+TEST_CASE("malloc") {
+    struct A {
+        char e[4];
+    };
+    ant::ant_enable_memory_tracking();
+    void *pa = ant::ant_alloc<A>();
+    ant::ant_free(pa);
+
+    void *pb = ant_malloc(sizeof(A));
+    ant::ant_free(pb);
+    ant::ant_disable_memory_tracking();
+}
 
 TEST_CASE("memory") { auto stack_resource = ant::get_stack_memory_resource(1024); }
 

@@ -59,6 +59,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     tracy/public
     magic_enum/include
     sol2/include
+    mimalloc/include
     #JoltPhysics/ # this will include some useless folder
     lua
 )
