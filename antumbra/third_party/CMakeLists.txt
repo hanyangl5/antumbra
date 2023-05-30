@@ -27,8 +27,6 @@ add_subdirectory(tinygltf)
 
 
 
- 
-
 if(ANTUMBRA_BUILD_VK)
     # prefer to use system installed vulkan sdk
     find_package(Vulkan REQUIRED)
@@ -37,9 +35,15 @@ if(ANTUMBRA_BUILD_VK)
         target_include_directories(${PROJECT_NAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
         target_link_libraries(${PROJECT_NAME} PUBLIC ${Vulkan_LIBRARIES})
     else()
-        message("failed to find vulkan sdk, use sdk in third_party")
         target_include_directories(${PROJECT_NAME} PUBLIC
         Vulkan-Headers/include)
+        find_library(Vulkan_LIBRARY NAMES vulkan-1 PATHS libs/windows/) 
+        if (Vulkan_LIBRARY)
+            message("using bundled vulkan")
+            target_link_libraries(${PROJECT_NAME} PUBLIC ${Vulkan_LIBRARY})
+        else()
+            message("failed to find vulkan library")
+        endif()
     endif()
 endif()
 
