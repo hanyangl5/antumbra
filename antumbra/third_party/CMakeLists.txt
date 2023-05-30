@@ -29,7 +29,7 @@ add_subdirectory(tinygltf)
 
 if(ANTUMBRA_BUILD_VK)
     # prefer to use system installed vulkan sdk
-    find_package(Vulkan REQUIRED)
+    find_package(Vulkan)
     if(Vulkan_FOUND)
         message("found vulkan sdk")
         target_include_directories(${PROJECT_NAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
