@@ -52,6 +52,7 @@
 #include "framework/01core/logging/log.h"
 #include "framework/01core/math/math.h"
 #include "framework/01core/memory/memory.h"
+#include "framework/02gal/dxc/shader.h"
 #include "gal_vulkan_enum.h"
 #include "gal_vulkan_utils.h"
 
@@ -736,7 +737,7 @@ gal_error_code vk_create_render_target(gal_context _context, gal_render_target_d
         //    for (u32 j = 0; j < depthOrArraySize; ++j) {
         //        rtvDesc.subresourceRange.layerCount = 1;
         //        rtvDesc.subresourceRange.baseArrayLayer = j;
-        //        result = (vkCreateImageView(pRenderer->mVulkan.pVkDevice, &rtvDesc, nullptr,
+        //        result = (vkCreateImageView(vk_ctx->device, &rtvDesc, nullptr,
         //                                    &pRenderTarget->mVulkan.pVkSliceDescriptors[i * depthOrArraySize + j]));
         //    }
         //} else {
@@ -794,18 +795,18 @@ gal_error_code vk_create_swap_chain(gal_context _context, gal_swap_chain_desc *_
     add_info.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
     add_info.pNext = NULL;
     add_info.flags = 0;
-    add_info.dpy = pDesc->mWindowHandle.display;   //TODO
-    add_info.window = pDesc->mWindowHandle.window; //TODO
+    add_info.dpy = _desc->mWindowHandle.display;   //TODO
+    add_info.window = _desc->mWindowHandle.window; //TODO
     CHECK_VKRESULT(
-        vkCreateXlibSurfaceKHR(pRenderer->mVulkan.pVkInstance, &add_info, &gVkAllocationCallbacks, &vkSurface));
+        vkCreateXlibSurfaceKHR(pRenderer->mVulkan.pVkInstance, &add_info, nullptr, &vkSurface));
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
     DECLARE_ZERO(VkXcbSurfaceCreateInfoKHR, add_info);
     add_info.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     add_info.pNext = NULL;
     add_info.flags = 0;
-    add_info.connection = pDesc->mWindowHandle.connection; //TODO
-    add_info.window = pDesc->mWindowHandle.window;         //TODO
-    CHECK_VKRESULT(vkCreateXcbSurfaceKHR(pRenderer->pVkInstance, &add_info, &gVkAllocationCallbacks, &vkSurface));
+    add_info.connection = _desc->mWindowHandle.connection; //TODO
+    add_info.window = _desc->mWindowHandle.window;         //TODO
+    CHECK_VKRESULT(vkCreateXcbSurfaceKHR(pRenderer->pVkInstance, &add_info, nullptr, &vkSurface));
 #elif defined(VK_USE_PLATFORM_IOS_MVK)
     // Add IOS support here
 #elif defined(VK_USE_PLATFORM_MACOS_MVK)
@@ -815,9 +816,9 @@ gal_error_code vk_create_swap_chain(gal_context _context, gal_swap_chain_desc *_
     add_info.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
     add_info.pNext = NULL;
     add_info.flags = 0;
-    add_info.window = pDesc->mWindowHandle.window;
+    add_info.window = _desc->mWindowHandle.window;
     CHECK_VKRESULT(
-        vkCreateAndroidSurfaceKHR(pRenderer->mVulkan.pVkInstance, &add_info, &gVkAllocationCallbacks, &vkSurface));
+        vkCreateAndroidSurfaceKHR(pRenderer->mVulkan.pVkInstance, &add_info, nullptr, &vkSurface));
 #elif defined(VK_USE_PLATFORM_GGP)
     extern VkResult ggpCreateSurface(VkInstance, VkSurfaceKHR * surface);
     CHECK_VKRESULT(ggpCreateSurface(pRenderer->pVkInstance, &vkSurface));
@@ -1049,31 +1050,125 @@ gal_error_code vk_destroy_swap_chain(gal_context _context, gal_swap_chain _swap_
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 
-// pipeline
-gal_error_code vk_create_shader(gal_context _context, gal_shader_desc *_desc, gal_shader *_shader) {
-    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
-    *_shader = reinterpret_cast<gal_shader>(ant::ant_alloc<vk_shader>());
-    vk_shader *vk_s = reinterpret_cast<vk_shader *>(*_shader);
-    VkShaderModuleCreateInfo create_info{};
-    create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    create_info.codeSize = _desc->size;
-    create_info.pCode = reinterpret_cast<u32 *>(_desc->data);
-    VkResult result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_s->shader);
+gal_error_code vk_create_shader_program(gal_context _context, gal_shader_program_desc* _desc, gal_shader_program* _shader_program) {
 
-    if (result != VK_SUCCESS || vk_s->shader == VK_NULL_HANDLE) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
+    *_shader_program = reinterpret_cast<gal_shader_program>(ant::ant_alloc<ant::gal::vk_shader_program>());
+    vk_shader_program *vk_sp = reinterpret_cast<vk_shader_program *>(*_shader_program);
+
+    u32 stage_count = 0;
+    // count stage count
+    for (u32 i = 0; i < SHADER_STAGE_COUNT; ++i) {
+        ShaderStage stage_mask = (ShaderStage)(1 << i);
+        if (stage_mask == (_desc->mStages & stage_mask)) {
+            switch (stage_mask) {
+            case SHADER_STAGE_VERT:
+                stage_count++;
+                break; //-V814
+            case SHADER_STAGE_TESC:
+                stage_count++;
+                break; //-V814
+            case SHADER_STAGE_TESE:
+                stage_count++;
+                break; //-V814
+            case SHADER_STAGE_GEOM:
+                stage_count++;
+                break; //-V814
+            case SHADER_STAGE_FRAG:
+                stage_count++;
+                break; //-V814
+            case SHADER_STAGE_RAYTRACING:
+            case SHADER_STAGE_COMP:
+                stage_count++;
+                break; //-V814
+            default:
+                break;
+            }
+        }
     }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
-}
-gal_error_code vk_destroy_shader(gal_context _context, gal_shader _shader) {
-    if (_shader != gal_null) {
-        vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
-        vk_shader *vk_s = reinterpret_cast<vk_shader *>(_shader);
-        vkDestroyShaderModule(vk_ctx->device, vk_s->shader, nullptr);
-        ant::ant_free(vk_s);
-        _shader = gal_null;
+    vk_sp->initialize(_desc, stage_count);
+    vk_sp->m_shader_modules.resize(stage_count);
+    vk_sp->m_entry_names.resize(stage_count);
+
+    VkResult result;
+
+    ShaderReflection stageReflections[MAX_SHADER_STAGE_COUNT] = {};
+
+    for (u32 i = 0; i < SHADER_STAGE_COUNT; ++i) {
+        ShaderStage stage_mask = (ShaderStage)(1 << i);
+        if (stage_mask == (_desc->mStages & stage_mask)) {
+            VkShaderModuleCreateInfo create_info{};
+            create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+            create_info.pNext = NULL;
+            create_info.flags = 0;
+            const BinaryShaderStageDesc *pStageDesc = nullptr;
+            switch (stage_mask) {
+            case SHADER_STAGE_VERT: {
+                create_info.codeSize = _desc->mVert.mByteCodeSize;
+                create_info.pCode = (const u32 *)_desc->mVert.pByteCode;
+                result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
+                if (result != VK_SUCCESS) {
+                    return gal_error_code::GAL_ERRORCODE_ERROR;
+                }
+                vk_sp->m_entry_names[i] = ant::str(_desc->mVert.pEntryPoint);
+            } break;
+            case SHADER_STAGE_TESC: {
+                create_info.codeSize = _desc->mHull.mByteCodeSize;
+                create_info.pCode = (const u32 *)_desc->mHull.pByteCode;
+                result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
+                if (result != VK_SUCCESS) {
+                    return gal_error_code::GAL_ERRORCODE_ERROR;
+                }
+                vk_sp->m_entry_names[i] = ant::str(_desc->mHull.pEntryPoint);
+            } break;
+            case SHADER_STAGE_TESE: {
+                create_info.codeSize = _desc->mDomain.mByteCodeSize;
+                create_info.pCode = (const u32 *)_desc->mDomain.pByteCode;
+                result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
+                if (result != VK_SUCCESS) {
+                    return gal_error_code::GAL_ERRORCODE_ERROR;
+                }
+                vk_sp->m_entry_names[i] = ant::str(_desc->mDomain.pEntryPoint);
+            } break;
+            case SHADER_STAGE_GEOM: {
+                create_info.codeSize = _desc->mGeom.mByteCodeSize;
+                create_info.pCode = (const u32 *)_desc->mGeom.pByteCode;
+                result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
+                if (result != VK_SUCCESS) {
+                    return gal_error_code::GAL_ERRORCODE_ERROR;
+                }
+                vk_sp->m_entry_names[i] = ant::str(_desc->mGeom.pEntryPoint);
+            } break;
+            case SHADER_STAGE_FRAG: {
+                create_info.codeSize = _desc->mFrag.mByteCodeSize;
+                create_info.pCode = (const u32 *)_desc->mFrag.pByteCode;
+                result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
+                if (result != VK_SUCCESS) {
+                    return gal_error_code::GAL_ERRORCODE_ERROR;
+                }
+                vk_sp->m_entry_names[i] = ant::str(_desc->mFrag.pEntryPoint);
+            } break;
+            case SHADER_STAGE_COMP:
+            {
+                create_info.codeSize = _desc->mComp.mByteCodeSize;
+                create_info.pCode = (const u32 *)_desc->mComp.pByteCode;
+                result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
+                if (result != VK_SUCCESS) {
+                    return gal_error_code::GAL_ERRORCODE_ERROR;
+                }
+                vk_sp->m_entry_names[i] = ant::str(_desc->mComp.pEntryPoint);
+            } break;
+            default:
+                assert(false && "Shader Stage not supported!");
+                break;
+            }
+        }
     }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+
+    //createPipelineReflection(stageReflections, stage_count, _desc->pReflection);
+
+    //addShaderDependencies(pShaderProgram, _desc);
+
 }
 
 gal_error_code vk_create_pipelinecache(gal_context _context, gal_pipelinecache_desc *_desc,
@@ -1120,8 +1215,8 @@ gal_error_code vk_create_compute_pipeline(gal_context _context, gal_pipeline_des
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
     *pipeline = reinterpret_cast<gal_pipeline>(new ant::gal::vk_pipeline);
     vk_pipeline *vk_pipe = reinterpret_cast<vk_pipeline *>(*pipeline);
-    gal_compute_pipeline_desc desc = std::get<gal_compute_pipeline_desc>(_desc->desc);
-    vk_shader *vk_s = reinterpret_cast<vk_shader *>(desc.shader);
+    gal_compute_pipeline_desc& desc = std::get<gal_compute_pipeline_desc>(_desc->desc);
+    vk_shader_program *vk_sp = reinterpret_cast<vk_shader_program *>(desc.shader);
 
     vk_rootsignature *vk_rs = reinterpret_cast<vk_rootsignature *>(desc.root_signature);
 
@@ -1129,8 +1224,8 @@ gal_error_code vk_create_compute_pipeline(gal_context _context, gal_pipeline_des
     shader_stage_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     shader_stage_create_info.flags = 0;
     shader_stage_create_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-    shader_stage_create_info.module = vk_s->shader;
-    shader_stage_create_info.pName = vk_s->entry.c_str();
+    shader_stage_create_info.module = vk_sp->m_shader_modules[0];
+    shader_stage_create_info.pName = vk_sp->m_entry_names[0].c_str();
     shader_stage_create_info.pSpecializationInfo = nullptr;
 
     VkComputePipelineCreateInfo pipeline_create_info{};
@@ -1151,232 +1246,213 @@ gal_error_code vk_create_compute_pipeline(gal_context _context, gal_pipeline_des
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 
-//gal_error_code vk_create_graphics_pipeline(gal_context _context, gal_graphics_pipeline_desc *_desc,
-//                                           gal_pipeline *pipeline) {
-//#if 0
-//    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
-//    *pipeline = reinterpret_cast<gal_pipeline>(new ant::gal::vk_pipeline);
-//    vk_pipeline *vk_pipe = reinterpret_cast<vk_pipeline *>(*pipeline);
-//    VkGraphicsPipelineCreateInfo pipeline_create_info{};
-//    gal_shader *pShaderProgram = _desc->pShaderProgram;
-//    gal_vertex_layout *pVertexLayout = _desc->pVertexLayout;
-//    u32 stage_count = 0;
-//    VkPipelineShaderStageCreateInfo stages[5];
-//    for (u32 i = 0; i < 5; ++i) {
-//        ShaderStage stage_mask = (ShaderStage)(1 << i);
-//        if (stage_mask == (pShaderProgram->mStages & stage_mask)) {
-//            stages[stage_count].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-//            stages[stage_count].pNext = NULL;
-//            stages[stage_count].flags = 0;
-//            stages[stage_count].pSpecializationInfo = nullptr;
-//            switch (stage_mask) {
-//            case SHADER_STAGE_VERT: {
-//                stages[stage_count].pName =
-//                    pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mVertexStageIndex]
-//                        .pEntryPoint;
-//                stages[stage_count].stage = VK_SHADER_STAGE_VERTEX_BIT;
-//                stages[stage_count].module =
-//                    pShaderProgram->mVulkan.pShaderModules[pShaderProgram->pReflection->mVertexStageIndex];
-//            } break;
-//            case SHADER_STAGE_TESC: {
-//                stages[stage_count].pName =
-//                    pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mHullStageIndex]
-//                        .pEntryPoint;
-//                stages[stage_count].stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-//                stages[stage_count].module =
-//                    pShaderProgram->mVulkan.pShaderModules[pShaderProgram->pReflection->mHullStageIndex];
-//            } break;
-//            case SHADER_STAGE_TESE: {
-//                stages[stage_count].pName =
-//                    pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mDomainStageIndex]
-//                        .pEntryPoint;
-//                stages[stage_count].stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-//                stages[stage_count].module =
-//                    pShaderProgram->mVulkan.pShaderModules[pShaderProgram->pReflection->mDomainStageIndex];
-//            } break;
-//            case SHADER_STAGE_GEOM: {
-//                stages[stage_count].pName =
-//                    pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mGeometryStageIndex]
-//                        .pEntryPoint;
-//                stages[stage_count].stage = VK_SHADER_STAGE_GEOMETRY_BIT;
-//                stages[stage_count].module =
-//                    pShaderProgram->mVulkan.pShaderModules[pShaderProgram->pReflection->mGeometryStageIndex];
-//            } break;
-//            case SHADER_STAGE_FRAG: {
-//                stages[stage_count].pName =
-//                    pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mPixelStageIndex]
-//                        .pEntryPoint;
-//                stages[stage_count].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-//                stages[stage_count].module =
-//                    pShaderProgram->mVulkan.pShaderModules[pShaderProgram->pReflection->mPixelStageIndex];
-//            } break;
-//            default:
-//                assert(false && "Shader Stage not supported!");
-//                break;
-//            }
-//            ++stage_count;
-//        }
-//    }
-//
-//    // Make sure there's a shader
-//    assert(0 != stage_count);
-//
-//    u32 input_binding_count = 0;
-//    VkVertexInputBindingDescription input_bindings[MAX_VERTEX_BINDINGS] = {{0}};
-//    u32 input_attribute_count = 0;
-//    VkVertexInputAttributeDescription input_attributes[MAX_VERTEX_ATTRIBS] = {{0}};
-//
-//    // Make sure there's attributes
-//    if (pVertexLayout != NULL) {
-//        // Ignore everything that's beyond max_vertex_attribs
-//        u32 attrib_count =
-//            pVertexLayout->mAttribCount > MAX_VERTEX_ATTRIBS ? MAX_VERTEX_ATTRIBS : pVertexLayout->mAttribCount;
-//        u32 binding_value = UINT32_MAX;
-//
-//        // Initial values
-//        for (u32 i = 0; i < attrib_count; ++i) {
-//            const gal_vertex_attrib *attrib = &(pVertexLayout->mAttribs[i]);
-//
-//            if (binding_value != attrib->mBinding) {
-//                binding_value = attrib->mBinding;
-//                ++input_binding_count;
-//            }
-//
-//            input_bindings[input_binding_count - 1].binding = binding_value;
-//            if (attrib->mRate == VERTEX_ATTRIB_RATE_INSTANCE) {
-//                input_bindings[input_binding_count - 1].inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
-//            } else {
-//                input_bindings[input_binding_count - 1].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-//            }
-//            input_bindings[input_binding_count - 1].stride += gal_tf_bit_size_of_block(attrib->mFormat) / 8;
-//
-//            input_attributes[input_attribute_count].location = attrib->mLocation;
-//            input_attributes[input_attribute_count].binding = attrib->mBinding;
-//            input_attributes[input_attribute_count].format = galtextureformat_to_vkformat(attrib->mFormat);
-//            input_attributes[input_attribute_count].offset = attrib->mOffset;
-//            ++input_attribute_count;
-//        }
-//    }
-//
-//    VkPipelineVertexInputStateCreateInfo vi{};
-//    vi.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-//    vi.pNext = NULL;
-//    vi.flags = 0;
-//    vi.vertexBindingDescriptionCount = input_binding_count;
-//    vi.pVertexBindingDescriptions = input_bindings;
-//    vi.vertexAttributeDescriptionCount = input_attribute_count;
-//    vi.pVertexAttributeDescriptions = input_attributes;
-//
-//    VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-//    switch (_desc->mPrimitiveTopo) {
-//    case PrimitiveTopology::PRIMITIVE_TOPO_POINT_LIST:
-//        topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-//        break;
-//    case PrimitiveTopology::PRIMITIVE_TOPO_LINE_LIST:
-//        topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-//        break;
-//    case PrimitiveTopology::PRIMITIVE_TOPO_LINE_STRIP:
-//        topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
-//        break;
-//    case PrimitiveTopology::PRIMITIVE_TOPO_TRI_STRIP:
-//        topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-//        break;
-//    case PrimitiveTopology::PRIMITIVE_TOPO_PATCH_LIST:
-//        topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
-//        break;
-//    case PrimitiveTopology::PRIMITIVE_TOPO_TRI_LIST:
-//        topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-//        break;
-//    default:
-//        assert(false && "Primitive Topo not supported!");
-//        break;
-//    }
-//    VkPipelineInputAssemblyStateCreateInfo ia{};
-//    ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-//    ia.pNext = NULL;
-//    ia.flags = 0;
-//    ia.topology = topology;
-//    ia.primitiveRestartEnable = VK_FALSE;
-//
-//    VkPipelineTessellationStateCreateInfo ts{};
-//    if ((pShaderProgram->mStages & SHADER_STAGE_TESC) && (pShaderProgram->mStages & SHADER_STAGE_TESE)) {
-//        ts.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
-//        ts.pNext = NULL;
-//        ts.flags = 0;
-//        ts.patchControlPoints =
-//            pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mHullStageIndex]
-//                .mNumControlPoint;
-//    }
-//
-//    VkPipelineViewportStateCreateInfo vs{};
-//    vs.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-//    vs.pNext = NULL;
-//    vs.flags = 0;
-//    // we are using dynamic viewports but we must set the count to 1
-//    vs.viewportCount = 1;
-//    vs.pViewports = NULL;
-//    vs.scissorCount = 1;
-//    vs.pScissors = NULL;
-//    VkPipelineMultisampleStateCreateInfo ms{};
-//    ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-//    ms.pNext = NULL;
-//    ms.flags = 0;
-//    ms.rasterizationSamples = util_to_vk_sample_count(_desc->mSampleCount);
-//    ms.sampleShadingEnable = VK_FALSE;
-//    ms.minSampleShading = 0.0f;
-//    ms.pSampleMask = 0;
-//    ms.alphaToCoverageEnable = VK_FALSE;
-//    ms.alphaToOneEnable = VK_FALSE;
-//
-//    VkPipelineRasterizationStateCreateInfo rs;
-//    rs = _desc->pRasterizerState ? util_to_rasterizer_desc(_desc->pRasterizerState) : gDefaultRasterizerDesc;
-//
-//    /// TODO: Dont create depth state if no depth stencil bound
-//    VkPipelineDepthStencilStateCreateInfo ds{};
-//    ds = _desc->pDepthState ? util_to_depth_desc(_desc->pDepthState) : gDefaultDepthDesc;
-//
-//    VkPipelineColorBlendStateCreateInfo cb{};
-//    VkPipelineColorBlendAttachmentState cbAtt[MAX_RENDER_TARGET_ATTACHMENTS];
-//    cb = _desc->pBlendState ? util_to_blend_desc(_desc->pBlendState, cbAtt) : gDefaultBlendDesc;
-//    cb.attachmentCount = _desc->mRenderTargetCount;
-//
-//    VkDynamicState dyn_states[] = {
-//        VK_DYNAMIC_STATE_VIEWPORT,     VK_DYNAMIC_STATE_SCISSOR,           VK_DYNAMIC_STATE_BLEND_CONSTANTS,
-//        VK_DYNAMIC_STATE_DEPTH_BOUNDS, VK_DYNAMIC_STATE_STENCIL_REFERENCE,
-//    };
-//    VkPipelineDynamicStateCreateInfo dy{};
-//    dy.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-//    dy.pNext = NULL;
-//    dy.flags = 0;
-//    dy.dynamicStateCount = sizeof(dyn_states) / sizeof(dyn_states[0]);
-//    dy.pDynamicStates = dyn_states;
-//
-//    VkGraphicsPipelineCreateInfo add_info{};
-//    add_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-//    add_info.pNext = NULL;
-//    add_info.flags = 0;
-//    add_info.stageCount = stage_count;
-//    add_info.pStages = stages;
-//    add_info.pVertexInputState = &vi;
-//    add_info.pInputAssemblyState = &ia;
-//
-//    if ((pShaderProgram->mStages & SHADER_STAGE_TESC) && (pShaderProgram->mStages & SHADER_STAGE_TESE))
-//        add_info.pTessellationState = &ts;
-//    else
-//        add_info.pTessellationState = NULL; // set tessellation state to null if we have no tessellation
-//
-//    add_info.pViewportState = &vs;
-//    add_info.pRasterizationState = &rs;
-//    add_info.pMultisampleState = &ms;
-//    add_info.pDepthStencilState = &ds;
-//    add_info.pColorBlendState = &cb;
-//    add_info.pDynamicState = &dy;
-//    add_info.layout = _desc->pRootSignature->mVulkan.pPipelineLayout;
-//    add_info.subpass = 0;
-//    result = (vkCreateGraphicsPipelines(vk_ctx->device, psoCache, 1, &add_info, nullptr,
-//                                        &(pPipeline->mVulkan.pVkPipeline)));
-//#endif
-//}
+gal_error_code vk_create_graphics_pipeline(gal_context _context, gal_pipeline_desc *_desc,
+                                           gal_pipeline *pipeline) {
+
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
+    *pipeline = reinterpret_cast<gal_pipeline>(new ant::gal::vk_pipeline);
+    vk_pipeline *vk_pipe = reinterpret_cast<vk_pipeline *>(*pipeline);
+    gal_graphics_pipeline_desc desc = std::get<gal_graphics_pipeline_desc>(_desc->desc);
+    VkGraphicsPipelineCreateInfo pipeline_create_info{};
+    vk_shader_program *vk_sp = reinterpret_cast<vk_shader_program *>(desc.shader);
+    gal_vertex_layout *pVertexLayout = desc.pVertexLayout;
+    u32 stage_count = 0;
+    ant::fixed_array<VkPipelineShaderStageCreateInfo, 5> stages;
+
+    gal_shader_program_desc *sp_desc = vk_sp->get_desc();
+
+    for (u32 i = 0; i < 5; ++i) {
+        ShaderStage stage_mask = (ShaderStage)(1 << i);
+        if (stage_mask == (sp_desc->mStages & stage_mask)) {
+            stages[stage_count].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+            stages[stage_count].pNext = NULL;
+            stages[stage_count].flags = 0;
+            stages[stage_count].pSpecializationInfo = nullptr;
+            stages[stage_count].module = vk_sp->m_shader_modules[i];
+            stages[stage_count].pName = vk_sp->m_entry_names[i].c_str();
+            switch (stage_mask) {
+            case SHADER_STAGE_VERT: {
+                stages[stage_count].stage = VK_SHADER_STAGE_VERTEX_BIT;
+            } break;
+            case SHADER_STAGE_TESC: {
+                stages[stage_count].stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+            } break;
+            case SHADER_STAGE_TESE: {
+                stages[stage_count].stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+            } break;
+            case SHADER_STAGE_GEOM: {
+                stages[stage_count].stage = VK_SHADER_STAGE_GEOMETRY_BIT;
+            } break;
+            case SHADER_STAGE_FRAG: {
+                stages[stage_count].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+            } break;
+            default:
+                assert(false && "Shader Stage not supported!");
+                break;
+            }
+            ++stage_count;
+        }
+    }
+
+    // Make sure there's a shader
+    assert(0 != stage_count);
+
+    u32 input_binding_count = 0;
+    VkVertexInputBindingDescription input_bindings[MAX_VERTEX_BINDINGS] = {{0}};
+    u32 input_attribute_count = 0;
+    VkVertexInputAttributeDescription input_attributes[MAX_VERTEX_ATTRIBS] = {{0}};
+
+    // Make sure there's attributes
+    if (pVertexLayout != NULL) {
+        // Ignore everything that's beyond max_vertex_attribs
+        u32 attrib_count =
+            pVertexLayout->mAttribCount > MAX_VERTEX_ATTRIBS ? MAX_VERTEX_ATTRIBS : pVertexLayout->mAttribCount;
+        u32 binding_value = UINT32_MAX;
+
+        // Initial values
+        for (u32 i = 0; i < attrib_count; ++i) {
+            const gal_vertex_attrib *attrib = &(pVertexLayout->mAttribs[i]);
+
+            if (binding_value != attrib->mBinding) {
+                binding_value = attrib->mBinding;
+                ++input_binding_count;
+            }
+
+            input_bindings[input_binding_count - 1].binding = binding_value;
+            if (attrib->mRate == VERTEX_ATTRIB_RATE_INSTANCE) {
+                input_bindings[input_binding_count - 1].inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+            } else {
+                input_bindings[input_binding_count - 1].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+            }
+            input_bindings[input_binding_count - 1].stride += gal_tf_bit_size_of_block(attrib->mFormat) / 8;
+
+            input_attributes[input_attribute_count].location = attrib->mLocation;
+            input_attributes[input_attribute_count].binding = attrib->mBinding;
+            input_attributes[input_attribute_count].format = galtextureformat_to_vkformat(attrib->mFormat);
+            input_attributes[input_attribute_count].offset = attrib->mOffset;
+            ++input_attribute_count;
+        }
+    }
+
+    VkPipelineVertexInputStateCreateInfo vi{};
+    vi.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vi.pNext = NULL;
+    vi.flags = 0;
+    vi.vertexBindingDescriptionCount = input_binding_count;
+    vi.pVertexBindingDescriptions = input_bindings;
+    vi.vertexAttributeDescriptionCount = input_attribute_count;
+    vi.pVertexAttributeDescriptions = input_attributes;
+
+    VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    switch (desc.mPrimitiveTopo) {
+    case PrimitiveTopology::PRIMITIVE_TOPO_POINT_LIST:
+        topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+        break;
+    case PrimitiveTopology::PRIMITIVE_TOPO_LINE_LIST:
+        topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+        break;
+    case PrimitiveTopology::PRIMITIVE_TOPO_LINE_STRIP:
+        topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+        break;
+    case PrimitiveTopology::PRIMITIVE_TOPO_TRI_STRIP:
+        topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+        break;
+    case PrimitiveTopology::PRIMITIVE_TOPO_PATCH_LIST:
+        topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
+        break;
+    case PrimitiveTopology::PRIMITIVE_TOPO_TRI_LIST:
+        topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        break;
+    default:
+        assert(false && "Primitive Topo not supported!");
+        break;
+    }
+    VkPipelineInputAssemblyStateCreateInfo ia{};
+    ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    ia.pNext = NULL;
+    ia.flags = 0;
+    ia.topology = topology;
+    ia.primitiveRestartEnable = VK_FALSE;
+
+    //VkPipelineTessellationStateCreateInfo ts{};
+    //if ((sp_desc->mStages & SHADER_STAGE_TESC) && (sp_desc->mStages & SHADER_STAGE_TESE)) {
+    //    ts.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+    //    ts.pNext = NULL;
+    //    ts.flags = 0;
+    //    ts.patchControlPoints =
+    //        pShaderProgram->pReflection->mStageReflections[pShaderProgram->pReflection->mHullStageIndex]
+    //            .mNumControlPoint;
+    //}
+
+    VkPipelineViewportStateCreateInfo vs{};
+    vs.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    vs.pNext = NULL;
+    vs.flags = 0;
+    // we are using dynamic viewports but we must set the count to 1
+    vs.viewportCount = 1;
+    vs.pViewports = NULL;
+    vs.scissorCount = 1;
+    vs.pScissors = NULL;
+    VkPipelineMultisampleStateCreateInfo ms{};
+    ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    ms.pNext = NULL;
+    ms.flags = 0;
+    ms.rasterizationSamples = util_to_vk_sample_count(desc.mSampleCount);
+    ms.sampleShadingEnable = VK_FALSE;
+    ms.minSampleShading = 0.0f;
+    ms.pSampleMask = 0;
+    ms.alphaToCoverageEnable = VK_FALSE;
+    ms.alphaToOneEnable = VK_FALSE;
+
+    VkPipelineRasterizationStateCreateInfo rs;
+    rs = desc.pRasterizerState ? util_to_rasterizer_desc(desc.pRasterizerState) : gDefaultRasterizerDesc;
+
+    /// TODO: Dont create depth state if no depth stencil bound
+    VkPipelineDepthStencilStateCreateInfo ds{};
+    ds = desc.pDepthState ? util_to_depth_desc(_desc->pDepthState) : gDefaultDepthDesc;
+
+    VkPipelineColorBlendStateCreateInfo cb{};
+    VkPipelineColorBlendAttachmentState cbAtt[MAX_RENDER_TARGET_ATTACHMENTS];
+    cb = desc.pBlendState ? util_to_blend_desc(desc.pBlendState, cbAtt) : gDefaultBlendDesc;
+    cb.attachmentCount = _desc->mRenderTargetCount;
+
+    VkDynamicState dyn_states[] = {
+        VK_DYNAMIC_STATE_VIEWPORT,     VK_DYNAMIC_STATE_SCISSOR,           VK_DYNAMIC_STATE_BLEND_CONSTANTS,
+        VK_DYNAMIC_STATE_DEPTH_BOUNDS, VK_DYNAMIC_STATE_STENCIL_REFERENCE,
+    };
+    VkPipelineDynamicStateCreateInfo dy{};
+    dy.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dy.pNext = NULL;
+    dy.flags = 0;
+    dy.dynamicStateCount = sizeof(dyn_states) / sizeof(dyn_states[0]);
+    dy.pDynamicStates = dyn_states;
+
+    VkGraphicsPipelineCreateInfo add_info{};
+    add_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    add_info.pNext = NULL;
+    add_info.flags = 0;
+    add_info.stageCount = stage_count;
+    add_info.pStages = stages;
+    add_info.pVertexInputState = &vi;
+    add_info.pInputAssemblyState = &ia;
+
+    if ((pShaderProgram->mStages & SHADER_STAGE_TESC) && (pShaderProgram->mStages & SHADER_STAGE_TESE))
+        add_info.pTessellationState = &ts;
+    else
+        add_info.pTessellationState = NULL; // set tessellation state to null if we have no tessellation
+
+    add_info.pViewportState = &vs;
+    add_info.pRasterizationState = &rs;
+    add_info.pMultisampleState = &ms;
+    add_info.pDepthStencilState = &ds;
+    add_info.pColorBlendState = &cb;
+    add_info.pDynamicState = &dy;
+    add_info.layout = _desc->pRootSignature->mVulkan.pPipelineLayout;
+    add_info.subpass = 0;
+    result = (vkCreateGraphicsPipelines(vk_ctx->device, psoCache, 1, &add_info, nullptr,
+                                        &(pPipeline->mVulkan.pVkPipeline)));
+
+}
 //gal_error_code vk_create_raytracing_pipeline(gal_context _context, gal_raytracing_pipeline_desc *_desc,
 //                                           gal_pipeline *pipeline) {
 //    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
@@ -1627,6 +1703,33 @@ gal_error_code vk_cmd_copy_texture_to_buffer() {
 //            return gal_error_code::GAL_ERRORCODE_ERROR;
 //        }
 //    }
+//}
+
+// pipeline
+//gal_error_code vk_create_shader(gal_context _context, gal_shader_desc *_desc, gal_shader *_shader) {
+//    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
+//    *_shader = reinterpret_cast<gal_shader>(ant::ant_alloc<vk_shader>());
+//    vk_shader *vk_s = reinterpret_cast<vk_shader *>(*_shader);
+//    VkShaderModuleCreateInfo create_info{};
+//    create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+//    create_info.codeSize = _desc->size;
+//    create_info.pCode = reinterpret_cast<u32 *>(_desc->data);
+//    VkResult result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_s->shader);
+//
+//    if (result != VK_SUCCESS || vk_s->shader == VK_NULL_HANDLE) {
+//        return gal_error_code::GAL_ERRORCODE_ERROR;
+//    }
+//    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+//}
+//gal_error_code vk_destroy_shader(gal_context _context, gal_shader _shader) {
+//    if (_shader != gal_null) {
+//        vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
+//        vk_shader *vk_s = reinterpret_cast<vk_shader *>(_shader);
+//        vkDestroyShaderModule(vk_ctx->device, vk_s->shader, nullptr);
+//        ant::ant_free(vk_s);
+//        _shader = gal_null;
+//    }
+//    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
 
 } // namespace ant::gal

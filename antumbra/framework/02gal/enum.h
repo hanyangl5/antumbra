@@ -31,9 +31,12 @@
 #include <Windows.h>
 #endif
 #include "framework/01core/utils/utils.h"
+#include "framework/01core/memory/container.h"
+#include "format.h"
 
 namespace ant::gal {
 
+inline constexpr u32 MAX_RESOURCE_NAME_LENGTH = 256;
 inline constexpr u32 MAX_RENDER_TARGET_ATTACHMENTS = 8;
 inline constexpr u32 MAX_VERTEX_BINDINGS = 15;
 inline constexpr u32 MAX_VERTEX_ATTRIBS = 15;
@@ -42,6 +45,7 @@ inline constexpr u32 MAX_DEBUG_NAME_LENGTH = 128;
 inline constexpr u32 MAX_MIP_LEVELS = 0xFFFFFFFF;
 inline constexpr u32 MAX_SWAPCHAIN_IMAGES = 3;
 inline constexpr u32 MAX_GPU_VENDOR_STRING_LENGTH = 64; //max size for GPUVendorPreset strings
+inline constexpr u32 MAX_SHADER_STAGE_COUNT = 5; //max size for GPUVendorPreset strings
 
 #ifndef MAKE_ENUM_FLAG
 #define MAKE_ENUM_FLAG(TYPE, ENUM_TYPE)                                                                                \
@@ -214,7 +218,7 @@ enum ShaderStage {
     SHADER_STAGE_DOMN = SHADER_STAGE_TESE,
     SHADER_STAGE_COUNT = 7,
 };
-
+MAKE_ENUM_FLAG(u32, ShaderStage)
 enum class PrimitiveTopology {
     PRIMITIVE_TOPO_POINT_LIST = 0,
     PRIMITIVE_TOPO_LINE_LIST,
@@ -537,23 +541,173 @@ DECLARE_GAL_HANDLE(gal_swap_chain) {
     ant::fixed_array<gal_render_target, MAX_SWAPCHAIN_IMAGES> m_render_targets;
 };
 
+enum class TextureDimension {
+    TEXTURE_DIM_1D,
+    TEXTURE_DIM_2D,
+    TEXTURE_DIM_2DMS,
+    TEXTURE_DIM_3D,
+    TEXTURE_DIM_CUBE,
+    TEXTURE_DIM_1D_ARRAY,
+    TEXTURE_DIM_2D_ARRAY,
+    TEXTURE_DIM_2DMS_ARRAY,
+    TEXTURE_DIM_CUBE_ARRAY,
+    TEXTURE_DIM_COUNT,
+    TEXTURE_DIM_UNDEFINED,
+};
+
+struct VertexInput {
+    // resource name
+    const char *name;
+
+    // The size of the attribute
+    u32 size;
+
+    // name size
+    u32 name_size;
+};
+
+struct ShaderResource {
+    // resource Type
+    gal_resource_type type;
+
+    // The resource set for binding frequency
+    u32 set;
+
+    // The resource binding location
+    u32 reg;
+
+    // The size of the resource. This will be the DescriptorInfo array size for textures
+    u32 size;
+
+    // what stages use this resource
+    ShaderStage used_stages;
+
+    // resource name
+    const char *name;
+
+    // name size
+    u32 name_size;
+
+    // 1D / 2D / Array / MSAA / ...
+    TextureDimension dim;
+};
+
+struct ShaderVariable {
+    // Variable name
+    const char *name;
+
+    // parents resource index
+    u32 parent_index;
+
+    // The offset of the Variable.
+    u32 offset;
+
+    // The size of the Variable.
+    u32 size;
+
+    // name size
+    u32 name_size;
+};
+
+struct ShaderReflection {
+    // single large allocation for names to reduce number of allocations
+    char *pNamePool;
+    VertexInput *pVertexInputs;
+    ShaderResource *pShaderResources;
+    ShaderVariable *pVariables;
+
+#if defined(VULKAN)
+    char *pEntryPoint;
+#endif
+
+    ShaderStage mShaderStage;
+
+    u32 mNamePoolSize;
+    u32 mVertexInputsCount;
+    u32 mShaderResourceCount;
+    u32 mVariableCount;
+
+    // Thread group size for compute shader
+    u32 mNumThreadsPerGroup[3];
+
+    //number of tessellation control point
+    u32 mNumControlPoint;
+};
+
+struct PipelineReflection {
+    ShaderStage mShaderStages;
+    // the individual stages reflection data.
+    ShaderReflection mStageReflections[MAX_SHADER_STAGE_COUNT];
+    u32 mStageReflectionCount;
+
+    u32 mVertexStageIndex;
+    u32 mHullStageIndex;
+    u32 mDomainStageIndex;
+    u32 mGeometryStageIndex;
+    u32 mPixelStageIndex;
+
+    ShaderResource *pShaderResources;
+    u32 mShaderResourceCount;
+
+    ShaderVariable *pVariables;
+    u32 mVariableCount;
+};
+
 struct gal_shader_desc {
     u64 size;
     void *data;
 };
-DECLARE_GAL_HANDLE(gal_shader){};
+
+DECLARE_GAL_HANDLE(gal_shader) {
+    ShaderStage mStages : 31;
+    uint32_t mNumThreadsPerGroup[3];
+    PipelineReflection *pReflection;
+};
+
+
+struct BinaryShaderStageDesc {
+    /// Byte code array
+    void *pByteCode;
+    uint32_t mByteCodeSize;
+    const char *pEntryPoint;
+};
+
+typedef struct BinaryShaderDesc {
+    ShaderStage mStages;
+    /// Specify whether shader will own byte code memory
+    uint32_t mOwnByteCode : 1;
+    BinaryShaderStageDesc mVert;
+    BinaryShaderStageDesc mFrag;
+    BinaryShaderStageDesc mGeom;
+    BinaryShaderStageDesc mHull;
+    BinaryShaderStageDesc mDomain;
+    BinaryShaderStageDesc mComp;
+    uint32_t mConstantCount;
+} BinaryShaderDesc;
+
+using gal_shader_program_desc = BinaryShaderDesc;
+
+// shader program is a set of shader for single pipeline
+DECLARE_GAL_HANDLE(gal_shader_program) {
+    gal_shader_program_desc m_desc;
+    u32 m_stage_count;
+    //ShaderStage mStages : 31;
+    //uint32_t mNumThreadsPerGroup[3];
+    //PipelineReflection *pReflection;
+};
+
 DECLARE_GAL_HANDLE(gal_rootsignature){};
 
 DECLARE_GAL_HANDLE(gal_pipelinecache){};
 
 struct gal_compute_pipeline_desc {
-    gal_shader shader;
+    gal_shader_program* shader;
     gal_rootsignature root_signature;
 };
 struct gal_raytracing_pipeline_desc {};
 
 struct gal_graphics_pipeline_desc {
-    gal_shader shader;
+    gal_shader_program *shader;
     gal_rootsignature root_signature;
     gal_vertex_layout *pVertexLayout;
     gal_blend_state_desc *pBlendState;

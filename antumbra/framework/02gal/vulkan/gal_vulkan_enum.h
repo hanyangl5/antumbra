@@ -88,14 +88,25 @@ DECLARE_VK_HANDLE(swap_chain) {
 };
 
 struct vk_commandlist {};
-struct vk_shader {
-    ant::str entry;
-    VkShaderModule shader = VK_NULL_HANDLE;
+
+DECLARE_VK_HANDLE(shader_program) {
+    void initialize(gal_shader_program_desc * _desc, u32 _stage_count) {
+        m_desc = *_desc;
+        m_stage_count = _stage_count;
+    }
+    gal_shader_program_desc *get_desc() { return &m_desc;
+    }
+
+    ant::vector<VkShaderModule> m_shader_modules;
+    ant::vector<ant::str> m_entry_names;
+    VkSpecializationInfo *m_specialization_info;
 };
 
 struct vk_rootsignature {
     VkPipelineLayout pipeline_layout;
 };
+
+
 
 DECLARE_VK_HANDLE(pipeline) {
     void initialize(gal_pipeline_desc * _desc) {

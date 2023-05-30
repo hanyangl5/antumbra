@@ -20,6 +20,7 @@ inline void ant_enable_memory_tracking() { b_enable_memory_tracking = true; }
 inline void ant_disable_memory_tracking() { b_enable_memory_tracking = false; }
 
 void *ant_malloc(u64 size);
+void *ant_calloc(u64 num, u64 size);
 
 template <typename T, typename... Args> T *ant_alloc(Args &&...args) {
     void *memory = mi_malloc(sizeof(T));
