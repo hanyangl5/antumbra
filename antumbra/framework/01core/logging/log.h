@@ -2,18 +2,18 @@
 
 #include <spdlog/spdlog.h>
 
-#include "framework/01core/memory/memory.h"
 #include "framework/01core/singleton/public_singleton.h"
 #include "framework/01core/utils/utils.h"
+#include "framework/01core/memory/container.h"
 
 enum VkResult;
 
 namespace ant {
-inline ant::str HrToString(long hr) {
-    char s_str[64] = {};
-    sprintf_s(s_str, "HRESULT of 0x%08X", static_cast<u32>(hr));
-    return ant::str(s_str);
-}
+//inline ant::str HrToString(long hr) {
+//    char s_str[64] = {};
+//    sprintf_s(s_str, "HRESULT of 0x%08X", static_cast<u32>(hr));
+//    return ant::str(s_str);
+//}
 
 class Log : public Singleton<Log> {
   public:

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <variant>
+
 #include "../enum.h"
 #include "../gal.h"
 
@@ -8,7 +10,9 @@ namespace ant::gal {
 #define DECLARE_VK_HANDLE(name) struct vk_##name : protected gal_##name##_T
 
 DECLARE_VK_HANDLE(context) {
-    constexpr void initialize(gal_desc * _desc) { m_gal_desc = *_desc; }
+    void initialize(gal_desc * _desc) { 
+        m_gal_desc = *_desc;
+    }
     VkInstance instance = VK_NULL_HANDLE;
     VkPhysicalDevice active_gpu = VK_NULL_HANDLE;
     VkDevice device = VK_NULL_HANDLE;
@@ -25,27 +29,70 @@ DECLARE_VK_HANDLE(context) {
 };
 
 DECLARE_VK_HANDLE(buffer) {
-    constexpr void initialize(u64 _size, gal_memory_flags _memory_flags, gal_resource_states _resource_states) {
-        m_size = _size;
-        m_memory_flags = _memory_flags;
-        m_resource_states = _resource_states;
-    }
-    VkBuffer buffer;
-    VmaAllocation allocation;
+    void initialize(gal_buffer_desc * _desc) { m_gal_buffer_desc = *_desc; }
+    VkBuffer m_buffer;
+    VmaAllocation m_allocation;
 };
 
 DECLARE_VK_HANDLE(texture) {
-    VkImage image;
-    VmaAllocation allocation;
+    void initialize(gal_texture_desc * _desc) { m_gal_texture_desc = *_desc; }
+    gal_texture_flag get_flags() { return m_gal_texture_desc.texture_flags; }
+    VkImage m_image;
+    VmaAllocation m_allocation;
+    VkImageView pVkSRVDescriptor;
+    /// Opaque handle used by shaders for doing read/write operations on the texture
+    VkImageView *pVkUAVDescriptors;
+    /// Opaque handle used by shaders for doing read/write operations on the texture
+    VkImageView pVkSRVStencilDescriptor;
 };
 
-struct vk_sampler {
-    VkSampler sampler;
+DECLARE_VK_HANDLE(sampler) {
+    void initialize(gal_sampler_desc * _desc) { m_gal_sampler_desc = *_desc; }
+    VkSampler m_sampler;
 };
-struct vk_rendertarget {};
+
+DECLARE_VK_HANDLE(render_target) {
+    void initialize(gal_render_target_desc * _desc) { 
+        m_desc = *_desc;
+    }
+    gal_texture *get_texture() { return &m_texture; }
+    gal_render_target_desc *get_render_target_desc() { return &m_desc; }
+    VkImageView pVkDescriptor;
+    VkImageView *pVkSliceDescriptors;
+};
+
+//struct vk_buffer_desciptor_view {
+//    VkDescriptorBufferInfo buffer_info;
+//    VkBufferView view;
+//};
+//struct vk_image_desciptor_view {
+//    VkDescriptorImageInfo image_info;
+//    VkImageView view;
+//};
+//
+//DECLARE_VK_HANDLE(srv_descriptor_view) {
+//    constexpr void initialize(gal_src_descriptor_view_desc * _desc) { m_desc = *_desc; }
+//    std::variant<vk_buffer_desciptor_view, vk_image_desciptor_view> m_view;
+//};
+//DECLARE_VK_HANDLE(uav_descriptor_view) {
+//    constexpr void initialize(gal_uav_descriptor_view_desc * _desc) { m_desc = *_desc; }
+//    std::variant<vk_buffer_desciptor_view, vk_image_desciptor_view> m_view;
+//};
+
 struct vk_fence {};
 struct vk_semaphore {};
-struct vk_swapchain {};
+DECLARE_VK_HANDLE(swap_chain) {
+    void initialize(gal_swap_chain_desc * _desc) { 
+        m_desc = *_desc;
+    }
+    ant::fixed_array<gal_render_target, MAX_SWAPCHAIN_IMAGES> &get_render_targets() { return m_render_targets; }
+    VkSwapchainKHR m_swap_chain = VK_NULL_HANDLE;
+    VkSurfaceKHR m_surface = VK_NULL_HANDLE;
+    VkSurfaceFormatKHR optimal_surface_format{};
+    ant::fixed_array<VkImage, MAX_SWAPCHAIN_IMAGES> swap_chain_images{};
+    ant::fixed_array<VkImageView, MAX_SWAPCHAIN_IMAGES> swap_chain_image_views{};
+};
+
 struct vk_commandlist {};
 struct vk_shader {
     ant::str entry;

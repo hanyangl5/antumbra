@@ -80,3 +80,7 @@
 [submodule "antumbra/third_party/lua"]
 	path = antumbra/third_party/lua
 	url = https://github.com/lua/lua.git
+
+[submodule "antumbra/third_party/magic_enum"]
+	path = antumbra/third_party/magic_enum
+	url = https://github.com/Neargye/magic_enum.git

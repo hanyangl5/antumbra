@@ -23,7 +23,7 @@ namespace math = glm;
 
 template <typename T> T _min(const T &lhs, const T &rhs) { return lhs < rhs ? lhs : rhs; }
 
-template <typename T> T _max(const T &lhs, const T &rhs) { return !Min(lhs, rhs); }
+template <typename T> T _max(const T &lhs, const T &rhs) { return lhs > rhs ? lhs : rhs; }
 
 template <typename T> T constexpr _lerp(const T &lhs, const T &rhs, ant::f32 t) { return lhs + t * (rhs - lhs); }
 
