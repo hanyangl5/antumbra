@@ -1116,41 +1116,40 @@ gal_error_code vk_get_pipelinecache_data(gal_context _context, gal_pipelinecache
     }
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
-//gal_error_code vk_create_compute_pipeline(gal_context _context, gal_compute_pipeline_desc *_desc,
-//                                          gal_pipeline *pipeline) {
-//    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
-//    *pipeline = reinterpret_cast<gal_pipeline>(new ant::gal::vk_pipeline);
-//    vk_pipeline *vk_pipe = reinterpret_cast<vk_pipeline *>(*pipeline);
-//    vk_shader *vk_shader;
-//
-//    vk_rootsignature *vk_rs = reinterpret_cast<vk_rootsignature *>(_desc->root_signature);
-//    VkPipelineShaderStageCreateInfo shader_stage_create_info{};
-//    shader_stage_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-//    shader_stage_create_info.flags = 0;
-//    shader_stage_create_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-//    shader_stage_create_info.module = vk_shader->shader;
-//    shader_stage_create_info.pName = vk_shader->entry.c_str();
-//    shader_stage_create_info.pSpecializationInfo = nullptr;
-//
-//    VkComputePipelineCreateInfo pipeline_create_info{};
-//    pipeline_create_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-//    pipeline_create_info.flags = 0;
-//    pipeline_create_info.layout = vk_rs->pipeline_layout;
-//    pipeline_create_info.stage = shader_stage_create_info;
-//
-//    VkPipelineCache pipeline_cache = VK_NULL_HANDLE;
-//
-//    if (_desc->pipeline_cache != gal_null) {
-//        pipeline_cache = reinterpret_cast<vk_pipelinecache *>(_desc->pipeline_cache)->pipeline_cache;
-//    }
-//
-//    VkResult result =
-//        vkCreateComputePipelines(vk_ctx->device, pipeline_cache, 1, &pipeline_create_info, nullptr, &vk_pipe->pipeline);
-//    if (result != VK_SUCCESS || vk_pipe->pipeline == VK_NULL_HANDLE) {
-//        return gal_error_code::GAL_ERRORCODE_ERROR;
-//    }
-//    return gal_error_code::GAL_ERRORCODE_SUCCESS;
-//}
+gal_error_code vk_create_compute_pipeline(gal_context _context, gal_pipeline_desc *_desc, gal_pipeline *pipeline) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
+    *pipeline = reinterpret_cast<gal_pipeline>(new ant::gal::vk_pipeline);
+    vk_pipeline *vk_pipe = reinterpret_cast<vk_pipeline *>(*pipeline);
+    gal_compute_pipeline_desc desc = std::get<gal_compute_pipeline_desc>(_desc->desc);
+    vk_shader *vk_s = reinterpret_cast<vk_shader *>(desc.shader);
+
+    vk_rootsignature *vk_rs = reinterpret_cast<vk_rootsignature *>(desc.root_signature);
+
+    VkPipelineShaderStageCreateInfo shader_stage_create_info{};
+    shader_stage_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shader_stage_create_info.flags = 0;
+    shader_stage_create_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    shader_stage_create_info.module = vk_s->shader;
+    shader_stage_create_info.pName = vk_s->entry.c_str();
+    shader_stage_create_info.pSpecializationInfo = nullptr;
+
+    VkComputePipelineCreateInfo pipeline_create_info{};
+    pipeline_create_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    pipeline_create_info.flags = 0;
+    pipeline_create_info.layout = vk_rs->pipeline_layout;
+    pipeline_create_info.stage = shader_stage_create_info;
+
+    VkPipelineCache pipeline_cache = (_desc->pipeline_cache == gal_null)
+                                         ? VK_NULL_HANDLE
+                                         : reinterpret_cast<vk_pipelinecache *>(_desc->pipeline_cache)->pipeline_cache;
+
+    VkResult result =
+        vkCreateComputePipelines(vk_ctx->device, pipeline_cache, 1, &pipeline_create_info, nullptr, &vk_pipe->pipeline);
+    if (result != VK_SUCCESS || vk_pipe->pipeline == VK_NULL_HANDLE) {
+        return gal_error_code::GAL_ERRORCODE_ERROR;
+    }
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+}
 
 //gal_error_code vk_create_graphics_pipeline(gal_context _context, gal_graphics_pipeline_desc *_desc,
 //                                           gal_pipeline *pipeline) {
@@ -1160,7 +1159,7 @@ gal_error_code vk_get_pipelinecache_data(gal_context _context, gal_pipelinecache
 //    vk_pipeline *vk_pipe = reinterpret_cast<vk_pipeline *>(*pipeline);
 //    VkGraphicsPipelineCreateInfo pipeline_create_info{};
 //    gal_shader *pShaderProgram = _desc->pShaderProgram;
-//    VertexLayout *pVertexLayout = _desc->pVertexLayout;
+//    gal_vertex_layout *pVertexLayout = _desc->pVertexLayout;
 //    u32 stage_count = 0;
 //    VkPipelineShaderStageCreateInfo stages[5];
 //    for (u32 i = 0; i < 5; ++i) {
@@ -1236,7 +1235,7 @@ gal_error_code vk_get_pipelinecache_data(gal_context _context, gal_pipelinecache
 //
 //        // Initial values
 //        for (u32 i = 0; i < attrib_count; ++i) {
-//            const VertexAttrib *attrib = &(pVertexLayout->mAttribs[i]);
+//            const gal_vertex_attrib *attrib = &(pVertexLayout->mAttribs[i]);
 //
 //            if (binding_value != attrib->mBinding) {
 //                binding_value = attrib->mBinding;

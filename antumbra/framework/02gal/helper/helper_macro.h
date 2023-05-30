@@ -80,8 +80,8 @@ __GAL_HELPER_MACRO__(gal_error_code, create_pipelinecache, gal_context _context,
 __GAL_HELPER_MACRO__(gal_error_code, destroy_pipelinecache, gal_context _context, gal_pipelinecache _pipeline_cache);
 
 __GAL_HELPER_MACRO__(gal_error_code, get_pipelinecache_data, gal_context _context, gal_pipelinecache _pipeline_cache, u64 *size, void *_data);
-//__GAL_HELPER_MACRO__(gal_error_code, create_compute_pipeline, gal_context _context, gal_compute_pipeline_desc *_desc,
-//                     gal_pipeline *pipeline);
+__GAL_HELPER_MACRO__(gal_error_code, create_compute_pipeline, gal_context _context, gal_pipeline_desc *_desc,
+                     gal_pipeline *pipeline);
 //__GAL_HELPER_MACRO__(gal_error_code, create_graphics_pipeline, gal_context _context, gal_graphics_pipeline_desc *_desc,
 //                     gal_pipeline *pipeline);
 // inline raytracing?

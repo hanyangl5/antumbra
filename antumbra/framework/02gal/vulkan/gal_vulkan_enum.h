@@ -10,9 +10,7 @@ namespace ant::gal {
 #define DECLARE_VK_HANDLE(name) struct vk_##name : protected gal_##name##_T
 
 DECLARE_VK_HANDLE(context) {
-    void initialize(gal_desc * _desc) { 
-        m_gal_desc = *_desc;
-    }
+    void initialize(gal_desc * _desc) { m_gal_desc = *_desc; }
     VkInstance instance = VK_NULL_HANDLE;
     VkPhysicalDevice active_gpu = VK_NULL_HANDLE;
     VkDevice device = VK_NULL_HANDLE;
@@ -52,9 +50,7 @@ DECLARE_VK_HANDLE(sampler) {
 };
 
 DECLARE_VK_HANDLE(render_target) {
-    void initialize(gal_render_target_desc * _desc) { 
-        m_desc = *_desc;
-    }
+    void initialize(gal_render_target_desc * _desc) { m_desc = *_desc; }
     gal_texture *get_texture() { return &m_texture; }
     gal_render_target_desc *get_render_target_desc() { return &m_desc; }
     VkImageView pVkDescriptor;
@@ -82,9 +78,7 @@ DECLARE_VK_HANDLE(render_target) {
 struct vk_fence {};
 struct vk_semaphore {};
 DECLARE_VK_HANDLE(swap_chain) {
-    void initialize(gal_swap_chain_desc * _desc) { 
-        m_desc = *_desc;
-    }
+    void initialize(gal_swap_chain_desc * _desc) { m_desc = *_desc; }
     ant::fixed_array<gal_render_target, MAX_SWAPCHAIN_IMAGES> &get_render_targets() { return m_render_targets; }
     VkSwapchainKHR m_swap_chain = VK_NULL_HANDLE;
     VkSurfaceKHR m_surface = VK_NULL_HANDLE;
@@ -102,7 +96,21 @@ struct vk_shader {
 struct vk_rootsignature {
     VkPipelineLayout pipeline_layout;
 };
-struct vk_pipeline {
+
+DECLARE_VK_HANDLE(pipeline) {
+    void initialize(gal_pipeline_desc * _desc) {
+        if (std::holds_alternative<gal_compute_pipeline_desc>(_desc->desc)) {
+            m_type = gal_pipeline_type::PIPELINE_TYPE_COMPUTE;
+        } else if (std::holds_alternative<gal_graphics_pipeline_desc>(_desc->desc)) {
+            m_type = gal_pipeline_type::PIPELINE_TYPE_GRAPHICS;
+        } else if (std::holds_alternative<gal_raytracing_pipeline_desc>(_desc->desc)) {
+            m_type = gal_pipeline_type::PIPELINE_TYPE_RAYTRACING;
+        } else {
+            LOG_ERROR("invalid pipeline desc");
+            return;
+        }
+        m_desc = *_desc;
+    }
     VkPipeline pipeline;
 };
 struct vk_pipelinecache {

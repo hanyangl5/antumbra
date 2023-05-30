@@ -126,7 +126,7 @@ enum class gal_front_face { FRONT_FACE_CCW = 0, FRONT_FACE_CW };
 
 enum class FillMode { FILL_MODE_SOLID, FILL_MODE_WIREFRAME, MAX_FILL_MODES };
 
-enum class PipelineType {
+enum class gal_pipeline_type {
     PIPELINE_TYPE_UNDEFINED = 0,
     PIPELINE_TYPE_COMPUTE,
     PIPELINE_TYPE_GRAPHICS,
@@ -348,7 +348,7 @@ enum class BlendConstant {
 
 struct gal_descriptorpool_desc {};
 
-struct BlendStateDesc {
+struct gal_blend_state_desc {
     /// Source blend factor per render target.
     BlendConstant mSrcFactors[MAX_RENDER_TARGET_ATTACHMENTS];
     /// Destination blend factor per render target.
@@ -371,7 +371,7 @@ struct BlendStateDesc {
     bool mIndependentBlend;
 };
 
-struct DepthStateDesc {
+struct gal_depth_state_desc {
     bool mDepthTest;
     bool mDepthWrite;
     gal_compare_mode mDepthFunc;
@@ -388,7 +388,7 @@ struct DepthStateDesc {
     StencilOp mStencilBackPass;
 };
 
-struct RasterizerStateDesc {
+struct gal_rasterizer_state_desc {
     gal_cull_mode mCullMode;
     int32_t mDepthBias;
     float mSlopeScaledDepthBias;
@@ -399,7 +399,7 @@ struct RasterizerStateDesc {
     bool mDepthClampEnable;
 };
 
-struct VertexAttrib {
+struct gal_vertex_attrib {
     ShaderSemantic mSemantic;
     uint32_t mSemanticNameLength;
     char mSemanticName[MAX_SEMANTIC_NAME_LENGTH];
@@ -410,13 +410,13 @@ struct VertexAttrib {
     VertexAttribRate mRate;
 };
 
-struct VertexLayout {
+struct gal_vertex_layout {
     uint32_t mAttribCount;
-    VertexAttrib mAttribs[MAX_VERTEX_ATTRIBS];
+    gal_vertex_attrib mAttribs[MAX_VERTEX_ATTRIBS];
     uint32_t mStrides[MAX_VERTEX_BINDINGS];
 };
 
-struct ReadRange {
+struct gal_read_range {
     uint64_t mOffset;
     uint64_t mSize;
 };
@@ -532,7 +532,7 @@ struct gal_swap_chain_desc {
     bool b_vsync;
 };
 
-DECLARE_GAL_HANDLE(gal_swap_chain){ 
+DECLARE_GAL_HANDLE(gal_swap_chain) {  
     gal_swap_chain_desc m_desc;
     ant::fixed_array<gal_render_target, MAX_SWAPCHAIN_IMAGES> m_render_targets;
 };
@@ -543,8 +543,44 @@ struct gal_shader_desc {
 };
 DECLARE_GAL_HANDLE(gal_shader){};
 DECLARE_GAL_HANDLE(gal_rootsignature){};
-DECLARE_GAL_HANDLE(gal_pipeline){};
+
 DECLARE_GAL_HANDLE(gal_pipelinecache){};
+
+struct gal_compute_pipeline_desc {
+    gal_shader shader;
+    gal_rootsignature root_signature;
+};
+struct gal_raytracing_pipeline_desc {};
+
+struct gal_graphics_pipeline_desc {
+    gal_shader shader;
+    gal_rootsignature root_signature;
+    gal_vertex_layout *pVertexLayout;
+    gal_blend_state_desc *pBlendState;
+    gal_depth_state_desc *pDepthState;
+    gal_rasterizer_state_desc *pRasterizerState;
+    gal_texture_format *pColorFormats;
+    uint32_t mRenderTargetCount;
+    gal_texture_sample_count mSampleCount;
+    uint32_t mSampleQuality;
+    gal_texture_format mDepthStencilFormat;
+    PrimitiveTopology mPrimitiveTopo;
+    bool mSupportIndirectCommandBuffer;
+    bool mVRFoveatedRendering;
+};
+
+struct gal_pipeline_desc {
+    gal_pipeline_type type;
+    std::variant<std::monostate, gal_graphics_pipeline_desc, gal_compute_pipeline_desc, gal_raytracing_pipeline_desc>
+        desc;
+    gal_pipelinecache pipeline_cache;
+};
+
+
+DECLARE_GAL_HANDLE(gal_pipeline) { 
+    gal_pipeline_desc m_desc;
+    gal_pipeline_type m_type;
+};
 DECLARE_GAL_HANDLE(gal_commandlist){};
 DECLARE_GAL_HANDLE(gal_descriptorpool){};
 
@@ -571,30 +607,6 @@ struct gal_pipelinecache_desc {
 //    u32 mMaxRaysCount;
 //};
 
-struct gal_compute_pipeline_desc {
-    gal_shader *shader;
-    gal_pipelinecache *pipeline_cache;
-    gal_rootsignature *root_signature;
-};
-struct gal_raytracing_pipeline_desc {};
-
-struct gal_graphics_pipeline_desc {
-    gal_shader *pShaderProgram;
-    gal_rootsignature *pRootSignature;
-    VertexLayout *pVertexLayout;
-    BlendStateDesc *pBlendState;
-    DepthStateDesc *pDepthState;
-    RasterizerStateDesc *pRasterizerState;
-    gal_texture_format *pColorFormats;
-    uint32_t mRenderTargetCount;
-    gal_texture_sample_count mSampleCount;
-    uint32_t mSampleQuality;
-    gal_texture_format mDepthStencilFormat;
-    PrimitiveTopology mPrimitiveTopo;
-    bool mSupportIndirectCommandBuffer;
-    bool mVRFoveatedRendering;
-};
-
 struct gal_commandpool_desc {};
 
 // struct to consume descriptorset
@@ -612,7 +624,6 @@ struct gal_command_pool_desc {};
 struct gal_commandlist_desc {};
 
 struct gal_renderpass_begin_desc {};
-
 
 struct BufferBarrier {
     gal_buffer *pBuffer;
