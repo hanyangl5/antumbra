@@ -91,7 +91,7 @@ gal_error_code vk_destroy_gal(gal_context _context) {
 
 gal_error_code vk_create_instance(gal_desc *gal_desc, gal_context *_context) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(*_context);
-    vk_ctx->initialize(gal_desc);
+    vk_ctx->m_gal_desc = *gal_desc;
 
     auto stack_memory = ant::get_stack_memory_resource(2048);
     ant::vector<const char *> required_instance_layers(&stack_memory);
@@ -451,7 +451,8 @@ gal_error_code vk_create_buffer(gal_context _context, gal_buffer_desc *_desc, ga
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
     *buffer = reinterpret_cast<gal_buffer>(ant::ant_alloc<ant::gal::vk_buffer>());
     vk_buffer *vk_buf = reinterpret_cast<vk_buffer *>(*buffer);
-    vk_buf->initialize(_desc);
+    vk_buf->m_gal_buffer_desc = *_desc;
+
     reinterpret_cast<vk_buffer *>(buffer);
 
     VkBufferCreateInfo buffer_create_info{};
@@ -507,7 +508,8 @@ gal_error_code vk_create_texture(gal_context _context, gal_texture_desc *_desc, 
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
     *texture = reinterpret_cast<gal_texture>(ant::ant_alloc<ant::gal::vk_texture>());
     vk_texture *vk_tex = reinterpret_cast<vk_texture *>(*texture);
-    vk_tex->initialize(_desc);
+    vk_tex->m_gal_texture_desc = *_desc;
+
     u32 array_size = _desc->array_size > 1u ? _desc->array_size : 1u;
     u32 depth = _desc->depth > 1u ? _desc->depth : 1u;
     bool b_is_cubemap = ((_desc->resource_types & gal_resource_type::TEXTURE_CUBE) != gal_resource_type::UNDEFINED) &&
@@ -575,7 +577,7 @@ gal_error_code vk_destroy_texture(gal_context _context, gal_texture texture) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
     if (texture != gal_null) {
         vk_texture *vk_tex = reinterpret_cast<vk_texture *>(texture);
-        if ((vk_tex->get_flags() & gal_texture_flag::TEXTURE_CREATION_FLAG_IMPORT_BIT) ==
+        if ((vk_tex->m_gal_texture_desc.texture_flags & gal_texture_flag::TEXTURE_CREATION_FLAG_IMPORT_BIT) ==
             gal_texture_flag::TEXTURE_CREATION_FLAG_UNFEFINED) {
             vmaDestroyImage(vk_ctx->vma_allocator, vk_tex->m_image, vk_tex->m_allocation);
             //vkDestroyImageView(vk_ctx->device, vk_tex->image_view, nullptr);
@@ -632,7 +634,8 @@ gal_error_code vk_create_render_target(gal_context _context, gal_render_target_d
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
     *_render_target = reinterpret_cast<gal_render_target>(ant::ant_alloc<vk_render_target>());
     vk_render_target *vk_rt = reinterpret_cast<vk_render_target *>(*_render_target);
-    vk_rt->initialize(_desc);
+    vk_rt->m_desc = *_desc;
+
     bool const isDepth = gal_tf_is_depth_only(_desc->format) || gal_tf_is_depth_and_stencil(_desc->format);
 
     assert(!((isDepth) && (_desc->resource_types & gal_resource_type::RW_TEXTURE) != gal_resource_type::UNDEFINED) &&
@@ -1058,27 +1061,27 @@ gal_error_code vk_create_shader_program(gal_context _context, gal_shader_program
 
     u32 stage_count = 0;
     // count stage count
-    for (u32 i = 0; i < SHADER_STAGE_COUNT; ++i) {
-        ShaderStage stage_mask = (ShaderStage)(1 << i);
-        if (stage_mask == (_desc->mStages & stage_mask)) {
+    for (u32 i = 0; i < gal_shader_stage_count; ++i) {
+        gal_shader_stage stage_mask = (gal_shader_stage)(1 << i);
+        if (stage_mask == (_desc->stage_flag & stage_mask)) {
             switch (stage_mask) {
-            case SHADER_STAGE_VERT:
+            case gal_shader_stage::VERT:
                 stage_count++;
                 break; //-V814
-            case SHADER_STAGE_TESC:
+            case gal_shader_stage::TESC:
                 stage_count++;
                 break; //-V814
-            case SHADER_STAGE_TESE:
+            case gal_shader_stage::TESE:
                 stage_count++;
                 break; //-V814
-            case SHADER_STAGE_GEOM:
+            case gal_shader_stage::GEOM:
                 stage_count++;
                 break; //-V814
-            case SHADER_STAGE_FRAG:
+            case gal_shader_stage::FRAG:
                 stage_count++;
                 break; //-V814
-            case SHADER_STAGE_RAYTRACING:
-            case SHADER_STAGE_COMP:
+            case gal_shader_stage::RAYTRACING:
+            case gal_shader_stage::COMP:
                 stage_count++;
                 break; //-V814
             default:
@@ -1086,7 +1089,8 @@ gal_error_code vk_create_shader_program(gal_context _context, gal_shader_program
             }
         }
     }
-    vk_sp->initialize(_desc, stage_count);
+    vk_sp->m_desc = *_desc;
+    vk_sp->m_stage_count = stage_count;
     vk_sp->m_shader_modules.resize(stage_count);
     vk_sp->m_entry_names.resize(stage_count);
 
@@ -1094,8 +1098,8 @@ gal_error_code vk_create_shader_program(gal_context _context, gal_shader_program
 
     ShaderReflection stageReflections[MAX_SHADER_STAGE_COUNT] = {};
 
-    for (u32 i = 0; i < SHADER_STAGE_COUNT; ++i) {
-        ShaderStage stage_mask = (ShaderStage)(1 << i);
+    for (u32 i = 0; i < gal_shader_stage_count; ++i) {
+        gal_shader_stage stage_mask = (gal_shader_stage)(1 << i);
         if (stage_mask == (_desc->mStages & stage_mask)) {
             VkShaderModuleCreateInfo create_info{};
             create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -1103,7 +1107,7 @@ gal_error_code vk_create_shader_program(gal_context _context, gal_shader_program
             create_info.flags = 0;
             const BinaryShaderStageDesc *pStageDesc = nullptr;
             switch (stage_mask) {
-            case SHADER_STAGE_VERT: {
+            case gal_shader_stage::VERT: {
                 create_info.codeSize = _desc->mVert.mByteCodeSize;
                 create_info.pCode = (const u32 *)_desc->mVert.pByteCode;
                 result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
@@ -1112,7 +1116,7 @@ gal_error_code vk_create_shader_program(gal_context _context, gal_shader_program
                 }
                 vk_sp->m_entry_names[i] = ant::str(_desc->mVert.pEntryPoint);
             } break;
-            case SHADER_STAGE_TESC: {
+            case gal_shader_stage::TESC: {
                 create_info.codeSize = _desc->mHull.mByteCodeSize;
                 create_info.pCode = (const u32 *)_desc->mHull.pByteCode;
                 result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
@@ -1121,7 +1125,7 @@ gal_error_code vk_create_shader_program(gal_context _context, gal_shader_program
                 }
                 vk_sp->m_entry_names[i] = ant::str(_desc->mHull.pEntryPoint);
             } break;
-            case SHADER_STAGE_TESE: {
+            case gal_shader_stage::TESE: {
                 create_info.codeSize = _desc->mDomain.mByteCodeSize;
                 create_info.pCode = (const u32 *)_desc->mDomain.pByteCode;
                 result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
@@ -1130,7 +1134,7 @@ gal_error_code vk_create_shader_program(gal_context _context, gal_shader_program
                 }
                 vk_sp->m_entry_names[i] = ant::str(_desc->mDomain.pEntryPoint);
             } break;
-            case SHADER_STAGE_GEOM: {
+            case gal_shader_stage::GEOM: {
                 create_info.codeSize = _desc->mGeom.mByteCodeSize;
                 create_info.pCode = (const u32 *)_desc->mGeom.pByteCode;
                 result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
@@ -1139,7 +1143,7 @@ gal_error_code vk_create_shader_program(gal_context _context, gal_shader_program
                 }
                 vk_sp->m_entry_names[i] = ant::str(_desc->mGeom.pEntryPoint);
             } break;
-            case SHADER_STAGE_FRAG: {
+            case gal_shader_stage::FRAG: {
                 create_info.codeSize = _desc->mFrag.mByteCodeSize;
                 create_info.pCode = (const u32 *)_desc->mFrag.pByteCode;
                 result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
@@ -1148,7 +1152,7 @@ gal_error_code vk_create_shader_program(gal_context _context, gal_shader_program
                 }
                 vk_sp->m_entry_names[i] = ant::str(_desc->mFrag.pEntryPoint);
             } break;
-            case SHADER_STAGE_COMP:
+            case gal_shader_stage::COMP:
             {
                 create_info.codeSize = _desc->mComp.mByteCodeSize;
                 create_info.pCode = (const u32 *)_desc->mComp.pByteCode;
@@ -1252,6 +1256,10 @@ gal_error_code vk_create_graphics_pipeline(gal_context _context, gal_pipeline_de
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(_context);
     *pipeline = reinterpret_cast<gal_pipeline>(new ant::gal::vk_pipeline);
     vk_pipeline *vk_pipe = reinterpret_cast<vk_pipeline *>(*pipeline);
+
+    vk_pipe->m_desc = *_desc;
+    vk_pipe->m_type = gal_pipeline_type::PIPELINE_TYPE_GRAPHICS;
+
     gal_graphics_pipeline_desc desc = std::get<gal_graphics_pipeline_desc>(_desc->desc);
     VkGraphicsPipelineCreateInfo pipeline_create_info{};
     vk_shader_program *vk_sp = reinterpret_cast<vk_shader_program *>(desc.shader);
@@ -1259,11 +1267,11 @@ gal_error_code vk_create_graphics_pipeline(gal_context _context, gal_pipeline_de
     u32 stage_count = 0;
     ant::fixed_array<VkPipelineShaderStageCreateInfo, 5> stages;
 
-    gal_shader_program_desc *sp_desc = vk_sp->get_desc();
+    gal_shader_program_desc *sp_desc = &vk_sp->m_desc;
 
     for (u32 i = 0; i < 5; ++i) {
-        ShaderStage stage_mask = (ShaderStage)(1 << i);
-        if (stage_mask == (sp_desc->mStages & stage_mask)) {
+        gal_shader_stage stage_mask = (gal_shader_stage)(1 << i);
+        if (stage_mask == (sp_desc->stage_flag & stage_mask)) {
             stages[stage_count].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
             stages[stage_count].pNext = NULL;
             stages[stage_count].flags = 0;
@@ -1271,19 +1279,19 @@ gal_error_code vk_create_graphics_pipeline(gal_context _context, gal_pipeline_de
             stages[stage_count].module = vk_sp->m_shader_modules[i];
             stages[stage_count].pName = vk_sp->m_entry_names[i].c_str();
             switch (stage_mask) {
-            case SHADER_STAGE_VERT: {
+            case gal_shader_stage::VERT: {
                 stages[stage_count].stage = VK_SHADER_STAGE_VERTEX_BIT;
             } break;
-            case SHADER_STAGE_TESC: {
+            case gal_shader_stage::TESC: {
                 stages[stage_count].stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
             } break;
-            case SHADER_STAGE_TESE: {
+            case gal_shader_stage::TESE: {
                 stages[stage_count].stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
             } break;
-            case SHADER_STAGE_GEOM: {
+            case gal_shader_stage::GEOM: {
                 stages[stage_count].stage = VK_SHADER_STAGE_GEOMETRY_BIT;
             } break;
-            case SHADER_STAGE_FRAG: {
+            case gal_shader_stage::FRAG: {
                 stages[stage_count].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
             } break;
             default:
@@ -1375,7 +1383,7 @@ gal_error_code vk_create_graphics_pipeline(gal_context _context, gal_pipeline_de
     ia.primitiveRestartEnable = VK_FALSE;
 
     //VkPipelineTessellationStateCreateInfo ts{};
-    //if ((sp_desc->mStages & SHADER_STAGE_TESC) && (sp_desc->mStages & SHADER_STAGE_TESE)) {
+    //if ((sp_desc->mStages & gal_shader_stage::TESC) && (sp_desc->mStages & gal_shader_stage::TESE)) {
     //    ts.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
     //    ts.pNext = NULL;
     //    ts.flags = 0;
@@ -1409,7 +1417,7 @@ gal_error_code vk_create_graphics_pipeline(gal_context _context, gal_pipeline_de
 
     /// TODO: Dont create depth state if no depth stencil bound
     VkPipelineDepthStencilStateCreateInfo ds{};
-    ds = desc.pDepthState ? util_to_depth_desc(_desc->pDepthState) : gDefaultDepthDesc;
+    ds = desc.pDepthState ? util_to_depth_desc(desc.pDepthState) : gDefaultDepthDesc;
 
     VkPipelineColorBlendStateCreateInfo cb{};
     VkPipelineColorBlendAttachmentState cbAtt[MAX_RENDER_TARGET_ATTACHMENTS];
@@ -1436,7 +1444,7 @@ gal_error_code vk_create_graphics_pipeline(gal_context _context, gal_pipeline_de
     add_info.pVertexInputState = &vi;
     add_info.pInputAssemblyState = &ia;
 
-    if ((pShaderProgram->mStages & SHADER_STAGE_TESC) && (pShaderProgram->mStages & SHADER_STAGE_TESE))
+    if ((pShaderProgram->mStages & gal_shader_stage::TESC) && (pShaderProgram->mStages & gal_shader_stage::TESE))
         add_info.pTessellationState = &ts;
     else
         add_info.pTessellationState = NULL; // set tessellation state to null if we have no tessellation

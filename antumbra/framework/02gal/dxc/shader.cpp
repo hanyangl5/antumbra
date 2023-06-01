@@ -130,19 +130,19 @@ void createPipelineReflection(ShaderReflection *pReflection, uint32_t stageCount
         ShaderReflection *pSrcRef = pReflection + i;
         pOutReflection->mStageReflections[i] = *pSrcRef;
 
-        if (pSrcRef->mShaderStage == SHADER_STAGE_VERT) {
+        if (pSrcRef->mShaderStage == gal_shader_stage::VERT) {
             vertexStageIndex = i;
         }
 #if !defined(METAL)
-        else if (pSrcRef->mShaderStage == SHADER_STAGE_HULL) {
+        else if (pSrcRef->mShaderStage == gal_shader_stage::HULL) {
             hullStageIndex = i;
-        } else if (pSrcRef->mShaderStage == SHADER_STAGE_DOMN) {
+        } else if (pSrcRef->mShaderStage == gal_shader_stage::DOMN) {
             domainStageIndex = i;
-        } else if (pSrcRef->mShaderStage == SHADER_STAGE_GEOM) {
+        } else if (pSrcRef->mShaderStage == gal_shader_stage::GEOM) {
             geometryStageIndex = i;
         }
 #endif
-        else if (pSrcRef->mShaderStage == SHADER_STAGE_FRAG) {
+        else if (pSrcRef->mShaderStage == gal_shader_stage::FRAG) {
             pixelStageIndex = i;
         }
 

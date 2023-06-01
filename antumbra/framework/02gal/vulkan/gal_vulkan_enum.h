@@ -7,10 +7,9 @@
 
 namespace ant::gal {
 
-#define DECLARE_VK_HANDLE(name) struct vk_##name : protected gal_##name##_T
+#define DECLARE_VK_HANDLE(name) struct vk_##name : public gal_##name##_T
 
 DECLARE_VK_HANDLE(context) {
-    void initialize(gal_desc * _desc) { m_gal_desc = *_desc; }
     VkInstance instance = VK_NULL_HANDLE;
     VkPhysicalDevice active_gpu = VK_NULL_HANDLE;
     VkDevice device = VK_NULL_HANDLE;
@@ -27,14 +26,11 @@ DECLARE_VK_HANDLE(context) {
 };
 
 DECLARE_VK_HANDLE(buffer) {
-    void initialize(gal_buffer_desc * _desc) { m_gal_buffer_desc = *_desc; }
     VkBuffer m_buffer;
     VmaAllocation m_allocation;
 };
 
 DECLARE_VK_HANDLE(texture) {
-    void initialize(gal_texture_desc * _desc) { m_gal_texture_desc = *_desc; }
-    gal_texture_flag get_flags() { return m_gal_texture_desc.texture_flags; }
     VkImage m_image;
     VmaAllocation m_allocation;
     VkImageView pVkSRVDescriptor;
@@ -45,14 +41,10 @@ DECLARE_VK_HANDLE(texture) {
 };
 
 DECLARE_VK_HANDLE(sampler) {
-    void initialize(gal_sampler_desc * _desc) { m_gal_sampler_desc = *_desc; }
     VkSampler m_sampler;
 };
 
 DECLARE_VK_HANDLE(render_target) {
-    void initialize(gal_render_target_desc * _desc) { m_desc = *_desc; }
-    gal_texture *get_texture() { return &m_texture; }
-    gal_render_target_desc *get_render_target_desc() { return &m_desc; }
     VkImageView pVkDescriptor;
     VkImageView *pVkSliceDescriptors;
 };
@@ -90,13 +82,6 @@ DECLARE_VK_HANDLE(swap_chain) {
 struct vk_commandlist {};
 
 DECLARE_VK_HANDLE(shader_program) {
-    void initialize(gal_shader_program_desc * _desc, u32 _stage_count) {
-        m_desc = *_desc;
-        m_stage_count = _stage_count;
-    }
-    gal_shader_program_desc *get_desc() { return &m_desc;
-    }
-
     ant::vector<VkShaderModule> m_shader_modules;
     ant::vector<ant::str> m_entry_names;
     VkSpecializationInfo *m_specialization_info;
@@ -109,19 +94,6 @@ struct vk_rootsignature {
 
 
 DECLARE_VK_HANDLE(pipeline) {
-    void initialize(gal_pipeline_desc * _desc) {
-        if (std::holds_alternative<gal_compute_pipeline_desc>(_desc->desc)) {
-            m_type = gal_pipeline_type::PIPELINE_TYPE_COMPUTE;
-        } else if (std::holds_alternative<gal_graphics_pipeline_desc>(_desc->desc)) {
-            m_type = gal_pipeline_type::PIPELINE_TYPE_GRAPHICS;
-        } else if (std::holds_alternative<gal_raytracing_pipeline_desc>(_desc->desc)) {
-            m_type = gal_pipeline_type::PIPELINE_TYPE_RAYTRACING;
-        } else {
-            LOG_ERROR("invalid pipeline desc");
-            return;
-        }
-        m_desc = *_desc;
-    }
     VkPipeline pipeline;
 };
 struct vk_pipelinecache {

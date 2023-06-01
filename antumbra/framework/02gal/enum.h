@@ -202,23 +202,25 @@ enum class gal_texture_flag {
     TEXTURE_CREATION_FLAG_FRAG_MASK = 0x2000,
 };
 MAKE_ENUM_FLAG(u32, gal_texture_flag)
-enum ShaderStage {
-    SHADER_STAGE_NONE = 0,
-    SHADER_STAGE_VERT = 0X00000001,
-    SHADER_STAGE_TESC = 0X00000002,
-    SHADER_STAGE_TESE = 0X00000004,
-    SHADER_STAGE_GEOM = 0X00000008,
-    SHADER_STAGE_FRAG = 0X00000010,
-    SHADER_STAGE_COMP = 0X00000020,
-    SHADER_STAGE_RAYTRACING = 0X00000040,
-    SHADER_STAGE_ALL_GRAPHICS =
-        ((uint32_t)SHADER_STAGE_VERT | (uint32_t)SHADER_STAGE_TESC | (uint32_t)SHADER_STAGE_TESE |
-         (uint32_t)SHADER_STAGE_GEOM | (uint32_t)SHADER_STAGE_FRAG),
-    SHADER_STAGE_HULL = SHADER_STAGE_TESC,
-    SHADER_STAGE_DOMN = SHADER_STAGE_TESE,
-    SHADER_STAGE_COUNT = 7,
+enum class gal_shader_stage {
+    NONE = 0,
+    VERT = 0X00000001,
+    TESC = 0X00000002,
+    TESE = 0X00000004,
+    GEOM = 0X00000008,
+    FRAG = 0X00000010,
+    COMP = 0X00000020,
+    RAYTRACING = 0X00000040,
+    ALL_GRAPHICS =
+        ((uint32_t)gal_shader_stage::VERT | (uint32_t)gal_shader_stage::TESC | (uint32_t)gal_shader_stage::TESE |
+         (uint32_t)gal_shader_stage::GEOM | (uint32_t)gal_shader_stage::FRAG),
+    HULL = gal_shader_stage::TESC,
+    DOMN = gal_shader_stage::TESE,
+    COUNT = 7,
 };
-MAKE_ENUM_FLAG(u32, ShaderStage)
+inline constexpr u32 gal_shader_stage_count = 7;
+
+MAKE_ENUM_FLAG(u32, gal_shader_stage)
 enum class PrimitiveTopology {
     PRIMITIVE_TOPO_POINT_LIST = 0,
     PRIMITIVE_TOPO_LINE_LIST,
@@ -440,7 +442,7 @@ struct gal_clear_value {
 };
 
 DECLARE_GAL_HANDLE(gal_context) {
-  protected:
+  public:
     gal_desc m_gal_desc;
 };
 
@@ -453,7 +455,7 @@ struct gal_buffer_desc {
 };
 
 DECLARE_GAL_HANDLE(gal_buffer) {
-  protected:
+  public:
     gal_buffer_desc m_gal_buffer_desc;
 };
 
@@ -475,7 +477,7 @@ struct gal_texture_desc {
 };
 
 DECLARE_GAL_HANDLE(gal_texture) {
-  protected:
+  public:
     gal_texture_desc m_gal_texture_desc;
 };
 
@@ -496,7 +498,7 @@ struct gal_render_target_desc {
 };
 
 DECLARE_GAL_HANDLE(gal_render_target) {
-  protected:
+  public:
     gal_render_target_desc m_desc;
     gal_texture m_texture;
 };
@@ -516,7 +518,7 @@ struct gal_sampler_desc {
     ant::fixed_array<f32, 4> border_color;
 };
 DECLARE_GAL_HANDLE(gal_sampler) {
-  protected:
+  public:
     gal_sampler_desc m_gal_sampler_desc;
 };
 
@@ -580,7 +582,7 @@ struct ShaderResource {
     u32 size;
 
     // what stages use this resource
-    ShaderStage used_stages;
+    gal_shader_stage used_stages;
 
     // resource name
     const char *name;
@@ -620,7 +622,7 @@ struct ShaderReflection {
     char *pEntryPoint;
 #endif
 
-    ShaderStage mShaderStage;
+    gal_shader_stage mShaderStage;
 
     u32 mNamePoolSize;
     u32 mVertexInputsCount;
@@ -635,7 +637,7 @@ struct ShaderReflection {
 };
 
 struct PipelineReflection {
-    ShaderStage mShaderStages;
+    gal_shader_stage mShaderStages;
     // the individual stages reflection data.
     ShaderReflection mStageReflections[MAX_SHADER_STAGE_COUNT];
     u32 mStageReflectionCount;
@@ -659,33 +661,28 @@ struct gal_shader_desc {
 };
 
 DECLARE_GAL_HANDLE(gal_shader) {
-    ShaderStage mStages : 31;
-    uint32_t mNumThreadsPerGroup[3];
+    gal_shader_stage stage_flag : 31;
+    u32 mNumThreadsPerGroup[3];
     PipelineReflection *pReflection;
 };
 
 
 struct BinaryShaderStageDesc {
     /// Byte code array
-    void *pByteCode;
-    uint32_t mByteCodeSize;
-    const char *pEntryPoint;
+    void *byte_code;
+    u64 size;
+    const char *entry;
 };
 
-typedef struct BinaryShaderDesc {
-    ShaderStage mStages;
-    /// Specify whether shader will own byte code memory
-    uint32_t mOwnByteCode : 1;
-    BinaryShaderStageDesc mVert;
-    BinaryShaderStageDesc mFrag;
-    BinaryShaderStageDesc mGeom;
-    BinaryShaderStageDesc mHull;
-    BinaryShaderStageDesc mDomain;
-    BinaryShaderStageDesc mComp;
-    uint32_t mConstantCount;
-} BinaryShaderDesc;
-
-using gal_shader_program_desc = BinaryShaderDesc;
+struct gal_shader_program_desc {
+    gal_shader_stage stage_flag;
+    BinaryShaderStageDesc vert;
+    BinaryShaderStageDesc frag;
+    BinaryShaderStageDesc geom;
+    BinaryShaderStageDesc hull;
+    BinaryShaderStageDesc domain;
+    BinaryShaderStageDesc comp;
+};
 
 // shader program is a set of shader for single pipeline
 DECLARE_GAL_HANDLE(gal_shader_program) {

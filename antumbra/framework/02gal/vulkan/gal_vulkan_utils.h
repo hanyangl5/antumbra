@@ -1067,4 +1067,31 @@ constexpr VkSamplerMipmapMode utils_to_vk_mip_map_mode(gal_sampler_mip_mode mip_
     }
 }
 
+constexpr VkSampleCountFlagBits util_to_vk_sample_count(gal_texture_sample_count sampleCount) {
+    VkSampleCountFlagBits result = VK_SAMPLE_COUNT_1_BIT;
+    switch (sampleCount) {
+    case gal_texture_sample_count::SAMPLE_COUNT_1:
+        result = VK_SAMPLE_COUNT_1_BIT;
+        break;
+    case gal_texture_sample_count::SAMPLE_COUNT_2:
+        result = VK_SAMPLE_COUNT_2_BIT;
+        break;
+    case gal_texture_sample_count::SAMPLE_COUNT_4:
+        result = VK_SAMPLE_COUNT_4_BIT;
+        break;
+    case gal_texture_sample_count::SAMPLE_COUNT_8:
+        result = VK_SAMPLE_COUNT_8_BIT;
+        break;
+    case gal_texture_sample_count::SAMPLE_COUNT_16:
+        result = VK_SAMPLE_COUNT_16_BIT;
+        break;
+    case gal_texture_sample_count::SAMPLE_COUNT_32:
+        result = VK_SAMPLE_COUNT_32_BIT;
+        break;
+    default:
+        assert(false);
+        break;
+    }
+    return result;
+}
 } // namespace ant::gal
