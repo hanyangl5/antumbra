@@ -59,18 +59,18 @@ DECLARE_VK_HANDLE(render_target) {
 //};
 //
 //DECLARE_VK_HANDLE(srv_descriptor_view) {
-//    constexpr void initialize(gal_src_descriptor_view_desc * _desc) { m_desc = *_desc; }
+//    constexpr void initialize(gal_src_descriptor_view_desc * desc) { m_desc = *desc; }
 //    std::variant<vk_buffer_desciptor_view, vk_image_desciptor_view> m_view;
 //};
 //DECLARE_VK_HANDLE(uav_descriptor_view) {
-//    constexpr void initialize(gal_uav_descriptor_view_desc * _desc) { m_desc = *_desc; }
+//    constexpr void initialize(gal_uav_descriptor_view_desc * desc) { m_desc = *desc; }
 //    std::variant<vk_buffer_desciptor_view, vk_image_desciptor_view> m_view;
 //};
 
 struct vk_fence {};
 struct vk_semaphore {};
 DECLARE_VK_HANDLE(swap_chain) {
-    void initialize(gal_swap_chain_desc * _desc) { m_desc = *_desc; }
+    void initialize(gal_swap_chain_desc * desc) { m_desc = *desc; }
     ant::fixed_array<gal_render_target, MAX_SWAPCHAIN_IMAGES> &get_render_targets() { return m_render_targets; }
     VkSwapchainKHR m_swap_chain = VK_NULL_HANDLE;
     VkSurfaceKHR m_surface = VK_NULL_HANDLE;
@@ -82,8 +82,8 @@ DECLARE_VK_HANDLE(swap_chain) {
 struct vk_commandlist {};
 
 DECLARE_VK_HANDLE(shader_program) {
-    ant::vector<VkShaderModule> m_shader_modules;
-    ant::vector<ant::str> m_entry_names;
+    ant::fixed_array<VkShaderModule, static_cast<u64>(gal::gal_shader_stage::COUNT)> m_shader_modules;
+    ant::fixed_array<const char*, static_cast<u64>(gal::gal_shader_stage::COUNT)> m_entrys;
     VkSpecializationInfo *m_specialization_info;
 };
 
@@ -96,7 +96,7 @@ struct vk_rootsignature {
 DECLARE_VK_HANDLE(pipeline) {
     VkPipeline pipeline;
 };
-struct vk_pipelinecache {
+struct vk_pipeline_cache {
     VkPipelineCache pipeline_cache;
 };
 

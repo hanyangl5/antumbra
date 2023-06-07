@@ -19,7 +19,7 @@ struct window_desc {
     bool b_vsync;
 };
 
-bool create_window(window_desc *_desc, ant_window *_window) {
+bool create_window(window_desc *desc, ant_window *_window) {
     if (glfwInit() != GLFW_TRUE) {
         glfwTerminate();
         LOG_ERROR("failed to init glfw");
@@ -28,7 +28,7 @@ bool create_window(window_desc *_desc, ant_window *_window) {
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    _window->m_window = glfwCreateWindow(_desc->width, _desc->height, _desc->name, nullptr, nullptr);
+    _window->m_window = glfwCreateWindow(desc->width, desc->height, desc->name, nullptr, nullptr);
 
     if (!_window) {
         glfwTerminate();
@@ -36,7 +36,7 @@ bool create_window(window_desc *_desc, ant_window *_window) {
         LOG_ERROR("failed to init window");
     }
     glfwMakeContextCurrent(_window->m_window);
-    glfwSwapInterval(_desc->b_vsync ? 1 : 0);
+    glfwSwapInterval(desc->b_vsync ? 1 : 0);
     return true;
 }
 

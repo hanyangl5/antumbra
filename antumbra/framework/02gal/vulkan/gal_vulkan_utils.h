@@ -56,23 +56,23 @@ constexpr VkFilter utils_to_vk_filter(gal_sampler_filter_mode filter) {
     }
 }
 
-constexpr VkBufferUsageFlags util_to_vk_buffer_usage(gal_resource_type types) {
+constexpr VkBufferUsageFlags util_to_vk_buffer_usage(gal_descriptor_type types) {
     VkBufferUsageFlags flags = 0;
 
-    if ((types & gal_resource_type::CONSTANT_BUFFER) != gal_resource_type::UNDEFINED) {
+    if ((types & gal_descriptor_type::CONSTANT_BUFFER) != gal_descriptor_type::UNDEFINED) {
         flags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     }
-    if ((types & gal_resource_type::RW_BUFFER) != gal_resource_type::UNDEFINED) {
+    if ((types & gal_descriptor_type::RW_BUFFER) != gal_descriptor_type::UNDEFINED) {
         flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
     }
 
-    if ((types & gal_resource_type::VERTEX_BUFFER) != gal_resource_type::UNDEFINED) {
+    if ((types & gal_descriptor_type::VERTEX_BUFFER) != gal_descriptor_type::UNDEFINED) {
         flags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     }
-    if ((types & gal_resource_type::INDEX_BUFFER) != gal_resource_type::UNDEFINED) {
+    if ((types & gal_descriptor_type::INDEX_BUFFER) != gal_descriptor_type::UNDEFINED) {
         flags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
     }
-    if ((types & gal_resource_type::INDIRECT_ARGUMENT) != gal_resource_type::UNDEFINED) {
+    if ((types & gal_descriptor_type::INDIRECT_ARGUMENT) != gal_descriptor_type::UNDEFINED) {
         flags |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
     }
 
@@ -111,7 +111,6 @@ constexpr VkSampleCountFlagBits utils_to_vk_sample_count_flags(gal_texture_sampl
         return VK_SAMPLE_COUNT_64_BIT;
     default:
         return VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM;
-        break;
     }
 }
 
@@ -121,23 +120,23 @@ constexpr VkSampleCountFlagBits utils_to_vk_sample_count_flags(gal_texture_sampl
 //    return flags;
 //}
 
-constexpr VkImageUsageFlags utils_to_vk_image_usage(gal_resource_type types, gal_memory_flag memory_flag) {
+constexpr VkImageUsageFlags utils_to_vk_image_usage(gal_descriptor_type types, gal_memory_flag memory_flag) {
     VkImageUsageFlags flags = 0;
     if ((memory_flag & gal_memory_flag::CPU_UPLOAD) != gal_memory_flag::UNDEFINED) {
         flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     } else if ((memory_flag & gal_memory_flag::GPU_DOWNLOAD) != gal_memory_flag::UNDEFINED) {
         flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     }
-    if ((types & gal_resource_type::COLOR_RT) != gal_resource_type::UNDEFINED) {
+    if ((types & gal_descriptor_type::COLOR_RT) != gal_descriptor_type::UNDEFINED) {
         flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     }
-    if ((types & gal_resource_type::DEPTH_STENCIL_RT) != gal_resource_type::UNDEFINED) {
+    if ((types & gal_descriptor_type::DEPTH_STENCIL_RT) != gal_descriptor_type::UNDEFINED) {
         flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     }
-    if ((types & gal_resource_type::TEXTURE) != gal_resource_type::UNDEFINED) {
+    if ((types & gal_descriptor_type::TEXTURE) != gal_descriptor_type::UNDEFINED) {
         flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
     }
-    if ((types & gal_resource_type::RW_TEXTURE) != gal_resource_type::UNDEFINED) {
+    if ((types & gal_descriptor_type::RW_TEXTURE) != gal_descriptor_type::UNDEFINED) {
         flags |= VK_IMAGE_USAGE_STORAGE_BIT;
         flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     }
@@ -1066,32 +1065,231 @@ constexpr VkSamplerMipmapMode utils_to_vk_mip_map_mode(gal_sampler_mip_mode mip_
         return VK_SAMPLER_MIPMAP_MODE_NEAREST;
     }
 }
-
+// This function converts a gal_texture_sample_count to VkSampleCountFlagBits
 constexpr VkSampleCountFlagBits util_to_vk_sample_count(gal_texture_sample_count sampleCount) {
-    VkSampleCountFlagBits result = VK_SAMPLE_COUNT_1_BIT;
     switch (sampleCount) {
     case gal_texture_sample_count::SAMPLE_COUNT_1:
-        result = VK_SAMPLE_COUNT_1_BIT;
-        break;
+        return VK_SAMPLE_COUNT_1_BIT;
     case gal_texture_sample_count::SAMPLE_COUNT_2:
-        result = VK_SAMPLE_COUNT_2_BIT;
-        break;
+        return VK_SAMPLE_COUNT_2_BIT;
     case gal_texture_sample_count::SAMPLE_COUNT_4:
-        result = VK_SAMPLE_COUNT_4_BIT;
-        break;
+        return VK_SAMPLE_COUNT_4_BIT;
     case gal_texture_sample_count::SAMPLE_COUNT_8:
-        result = VK_SAMPLE_COUNT_8_BIT;
-        break;
+        return VK_SAMPLE_COUNT_8_BIT;
     case gal_texture_sample_count::SAMPLE_COUNT_16:
-        result = VK_SAMPLE_COUNT_16_BIT;
-        break;
+        return VK_SAMPLE_COUNT_16_BIT;
     case gal_texture_sample_count::SAMPLE_COUNT_32:
-        result = VK_SAMPLE_COUNT_32_BIT;
-        break;
+        return VK_SAMPLE_COUNT_32_BIT;
     default:
-        assert(false);
-        break;
+        return VK_SAMPLE_COUNT_1_BIT;
     }
-    return result;
 }
+constexpr VkStencilOp utils_to_vk_stencil_op(gal_stencil_op op) {
+    switch (op) {
+    case ant::gal::gal_stencil_op::UNDEFINED:
+        return VK_STENCIL_OP_KEEP;
+    case ant::gal::gal_stencil_op::KEEP:
+        return VK_STENCIL_OP_KEEP;
+    case ant::gal::gal_stencil_op::SET_ZERO:
+        return VK_STENCIL_OP_ZERO;
+    case ant::gal::gal_stencil_op::REPLACE:
+        return VK_STENCIL_OP_REPLACE;
+    case ant::gal::gal_stencil_op::INVERT:
+        return VK_STENCIL_OP_INVERT;
+    case ant::gal::gal_stencil_op::INCR:
+        return VK_STENCIL_OP_INCREMENT_AND_WRAP;
+    case ant::gal::gal_stencil_op::DECR:
+        return VK_STENCIL_OP_DECREMENT_AND_WRAP;
+    case ant::gal::gal_stencil_op::INCR_SAT:
+        return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
+    case ant::gal::gal_stencil_op::DECR_SAT:
+        return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
+    default:
+        return VK_STENCIL_OP_KEEP;
+    }
+}
+
+
+constexpr VkPipelineDepthStencilStateCreateInfo util_to_depth_desc(const gal_depth_state_desc *desc) {
+
+    VkPipelineDepthStencilStateCreateInfo ds = {};
+    ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    ds.pNext = NULL;
+    ds.flags = 0;
+    ds.depthTestEnable = desc->mDepthTest ? VK_TRUE : VK_FALSE;
+    ds.depthWriteEnable = desc->mDepthWrite ? VK_TRUE : VK_FALSE;
+    ds.depthCompareOp = utils_to_vk_compare_op(desc->mDepthFunc);
+    
+    ds.depthBoundsTestEnable = VK_FALSE;
+    ds.stencilTestEnable = desc->mStencilTest ? VK_TRUE : VK_FALSE;
+
+    ds.front.failOp = utils_to_vk_stencil_op(desc->mStencilFrontFail);
+    ds.front.passOp = utils_to_vk_stencil_op(desc->mStencilFrontPass);
+    ds.front.depthFailOp = utils_to_vk_stencil_op(desc->mDepthFrontFail);
+    ds.front.compareOp = utils_to_vk_compare_op(desc->mStencilFrontFunc);
+    ds.front.compareMask = desc->mStencilReadMask;
+    ds.front.writeMask = desc->mStencilWriteMask;
+    ds.front.reference = 0;
+
+    ds.back.failOp = utils_to_vk_stencil_op(desc->mStencilBackFail);
+    ds.back.passOp = utils_to_vk_stencil_op(desc->mStencilBackPass);
+    ds.back.depthFailOp = utils_to_vk_stencil_op(desc->mDepthBackFail);
+    ds.back.compareOp = utils_to_vk_compare_op(desc->mStencilBackFunc);
+    ds.back.compareMask = desc->mStencilReadMask;
+    ds.back.writeMask = desc->mStencilWriteMask; // devsh fixed
+    ds.back.reference = 0;
+
+    ds.minDepthBounds = 0;
+    ds.maxDepthBounds = 1;
+
+    return ds;
+}
+constexpr VkPolygonMode utils_to_vk_fill_mode(gal_polygon_fill_mode mode) {
+    switch (mode) {
+    case ant::gal::gal_polygon_fill_mode::SOLID:
+        return VK_POLYGON_MODE_FILL;
+    case ant::gal::gal_polygon_fill_mode::WIREFRAME:
+        return VK_POLYGON_MODE_LINE;
+    default:
+        return VK_POLYGON_MODE_MAX_ENUM;
+    }
+}
+
+constexpr VkCullModeFlags utils_to_vk_culll_mode_flags(gal_cull_mode mode) {
+    switch (mode) {
+    case ant::gal::gal_cull_mode::NONE:
+        return VK_CULL_MODE_NONE;
+    case ant::gal::gal_cull_mode::BACK:
+        return VK_CULL_MODE_BACK_BIT;
+    case ant::gal::gal_cull_mode::FRONT:
+        return VK_CULL_MODE_FRONT_BIT;
+    case ant::gal::gal_cull_mode::BOTH:
+        return VK_CULL_MODE_FRONT_AND_BACK;
+    default:
+        return VK_CULL_MODE_FLAG_BITS_MAX_ENUM;
+    }
+}
+
+constexpr VkShaderStageFlags util_to_vk_shader_stage_flags(gal_shader_stage stages) {
+    VkShaderStageFlags res = 0;
+    if ((stages & gal_shader_stage::ALL_GRAPHICS) != gal_shader_stage::UNDEFINED)
+        return VK_SHADER_STAGE_ALL_GRAPHICS;
+
+    if ((stages & gal_shader_stage::VERT) != gal_shader_stage::UNDEFINED)
+        res |= VK_SHADER_STAGE_VERTEX_BIT;
+    if ((stages & gal_shader_stage::GEOM) != gal_shader_stage::UNDEFINED)
+        res |= VK_SHADER_STAGE_GEOMETRY_BIT;
+    if ((stages & gal_shader_stage::TESE) != gal_shader_stage::UNDEFINED)
+        res |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+    if ((stages & gal_shader_stage::TESC) != gal_shader_stage::UNDEFINED)
+        res |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+    if ((stages & gal_shader_stage::COMP) != gal_shader_stage::UNDEFINED)
+        res |= VK_SHADER_STAGE_COMPUTE_BIT;
+#ifdef VK_RAYTRACING_AVAILABLE
+    if (stages & SHADER_STAGE_RAYTRACING)
+        res |= (VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+                VK_SHADER_STAGE_MISS_BIT_KHR | VK_SHADER_STAGE_INTERSECTION_BIT_KHR | VK_SHADER_STAGE_CALLABLE_BIT_KHR);
+#endif
+
+    if (res == 0) {
+        return VkShaderStageFlagBits::VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
+    }
+    return res;
+}
+
+constexpr VkBlendOp utils_to_vk_blend_op() {
+
+}
+
+const
+
+constexpr VkPipelineColorBlendStateCreateInfo util_to_blend_desc(const gal_blend_state_desc *desc,
+                                                                 VkPipelineColorBlendAttachmentState *pAttachments) {
+    int blendDescIndex = 0;
+    //#if defined(ENABLE_GRAPHICS_DEBUG)
+    //
+    //    for (uint32_t i = 0; i < MAX_RENDER_TARGET_ATTACHMENTS; ++i) {
+    //        if (desc->mRenderTargetMask & (1 << i)) {
+    //            ASSERT(desc->mSrcFactors[blendDescIndex] < BlendConstant::MAX_BLEND_CONSTANTS);
+    //            ASSERT(desc->mDstFactors[blendDescIndex] < BlendConstant::MAX_BLEND_CONSTANTS);
+    //            ASSERT(desc->mSrcAlphaFactors[blendDescIndex] < BlendConstant::MAX_BLEND_CONSTANTS);
+//            ASSERT(desc->mDstAlphaFactors[blendDescIndex] < BlendConstant::MAX_BLEND_CONSTANTS);
+//            ASSERT(desc->mBlendModes[blendDescIndex] < BlendMode::MAX_BLEND_MODES);
+//            ASSERT(desc->mBlendAlphaModes[blendDescIndex] < BlendMode::MAX_BLEND_MODES);
+//        }
+//
+//        if (desc->mIndependentBlend)
+//            ++blendDescIndex;
+//    }
+//
+//    blendDescIndex = 0;
+//#endif
+
+    for (uint32_t i = 0; i < MAX_RENDER_TARGET_ATTACHMENTS; ++i) {
+        if (desc->mRenderTargetMask & (1 << i)) {
+            VkBool32 blendEnable =
+                (gVkBlendConstantTranslator[desc->mSrcFactors[blendDescIndex]] != VK_BLEND_FACTOR_ONE ||
+                 gVkBlendConstantTranslator[desc->mDstFactors[blendDescIndex]] != VK_BLEND_FACTOR_ZERO ||
+                 gVkBlendConstantTranslator[desc->mSrcAlphaFactors[blendDescIndex]] != VK_BLEND_FACTOR_ONE ||
+                 gVkBlendConstantTranslator[desc->mDstAlphaFactors[blendDescIndex]] != VK_BLEND_FACTOR_ZERO);
+
+            pAttachments[i].blendEnable = blendEnable;
+            pAttachments[i].colorWriteMask = desc->mMasks[blendDescIndex];
+            pAttachments[i].srcColorBlendFactor = gVkBlendConstantTranslator[desc->mSrcFactors[blendDescIndex]];
+            pAttachments[i].dstColorBlendFactor = gVkBlendConstantTranslator[desc->mDstFactors[blendDescIndex]];
+            pAttachments[i].colorBlendOp = gVkBlendOpTranslator[desc->mBlendModes[blendDescIndex]];
+            pAttachments[i].srcAlphaBlendFactor = gVkBlendConstantTranslator[desc->mSrcAlphaFactors[blendDescIndex]];
+            pAttachments[i].dstAlphaBlendFactor = gVkBlendConstantTranslator[desc->mDstAlphaFactors[blendDescIndex]];
+            pAttachments[i].alphaBlendOp = gVkBlendOpTranslator[desc->mBlendAlphaModes[blendDescIndex]];
+        }
+
+        if (desc->mIndependentBlend)
+            ++blendDescIndex;
+    }
+
+    VkPipelineColorBlendStateCreateInfo cb = {};
+    cb.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    cb.pNext = NULL;
+    cb.flags = 0;
+    cb.logicOpEnable = VK_FALSE;
+    cb.logicOp = VK_LOGIC_OP_CLEAR;
+    cb.pAttachments = pAttachments;
+    cb.blendConstants[0] = 0.0f;
+    cb.blendConstants[1] = 0.0f;
+    cb.blendConstants[2] = 0.0f;
+    cb.blendConstants[3] = 0.0f;
+
+    return cb;
+}
+
+constexpr VkFrontFace utils_to_vk_front_face(gal_front_face ff) {
+    switch (ff) {
+    case ant::gal::gal_front_face::CCW:
+        return VkFrontFace::VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    case ant::gal::gal_front_face::CW:
+        return VkFrontFace::VK_FRONT_FACE_CLOCKWISE;
+    default:
+        return VkFrontFace::VK_FRONT_FACE_MAX_ENUM;
+    }
+}
+
+constexpr VkPipelineRasterizationStateCreateInfo util_to_rasterizer_desc(const gal_rasterizer_state_desc *desc) {
+
+    VkPipelineRasterizationStateCreateInfo rs = {};
+    rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rs.pNext = NULL;
+    rs.flags = 0;
+    rs.depthClampEnable = desc->mDepthClampEnable ? VK_TRUE : VK_FALSE;
+    rs.rasterizerDiscardEnable = VK_FALSE;
+    rs.polygonMode = utils_to_vk_fill_mode(desc->mFillMode);
+    rs.cullMode = utils_to_vk_culll_mode_flags(desc->mCullMode);
+    rs.frontFace = utils_to_vk_front_face(desc->mFrontFace);
+    rs.depthBiasEnable = (desc->mDepthBias != 0) ? VK_TRUE : VK_FALSE;
+    rs.depthBiasConstantFactor = float(desc->mDepthBias);
+    rs.depthBiasClamp = 0.0f;
+    rs.depthBiasSlopeFactor = desc->mSlopeScaledDepthBias;
+    rs.lineWidth = 1;
+    return rs;
+}
+
 } // namespace ant::gal

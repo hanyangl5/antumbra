@@ -270,7 +270,7 @@ enum class gal_texture_format {
     G16_B16R16_2PLANE_422_UNORM = 238,
 };
 
-constexpr inline u64 gal_tf_code(gal_texture_format fmt) {
+constexpr u64 gal_tf_code(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::UNDEFINED:
         return 0x0000000000000000;
@@ -681,9 +681,9 @@ constexpr inline u64 gal_tf_code(gal_texture_format fmt) {
     }
 }
 
-constexpr inline u64 MaxPixelCountOfBlock = 144u;
+constexpr u64 MaxPixelCountOfBlock = 144u;
 
-constexpr inline bool gal_tf_is_depth_only(gal_texture_format fmt) {
+constexpr bool gal_tf_is_depth_only(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::D16_UNORM:
         return true;
@@ -696,7 +696,7 @@ constexpr inline bool gal_tf_is_depth_only(gal_texture_format fmt) {
     }
 }
 
-constexpr inline bool gal_tf_is_stencil_only(gal_texture_format fmt) {
+constexpr bool gal_tf_is_stencil_only(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::S8_UINT:
         return true;
@@ -705,7 +705,7 @@ constexpr inline bool gal_tf_is_stencil_only(gal_texture_format fmt) {
     }
 }
 
-constexpr inline bool gal_tf_is_depth_and_stencil(gal_texture_format fmt) {
+constexpr bool gal_tf_is_depth_and_stencil(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::D16_UNORM_S8_UINT:
         return true;
@@ -718,17 +718,17 @@ constexpr inline bool gal_tf_is_depth_and_stencil(gal_texture_format fmt) {
     }
 }
 
-constexpr inline bool gal_tf_has_depth(gal_texture_format fmt) { return gal_tf_is_depth_only(fmt) || gal_tf_is_depth_and_stencil(fmt); }
+constexpr bool gal_tf_has_depth(gal_texture_format fmt) { return gal_tf_is_depth_only(fmt) || gal_tf_is_depth_and_stencil(fmt); }
 
-constexpr inline bool gal_tf_has_stencil(gal_texture_format fmt) {
+constexpr bool gal_tf_has_stencil(gal_texture_format fmt) {
     return gal_tf_is_stencil_only(fmt) || gal_tf_is_depth_and_stencil(fmt);
 }
 
-constexpr inline bool gal_tf_has_depth_or_stencil(gal_texture_format fmt) {
+constexpr bool gal_tf_has_depth_or_stencil(gal_texture_format fmt) {
     return gal_tf_is_depth_only(fmt) || gal_tf_is_stencil_only(fmt) || gal_tf_is_depth_and_stencil(fmt);
 }
 
-constexpr inline bool gal_tf_is_clut(gal_texture_format fmt) {
+constexpr bool gal_tf_is_clut(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::CLUT_P4:
         return true;
@@ -743,7 +743,7 @@ constexpr inline bool gal_tf_is_clut(gal_texture_format fmt) {
     }
 }
 
-constexpr inline bool gal_tf_is_float(gal_texture_format fmt) {
+constexpr bool gal_tf_is_float(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::R16_SFLOAT:
         return true;
@@ -794,7 +794,7 @@ constexpr inline bool gal_tf_is_float(gal_texture_format fmt) {
     }
 }
 
-constexpr inline bool gal_tf_is_normalized(gal_texture_format fmt) {
+constexpr bool gal_tf_is_normalized(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::R1_UNORM:
         return true;
@@ -1061,7 +1061,7 @@ constexpr inline bool gal_tf_is_normalized(gal_texture_format fmt) {
     }
 }
 
-constexpr inline bool gal_tf_is_signed(gal_texture_format fmt) {
+constexpr bool gal_tf_is_signed(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::R8_SNORM:
         return true;
@@ -1190,7 +1190,7 @@ constexpr inline bool gal_tf_is_signed(gal_texture_format fmt) {
     }
 }
 
-constexpr inline bool gal_tf_is_srgb(gal_texture_format fmt) {
+constexpr bool gal_tf_is_srgb(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::R8_SRGB:
         return true;
@@ -1261,7 +1261,7 @@ constexpr inline bool gal_tf_is_srgb(gal_texture_format fmt) {
     }
 }
 
-constexpr inline bool gal_tf_is_ycbcr(gal_texture_format fmt) {
+constexpr bool gal_tf_is_ycbcr(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::G8B8G8R8_422_UNORM:
     case gal_texture_format::B8G8R8G8_422_UNORM:
@@ -1300,7 +1300,7 @@ constexpr inline bool gal_tf_is_ycbcr(gal_texture_format fmt) {
     }
 }
 
-constexpr inline bool gal_tf_is_compressed(gal_texture_format fmt) {
+constexpr bool gal_tf_is_compressed(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::DXBC1_RGB_UNORM:
         return true;
@@ -1431,7 +1431,7 @@ constexpr inline bool gal_tf_is_compressed(gal_texture_format fmt) {
     }
 }
 
-constexpr inline bool gal_tf_is_planer(gal_texture_format fmt) {
+constexpr bool gal_tf_is_planer(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::G8_B8R8_2PLANE_420_UNORM:
     case gal_texture_format::G8_B8R8_2PLANE_422_UNORM:
@@ -1460,7 +1460,7 @@ constexpr inline bool gal_tf_is_planer(gal_texture_format fmt) {
     }
 }
 
-constexpr inline bool gal_tf_is_packed(gal_texture_format fmt) {
+constexpr bool gal_tf_is_packed(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::G8B8G8R8_422_UNORM:
     case gal_texture_format::B8G8R8G8_422_UNORM:
@@ -1479,7 +1479,7 @@ constexpr inline bool gal_tf_is_packed(gal_texture_format fmt) {
     }
 }
 
-constexpr inline u32 gal_tf_num_of_planes(gal_texture_format fmt) {
+constexpr u32 gal_tf_num_of_planes(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::G8_B8_R8_3PLANE_420_UNORM:
     case gal_texture_format::G8_B8_R8_3PLANE_422_UNORM:
@@ -1510,7 +1510,7 @@ constexpr inline u32 gal_tf_num_of_planes(gal_texture_format fmt) {
     }
 }
 
-constexpr inline u32 gal_tf_plane_width(gal_texture_format fmt, uint32_t plane, uint32_t width) {
+constexpr u32 gal_tf_plane_width(gal_texture_format fmt, uint32_t plane, uint32_t width) {
     if (0 == plane)
         return width;
 
@@ -1537,7 +1537,7 @@ constexpr inline u32 gal_tf_plane_width(gal_texture_format fmt, uint32_t plane, 
     }
 }
 
-constexpr inline u32 gal_tf_plane_height(gal_texture_format fmt, uint32_t plane, uint32_t height) {
+constexpr u32 gal_tf_plane_height(gal_texture_format fmt, uint32_t plane, uint32_t height) {
     if (0 == plane)
         return height;
 
@@ -1557,7 +1557,7 @@ constexpr inline u32 gal_tf_plane_height(gal_texture_format fmt, uint32_t plane,
     }
 }
 
-constexpr inline u32 gal_tf_plane_size_of_block(gal_texture_format fmt, uint32_t plane) {
+constexpr u32 gal_tf_plane_size_of_block(gal_texture_format fmt, uint32_t plane) {
     switch (fmt) {
     case gal_texture_format::G8_B8_R8_3PLANE_420_UNORM:
     case gal_texture_format::G8_B8_R8_3PLANE_422_UNORM:
@@ -1592,11 +1592,11 @@ constexpr inline u32 gal_tf_plane_size_of_block(gal_texture_format fmt, uint32_t
     }
 }
 
-constexpr inline u32 gal_tf_is_single_plane(gal_texture_format fmt) {
+constexpr u32 gal_tf_is_single_plane(gal_texture_format fmt) {
     return !gal_tf_is_planer(fmt) || gal_tf_num_of_planes(fmt) < 2;
 }
 
-constexpr inline bool gal_tf_is_homogenous(gal_texture_format fmt) {
+constexpr bool gal_tf_is_homogenous(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::UNDEFINED:
         return false;
@@ -1813,7 +1813,7 @@ constexpr inline bool gal_tf_is_homogenous(gal_texture_format fmt) {
     }
 }
 
-constexpr inline u32 gal_tf_width_of_block(gal_texture_format fmt) {
+constexpr u32 gal_tf_width_of_block(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::UNDEFINED:
         return 1;
@@ -1954,7 +1954,7 @@ constexpr inline u32 gal_tf_width_of_block(gal_texture_format fmt) {
     }
 }
 
-constexpr inline u32 gal_tf_height_of_block(gal_texture_format fmt) {
+constexpr u32 gal_tf_height_of_block(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::UNDEFINED:
         return 1;
@@ -2087,7 +2087,7 @@ constexpr inline u32 gal_tf_height_of_block(gal_texture_format fmt) {
     }
 }
 
-constexpr inline u32 gal_tf_depth_of_block(gal_texture_format fmt) {
+constexpr u32 gal_tf_depth_of_block(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::UNDEFINED:
         return 1;
@@ -2096,7 +2096,7 @@ constexpr inline u32 gal_tf_depth_of_block(gal_texture_format fmt) {
     }
 }
 
-constexpr inline u32 gal_tf_bit_size_of_block(gal_texture_format fmt) {
+constexpr u32 gal_tf_bit_size_of_block(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::UNDEFINED:
         return 0;
@@ -2437,7 +2437,7 @@ constexpr inline u32 gal_tf_bit_size_of_block(gal_texture_format fmt) {
     }
 }
 
-constexpr inline u32 gal_tf_channel_count(gal_texture_format fmt) {
+constexpr u32 gal_tf_channel_count(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::UNDEFINED:
         return 0;
@@ -2636,7 +2636,7 @@ constexpr inline u32 gal_tf_channel_count(gal_texture_format fmt) {
     }
 }
 
-constexpr inline u32 gal_tf_channel_bit_width_physical(gal_texture_format fmt, uint32_t channel) {
+constexpr u32 gal_tf_channel_bit_width_physical(gal_texture_format fmt, uint32_t channel) {
     if (gal_tf_is_homogenous(fmt) || channel == 0) {
         switch (fmt) {
         case gal_texture_format::UNDEFINED:
@@ -3684,7 +3684,7 @@ constexpr inline u32 gal_tf_channel_bit_width_physical(gal_texture_format fmt, u
     return 0;
 }
 
-constexpr inline double MinAtPhysical(gal_texture_format fmt, uint32_t channel) {
+constexpr double MinAtPhysical(gal_texture_format fmt, uint32_t channel) {
     if (gal_tf_is_homogenous(fmt) || channel == 0) {
         switch (fmt) {
         case gal_texture_format::R8_SNORM:
@@ -4034,7 +4034,7 @@ constexpr inline double MinAtPhysical(gal_texture_format fmt, uint32_t channel) 
     return 0.0;
 }
 
-constexpr inline double MaxAtPhysical(gal_texture_format fmt, uint32_t channel) {
+constexpr double MaxAtPhysical(gal_texture_format fmt, uint32_t channel) {
     if (gal_tf_is_homogenous(fmt) || channel == 0) {
         switch (fmt) {
         case gal_texture_format::UNDEFINED:
@@ -6114,7 +6114,7 @@ constexpr inline double MaxAtPhysical(gal_texture_format fmt, uint32_t channel) 
 //    return gal_texture_format::PC_CONST_0;
 //}
 
-constexpr inline gal_texture_format ToSRGB(gal_texture_format fmt) {
+constexpr gal_texture_format ToSRGB(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::R8_UNORM:
         return gal_texture_format::R8_SRGB;
@@ -6285,7 +6285,7 @@ constexpr inline gal_texture_format ToSRGB(gal_texture_format fmt) {
     }
 }
 
-constexpr inline gal_texture_format ToUNORM(gal_texture_format fmt) {
+constexpr gal_texture_format ToUNORM(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::R8_SNORM:
         return gal_texture_format::R8_UNORM;
@@ -6584,7 +6584,7 @@ constexpr inline gal_texture_format ToUNORM(gal_texture_format fmt) {
     }
 }
 
-constexpr inline char *gal_tf_name(gal_texture_format fmt) {
+constexpr char *gal_tf_name(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::UNDEFINED:
         return "UNDEFINED";
@@ -6995,7 +6995,7 @@ constexpr inline char *gal_tf_name(gal_texture_format fmt) {
     }
 }
 
-constexpr inline gal_texture_format FromName(char *p) {
+constexpr gal_texture_format FromName(char *p) {
     // FNV-1a hashing algorithm.
     uint64_t hash = 0xcbf29ce484222325ULL;
     while ((*p) != 0) {
@@ -7413,7 +7413,7 @@ constexpr inline gal_texture_format FromName(char *p) {
 }
 
 // Helpers
-constexpr inline uint32_t PixelCountOfBlock(gal_texture_format fmt) {
+constexpr uint32_t PixelCountOfBlock(gal_texture_format fmt) {
     return gal_tf_width_of_block(fmt) * gal_tf_height_of_block(fmt) * gal_tf_depth_of_block(fmt);
 }
 

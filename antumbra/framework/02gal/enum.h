@@ -91,26 +91,24 @@ struct gal_desc {
 };
 
 enum class gal_blend_mode {
-    BM_ADD,
-    BM_SUBTRACT,
-    BM_REVERSE_SUBTRACT,
-    BM_MIN,
-    BM_MAX,
-    MAX_BLEND_MODES,
+    UNDEFINED,
     ADD,
-    SUBSTRACT,
+    SUBTRACT,
+    REVERSE_SUBTRACT,
+    MIN,
+    MAX
 };
 
-enum class StencilOp {
-    STENCIL_OP_KEEP,
-    STENCIL_OP_SET_ZERO,
-    STENCIL_OP_REPLACE,
-    STENCIL_OP_INVERT,
-    STENCIL_OP_INCR,
-    STENCIL_OP_DECR,
-    STENCIL_OP_INCR_SAT,
-    STENCIL_OP_DECR_SAT,
-    MAX_STENCIL_OPS,
+enum class gal_stencil_op {
+    UNDEFINED,
+    KEEP,
+    SET_ZERO,
+    REPLACE,
+    INVERT,
+    INCR,
+    DECR,
+    INCR_SAT,
+    DECR_SAT,
 };
 enum BlendStateTargets {
     BLEND_STATE_TARGET_0 = 0x1,
@@ -124,17 +122,17 @@ enum BlendStateTargets {
     BLEND_STATE_TARGET_ALL = 0xFF,
 };
 
-enum class gal_cull_mode { CULL_MODE_NONE = 0, CULL_MODE_BACK, CULL_MODE_FRONT, CULL_MODE_BOTH, MAX_CULL_MODES };
+enum class gal_cull_mode { UNDEFINED = 0, NONE, BACK, FRONT, BOTH };
 
-enum class gal_front_face { FRONT_FACE_CCW = 0, FRONT_FACE_CW };
+enum class gal_front_face { UNDEFINED = 0, CCW, CW };
 
-enum class FillMode { FILL_MODE_SOLID, FILL_MODE_WIREFRAME, MAX_FILL_MODES };
+enum class gal_polygon_fill_mode { UNDEFINED, SOLID, WIREFRAME};
 
 enum class gal_pipeline_type {
-    PIPELINE_TYPE_UNDEFINED = 0,
-    PIPELINE_TYPE_COMPUTE,
-    PIPELINE_TYPE_GRAPHICS,
-    PIPELINE_TYPE_RAYTRACING,
+    UNDEFINED = 0,
+    COMPUTE,
+    GRAPHICS,
+    RAYTRACING,
     PIPELINE_TYPE_COUNT,
 };
 
@@ -203,7 +201,7 @@ enum class gal_texture_flag {
 };
 MAKE_ENUM_FLAG(u32, gal_texture_flag)
 enum class gal_shader_stage {
-    NONE = 0,
+    UNDEFINED = 0,
     VERT = 0X00000001,
     TESC = 0X00000002,
     TESE = 0X00000004,
@@ -216,11 +214,12 @@ enum class gal_shader_stage {
          (uint32_t)gal_shader_stage::GEOM | (uint32_t)gal_shader_stage::FRAG),
     HULL = gal_shader_stage::TESC,
     DOMN = gal_shader_stage::TESE,
-    COUNT = 7,
 };
-inline constexpr u32 gal_shader_stage_count = 7;
 
 MAKE_ENUM_FLAG(u32, gal_shader_stage)
+
+inline constexpr u32 gal_shader_stage_count = 7;
+
 enum class PrimitiveTopology {
     PRIMITIVE_TOPO_POINT_LIST = 0,
     PRIMITIVE_TOPO_LINE_LIST,
@@ -266,7 +265,7 @@ enum class ShaderSemantic {
 enum class gal_queue_type { UNDEFINED, graphcis, compute, transfer };
 
 // Enum for descriptor types
-enum class gal_resource_type : u32 {
+enum class gal_descriptor_type : u32 {
     UNDEFINED = 0,
     // constant buffer
     CONSTANT_BUFFER = 1 << 0,
@@ -285,7 +284,7 @@ enum class gal_resource_type : u32 {
     COLOR_RT = 1 << 10,
     DEPTH_STENCIL_RT = 1 << 11,
 };
-MAKE_ENUM_FLAG(u32, gal_resource_type)
+MAKE_ENUM_FLAG(u32, gal_descriptor_type)
 
 enum class gal_resource_state : u32 {
     UNDEFINIED = 0,
@@ -385,20 +384,20 @@ struct gal_depth_state_desc {
     uint8_t mStencilReadMask;
     uint8_t mStencilWriteMask;
     gal_compare_mode mStencilFrontFunc;
-    StencilOp mStencilFrontFail;
-    StencilOp mDepthFrontFail;
-    StencilOp mStencilFrontPass;
+    gal_stencil_op mStencilFrontFail;
+    gal_stencil_op mDepthFrontFail;
+    gal_stencil_op mStencilFrontPass;
     gal_compare_mode mStencilBackFunc;
-    StencilOp mStencilBackFail;
-    StencilOp mDepthBackFail;
-    StencilOp mStencilBackPass;
+    gal_stencil_op mStencilBackFail;
+    gal_stencil_op mDepthBackFail;
+    gal_stencil_op mStencilBackPass;
 };
 
 struct gal_rasterizer_state_desc {
     gal_cull_mode mCullMode;
     int32_t mDepthBias;
     float mSlopeScaledDepthBias;
-    FillMode mFillMode;
+    gal_polygon_fill_mode mFillMode;
     gal_front_face mFrontFace;
     bool mMultiSample;
     bool mScissor;
@@ -448,7 +447,7 @@ DECLARE_GAL_HANDLE(gal_context) {
 
 struct gal_buffer_desc {
     u64 size;                          // size
-    gal_resource_type resource_types; // descriptor types of buffer
+    gal_descriptor_type descriptor_types; // descriptor types of buffer
     gal_resource_state initial_state; // initial state of buffer
     gal_memory_flag memory_flags;
     gal_buffer_flag flags;
@@ -471,7 +470,7 @@ struct gal_texture_desc {
     u32 texture_sample_quality;
     gal_texture_format format;
     gal_texture_flag texture_flags;
-    gal_resource_type resource_types; // descriptor types of buffer
+    gal_descriptor_type descriptor_types; // descriptor types of buffer
     gal_resource_state initial_state; // initial state of buffer
     void *native_handle;
 };
@@ -492,7 +491,7 @@ struct gal_render_target_desc {
     gal_texture_sample_count sample_count;
     u32 texture_sample_quality;
     gal_clear_value clear_value;
-    gal_resource_type resource_types; // descriptor types of buffer
+    gal_descriptor_type descriptor_types; // descriptor types of buffer
     gal_resource_state initial_state; // initial state of buffer
     void *native_handle;
 };
@@ -570,7 +569,7 @@ struct VertexInput {
 
 struct ShaderResource {
     // resource Type
-    gal_resource_type type;
+    gal_descriptor_type type;
 
     // The resource set for binding frequency
     u32 set;
@@ -695,7 +694,7 @@ DECLARE_GAL_HANDLE(gal_shader_program) {
 
 DECLARE_GAL_HANDLE(gal_rootsignature){};
 
-DECLARE_GAL_HANDLE(gal_pipelinecache){};
+DECLARE_GAL_HANDLE(gal_pipeline_cache){};
 
 struct gal_compute_pipeline_desc {
     gal_shader_program* shader;
@@ -721,10 +720,9 @@ struct gal_graphics_pipeline_desc {
 };
 
 struct gal_pipeline_desc {
-    gal_pipeline_type type;
     std::variant<std::monostate, gal_graphics_pipeline_desc, gal_compute_pipeline_desc, gal_raytracing_pipeline_desc>
         desc;
-    gal_pipelinecache pipeline_cache;
+    gal_pipeline_cache pipeline_cache;
 };
 
 
@@ -735,7 +733,7 @@ DECLARE_GAL_HANDLE(gal_pipeline) {
 DECLARE_GAL_HANDLE(gal_commandlist){};
 DECLARE_GAL_HANDLE(gal_descriptorpool){};
 
-struct gal_pipelinecache_desc {
+struct gal_pipeline_cache_desc {
     ant::str filename;
 };
 
@@ -771,7 +769,7 @@ struct gal_fence_desc {};
 struct gal_semaphore_desc {};
 struct gal_command_pool_desc {};
 
-// _desc to allocate commandlist
+// desc to allocate commandlist
 struct gal_commandlist_desc {};
 
 struct gal_renderpass_begin_desc {};

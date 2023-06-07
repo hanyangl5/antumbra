@@ -33,60 +33,60 @@
 // clang-format on
 //
 // destroy gal_context
-__GAL_HELPER_MACRO__(gal_error_code, destroy_gal, gal_context _context);
+__GAL_HELPER_MACRO__(gal_error_code, destroy_gal, gal_context context);
 // TODO(hyl5): how to add [[nodiscard]] attribute to these function?
 
 // create gal instance, vkinstance or dxgifactory
-__GAL_HELPER_MACRO__(gal_error_code, create_instance, gal_desc *_desc, gal_context *_context);
+__GAL_HELPER_MACRO__(gal_error_code, create_instance, gal_desc *desc, gal_context *context);
 // destroy gal instance
-__GAL_HELPER_MACRO__(gal_error_code, destroy_instance, gal_context *_context);
+__GAL_HELPER_MACRO__(gal_error_code, destroy_instance, gal_context *context);
 // select required gpu and create gal device
-__GAL_HELPER_MACRO__(gal_error_code, create_device, gal_desc *_gal_desc, gal_context *_context);
+__GAL_HELPER_MACRO__(gal_error_code, create_device, gal_desc *_gal_desc, gal_context *context);
 // destroy gal device
-__GAL_HELPER_MACRO__(gal_error_code, destroy_device, gal_context *_context);
+__GAL_HELPER_MACRO__(gal_error_code, destroy_device, gal_context *context);
 // create memory allocator, vma or d3dma
-__GAL_HELPER_MACRO__(gal_error_code, create_memory_allocator, gal_context *_context);
+__GAL_HELPER_MACRO__(gal_error_code, create_memory_allocator, gal_context *context);
 // destroy memory allocator
-__GAL_HELPER_MACRO__(gal_error_code, destroy_memory_allocator, gal_context *_context);
+__GAL_HELPER_MACRO__(gal_error_code, destroy_memory_allocator, gal_context *context);
 // resources
 // create a gpu buffer and allocate gpu memory
-__GAL_HELPER_MACRO__(gal_error_code, create_buffer, gal_context _context, gal_buffer_desc *_desc, gal_buffer *buffer);
+__GAL_HELPER_MACRO__(gal_error_code, create_buffer, gal_context context, gal_buffer_desc *desc, gal_buffer *buffer);
 // destroy a gpu buffer
-__GAL_HELPER_MACRO__(gal_error_code, destroy_buffer, gal_context _context, gal_buffer buffer);
+__GAL_HELPER_MACRO__(gal_error_code, destroy_buffer, gal_context context, gal_buffer buffer);
 // create a gpu texture and allocate memory
-__GAL_HELPER_MACRO__(gal_error_code, create_texture, gal_context _context, gal_texture_desc *_desc, gal_texture *texture);
+__GAL_HELPER_MACRO__(gal_error_code, create_texture, gal_context context, gal_texture_desc *desc, gal_texture *texture);
 // destroy gpu texture
-__GAL_HELPER_MACRO__(gal_error_code, destroy_texture, gal_context _context, gal_texture texture);
+__GAL_HELPER_MACRO__(gal_error_code, destroy_texture, gal_context context, gal_texture texture);
 
-__GAL_HELPER_MACRO__(gal_error_code, create_sampler, gal_context _context, gal_sampler_desc *sampler_desc,
+__GAL_HELPER_MACRO__(gal_error_code, create_sampler, gal_context context, gal_sampler_desc *sampler_desc,
                      gal_sampler *sampler);
-__GAL_HELPER_MACRO__(gal_error_code, destroy_sampler, gal_context _context, gal_sampler sampler);
+__GAL_HELPER_MACRO__(gal_error_code, destroy_sampler, gal_context context, gal_sampler sampler);
 
-__GAL_HELPER_MACRO__(gal_error_code, create_render_target, gal_context _context, gal_render_target_desc *_desc,
-                     gal_render_target *_render_target);
+__GAL_HELPER_MACRO__(gal_error_code, create_render_target, gal_context context, gal_render_target_desc *desc,
+                     gal_render_target *render_target);
 
-__GAL_HELPER_MACRO__(gal_error_code, destroy_render_target, gal_context _context, gal_render_target _render_target);
+__GAL_HELPER_MACRO__(gal_error_code, destroy_render_target, gal_context context, gal_render_target render_target);
 // surface
-__GAL_HELPER_MACRO__(gal_error_code, create_swap_chain, gal_context _context, gal_swap_chain_desc *_desc,
+__GAL_HELPER_MACRO__(gal_error_code, create_swap_chain, gal_context context, gal_swap_chain_desc *desc,
                      gal_swap_chain *_swap_chain);
-__GAL_HELPER_MACRO__(gal_error_code, destroy_swap_chain, gal_context _context, gal_swap_chain _swap_chain);
+__GAL_HELPER_MACRO__(gal_error_code, destroy_swap_chain, gal_context context, gal_swap_chain _swap_chain);
 // pipeline
-__GAL_HELPER_MACRO__(gal_error_code, create_shader, gal_context _context, gal_shader_desc *_desc, gal_shader *_shader);
-__GAL_HELPER_MACRO__(gal_error_code, destroy_shader, gal_context _context, gal_shader _shader);
+__GAL_HELPER_MACRO__(gal_error_code, create_shader, gal_context context, gal_shader_desc *desc, gal_shader *_shader);
+__GAL_HELPER_MACRO__(gal_error_code, destroy_shader, gal_context context, gal_shader _shader);
 
-__GAL_HELPER_MACRO__(gal_error_code, create_pipelinecache, gal_context _context, gal_pipelinecache_desc *_desc,
-                     gal_pipelinecache *pipelinecache);
+__GAL_HELPER_MACRO__(gal_error_code, create_pipeline_cache, gal_context context, gal_pipeline_cache_desc *desc,
+                     gal_pipeline_cache *pipeline_cache);
 
-__GAL_HELPER_MACRO__(gal_error_code, destroy_pipelinecache, gal_context _context, gal_pipelinecache _pipeline_cache);
+__GAL_HELPER_MACRO__(gal_error_code, destroy_pipeline_cache, gal_context context, gal_pipeline_cache _pipeline_cache);
 
-__GAL_HELPER_MACRO__(gal_error_code, get_pipelinecache_data, gal_context _context, gal_pipelinecache _pipeline_cache, u64 *size, void *_data);
-__GAL_HELPER_MACRO__(gal_error_code, create_compute_pipeline, gal_context _context, gal_pipeline_desc *_desc,
+__GAL_HELPER_MACRO__(gal_error_code, get_pipeline_cache_data, gal_context context, gal_pipeline_cache _pipeline_cache, u64 *size, void *_data);
+__GAL_HELPER_MACRO__(gal_error_code, create_compute_pipeline, gal_context context, gal_pipeline_desc *desc,
                      gal_pipeline *pipeline);
-//__GAL_HELPER_MACRO__(gal_error_code, create_graphics_pipeline, gal_context _context, gal_graphics_pipeline_desc *_desc,
+//__GAL_HELPER_MACRO__(gal_error_code, create_graphics_pipeline, gal_context context, gal_graphics_pipeline_desc *desc,
 //                     gal_pipeline *pipeline);
 // inline raytracing?
-//__GAL_HELPER_MACRO__(gal_error_code, create_raytracing_pipeline, gal_context _context,
-//                     gal_raytracing_pipeline_desc *_desc, gal_pipeline *pipeline);
+//__GAL_HELPER_MACRO__(gal_error_code, create_raytracing_pipeline, gal_context context,
+//                     gal_raytracing_pipeline_desc *desc, gal_pipeline *pipeline);
 
 __GAL_HELPER_MACRO__(gal_error_code, destroy_pipeline);
 //__GAL_HELPER_MACRO__(gal_error_code, create_descriptorpool);
