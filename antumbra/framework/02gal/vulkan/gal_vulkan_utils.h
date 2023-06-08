@@ -1109,7 +1109,6 @@ constexpr VkStencilOp utils_to_vk_stencil_op(gal_stencil_op op) {
     }
 }
 
-
 constexpr VkPipelineDepthStencilStateCreateInfo util_to_depth_desc(const gal_depth_state_desc *desc) {
 
     VkPipelineDepthStencilStateCreateInfo ds = {};
@@ -1119,7 +1118,7 @@ constexpr VkPipelineDepthStencilStateCreateInfo util_to_depth_desc(const gal_dep
     ds.depthTestEnable = desc->mDepthTest ? VK_TRUE : VK_FALSE;
     ds.depthWriteEnable = desc->mDepthWrite ? VK_TRUE : VK_FALSE;
     ds.depthCompareOp = utils_to_vk_compare_op(desc->mDepthFunc);
-    
+
     ds.depthBoundsTestEnable = VK_FALSE;
     ds.stencilTestEnable = desc->mStencilTest ? VK_TRUE : VK_FALSE;
 
@@ -1196,12 +1195,56 @@ constexpr VkShaderStageFlags util_to_vk_shader_stage_flags(gal_shader_stage stag
     }
     return res;
 }
-
-constexpr VkBlendOp utils_to_vk_blend_op() {
-
+constexpr VkBlendOp utils_to_vk_blend_op(gal_blend_mode bm) {
+    switch (bm) {
+    case ant::gal::gal_blend_mode::UNDEFINED:
+        return VK_BLEND_OP_MAX_ENUM;
+    case ant::gal::gal_blend_mode::ADD:
+        return VK_BLEND_OP_ADD;
+    case ant::gal::gal_blend_mode::SUBTRACT:
+        return VK_BLEND_OP_SUBTRACT;
+    case ant::gal::gal_blend_mode::REVERSE_SUBTRACT:
+        return VK_BLEND_OP_REVERSE_SUBTRACT;
+    case ant::gal::gal_blend_mode::MIN:
+        return VK_BLEND_OP_MIN;
+    case ant::gal::gal_blend_mode::MAX:
+        return VK_BLEND_OP_MAX;
+    default:
+        return VK_BLEND_OP_MAX_ENUM;
+    }
 }
-
-const
+constexpr VkBlendFactor utils_to_vk_blend_factor(BlendConstant bc) {
+    switch (bc) {
+    case ant::gal::BlendConstant::ZERO:
+        return VK_BLEND_FACTOR_ZERO;
+    case ant::gal::BlendConstant::ONE:
+        return VK_BLEND_FACTOR_ONE;
+    case ant::gal::BlendConstant::SRC_COLOR:
+        return VK_BLEND_FACTOR_SRC_COLOR;
+    case ant::gal::BlendConstant::ONE_MINUS_SRC_COLOR:
+        return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+    case ant::gal::BlendConstant::DST_COLOR:
+        return VK_BLEND_FACTOR_DST_COLOR;
+    case ant::gal::BlendConstant::ONE_MINUS_DST_COLOR:
+        return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+    case ant::gal::BlendConstant::SRC_ALPHA:
+        return VK_BLEND_FACTOR_SRC_ALPHA;
+    case ant::gal::BlendConstant::ONE_MINUS_SRC_ALPHA:
+        return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    case ant::gal::BlendConstant::DST_ALPHA:
+        return VK_BLEND_FACTOR_DST_ALPHA;
+    case ant::gal::BlendConstant::ONE_MINUS_DST_ALPHA:
+        return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+    case ant::gal::BlendConstant::SRC_ALPHA_SATURATE:
+        return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
+    case ant::gal::BlendConstant::BLEND_FACTOR:
+        return VK_BLEND_FACTOR_CONSTANT_COLOR;
+    case ant::gal::BlendConstant::ONE_MINUS_BLEND_FACTOR:
+        return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
+    default:
+        return VK_BLEND_FACTOR_MAX_ENUM;
+    }
+}
 
 constexpr VkPipelineColorBlendStateCreateInfo util_to_blend_desc(const gal_blend_state_desc *desc,
                                                                  VkPipelineColorBlendAttachmentState *pAttachments) {
@@ -1213,34 +1256,34 @@ constexpr VkPipelineColorBlendStateCreateInfo util_to_blend_desc(const gal_blend
     //            ASSERT(desc->mSrcFactors[blendDescIndex] < BlendConstant::MAX_BLEND_CONSTANTS);
     //            ASSERT(desc->mDstFactors[blendDescIndex] < BlendConstant::MAX_BLEND_CONSTANTS);
     //            ASSERT(desc->mSrcAlphaFactors[blendDescIndex] < BlendConstant::MAX_BLEND_CONSTANTS);
-//            ASSERT(desc->mDstAlphaFactors[blendDescIndex] < BlendConstant::MAX_BLEND_CONSTANTS);
-//            ASSERT(desc->mBlendModes[blendDescIndex] < BlendMode::MAX_BLEND_MODES);
-//            ASSERT(desc->mBlendAlphaModes[blendDescIndex] < BlendMode::MAX_BLEND_MODES);
-//        }
-//
-//        if (desc->mIndependentBlend)
-//            ++blendDescIndex;
-//    }
-//
-//    blendDescIndex = 0;
-//#endif
+    //            ASSERT(desc->mDstAlphaFactors[blendDescIndex] < BlendConstant::MAX_BLEND_CONSTANTS);
+    //            ASSERT(desc->mBlendModes[blendDescIndex] < BlendMode::MAX_BLEND_MODES);
+    //            ASSERT(desc->mBlendAlphaModes[blendDescIndex] < BlendMode::MAX_BLEND_MODES);
+    //        }
+    //
+    //        if (desc->mIndependentBlend)
+    //            ++blendDescIndex;
+    //    }
+    //
+    //    blendDescIndex = 0;
+    //#endif
 
     for (uint32_t i = 0; i < MAX_RENDER_TARGET_ATTACHMENTS; ++i) {
         if (desc->mRenderTargetMask & (1 << i)) {
             VkBool32 blendEnable =
-                (gVkBlendConstantTranslator[desc->mSrcFactors[blendDescIndex]] != VK_BLEND_FACTOR_ONE ||
-                 gVkBlendConstantTranslator[desc->mDstFactors[blendDescIndex]] != VK_BLEND_FACTOR_ZERO ||
-                 gVkBlendConstantTranslator[desc->mSrcAlphaFactors[blendDescIndex]] != VK_BLEND_FACTOR_ONE ||
-                 gVkBlendConstantTranslator[desc->mDstAlphaFactors[blendDescIndex]] != VK_BLEND_FACTOR_ZERO);
+                (utils_to_vk_blend_factor(desc->mSrcFactors[blendDescIndex]) != VK_BLEND_FACTOR_ONE ||
+                 utils_to_vk_blend_factor(desc->mDstFactors[blendDescIndex]) != VK_BLEND_FACTOR_ZERO ||
+                 utils_to_vk_blend_factor(desc->mSrcAlphaFactors[blendDescIndex]) != VK_BLEND_FACTOR_ONE ||
+                 utils_to_vk_blend_factor(desc->mDstAlphaFactors[blendDescIndex]) != VK_BLEND_FACTOR_ZERO);
 
             pAttachments[i].blendEnable = blendEnable;
             pAttachments[i].colorWriteMask = desc->mMasks[blendDescIndex];
-            pAttachments[i].srcColorBlendFactor = gVkBlendConstantTranslator[desc->mSrcFactors[blendDescIndex]];
-            pAttachments[i].dstColorBlendFactor = gVkBlendConstantTranslator[desc->mDstFactors[blendDescIndex]];
-            pAttachments[i].colorBlendOp = gVkBlendOpTranslator[desc->mBlendModes[blendDescIndex]];
-            pAttachments[i].srcAlphaBlendFactor = gVkBlendConstantTranslator[desc->mSrcAlphaFactors[blendDescIndex]];
-            pAttachments[i].dstAlphaBlendFactor = gVkBlendConstantTranslator[desc->mDstAlphaFactors[blendDescIndex]];
-            pAttachments[i].alphaBlendOp = gVkBlendOpTranslator[desc->mBlendAlphaModes[blendDescIndex]];
+            pAttachments[i].srcColorBlendFactor = utils_to_vk_blend_factor(desc->mSrcFactors[blendDescIndex]);
+            pAttachments[i].dstColorBlendFactor = utils_to_vk_blend_factor(desc->mDstFactors[blendDescIndex]);
+            pAttachments[i].colorBlendOp = utils_to_vk_blend_op(desc->mBlendModes[blendDescIndex]);
+            pAttachments[i].srcAlphaBlendFactor = utils_to_vk_blend_factor(desc->mSrcAlphaFactors[blendDescIndex]);
+            pAttachments[i].dstAlphaBlendFactor = utils_to_vk_blend_factor(desc->mDstAlphaFactors[blendDescIndex]);
+            pAttachments[i].alphaBlendOp = utils_to_vk_blend_op(desc->mBlendAlphaModes[blendDescIndex]);
         }
 
         if (desc->mIndependentBlend)

@@ -335,20 +335,19 @@ enum class gal_buffer_flag {
 MAKE_ENUM_FLAG(u32, gal_buffer_flag)
 
 enum class BlendConstant {
-    BC_ZERO = 0,
-    BC_ONE,
-    BC_SRC_COLOR,
-    BC_ONE_MINUS_SRC_COLOR,
-    BC_DST_COLOR,
-    BC_ONE_MINUS_DST_COLOR,
-    BC_SRC_ALPHA,
-    BC_ONE_MINUS_SRC_ALPHA,
-    BC_DST_ALPHA,
-    BC_ONE_MINUS_DST_ALPHA,
-    BC_SRC_ALPHA_SATURATE,
-    BC_BLEND_FACTOR,
-    BC_ONE_MINUS_BLEND_FACTOR,
-    MAX_BLEND_CONSTANTS
+    ZERO = 0,
+    ONE,
+    SRC_COLOR,
+    ONE_MINUS_SRC_COLOR,
+    DST_COLOR,
+    ONE_MINUS_DST_COLOR,
+    SRC_ALPHA,
+    ONE_MINUS_SRC_ALPHA,
+    DST_ALPHA,
+    ONE_MINUS_DST_ALPHA,
+    SRC_ALPHA_SATURATE,
+    BLEND_FACTOR,
+    ONE_MINUS_BLEND_FACTOR
 };
 
 struct gal_descriptorpool_desc {};

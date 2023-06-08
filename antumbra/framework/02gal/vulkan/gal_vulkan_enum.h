@@ -82,8 +82,9 @@ DECLARE_VK_HANDLE(swap_chain) {
 struct vk_commandlist {};
 
 DECLARE_VK_HANDLE(shader_program) {
-    ant::fixed_array<VkShaderModule, static_cast<u64>(gal::gal_shader_stage::COUNT)> m_shader_modules;
-    ant::fixed_array<const char*, static_cast<u64>(gal::gal_shader_stage::COUNT)> m_entrys;
+    
+    ant::fixed_array<VkShaderModule, gal_shader_stage_count> m_shader_modules;
+    ant::fixed_array<const char *, gal_shader_stage_count> m_entrys;
     VkSpecializationInfo *m_specialization_info;
 };
 

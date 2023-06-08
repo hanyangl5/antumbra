@@ -1122,7 +1122,7 @@ gal_error_code vk_create_shader_program(gal_context context, gal_shader_program_
             create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
             create_info.pNext = NULL;
             create_info.flags = 0;
-            const BinaryShaderStageDesc *pStageDesc = nullptr;
+            //const BinaryShaderStageDesc *pStageDesc = nullptr;
             switch (stage_mask) {
             case gal_shader_stage::VERT: {
                 create_info.codeSize = desc->vert.size;
@@ -1188,6 +1188,7 @@ gal_error_code vk_create_shader_program(gal_context context, gal_shader_program_
     //createPipelineReflection(stageReflections, stage_count, desc->pReflection);
 
     //addShaderDependencies(pShaderProgram, desc);
+    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 
 gal_error_code vk_create_pipeline_cache(gal_context context, gal_pipeline_cache_desc *desc,
