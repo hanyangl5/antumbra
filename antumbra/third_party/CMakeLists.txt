@@ -25,7 +25,16 @@ add_subdirectory(tinygltf)
 #message("downloading dxc")
 #file(DOWNLOAD "https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.7.2212.1/dxc_2023_03_01.zip")
 
+# dxc
 
+find_library(DXC_LIBRARY dxcompiler PATHS libs/dxc_2023_03_01/lib/x64)
+if(DXC_LIBRARY)
+    message("found dxcompiler")
+    target_include_directories(${PROJECT_NAME} PUBLIC libs/dxc_2023_03_01/inc)
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${DXC_LIBRARY})
+else()
+    message("dxcompiler not found")
+endif()
 
 if(ANTUMBRA_BUILD_VK)
     # prefer to use system installed vulkan sdk
@@ -37,7 +46,7 @@ if(ANTUMBRA_BUILD_VK)
     else()
         target_include_directories(${PROJECT_NAME} PUBLIC
         Vulkan-Headers/include)
-        find_library(Vulkan_LIBRARY NAMES vulkan-1 PATHS libs/windows/) 
+        find_library(Vulkan_LIBRARY NAMES vulkan-1 PATHS libs/vulkan/windows) 
         if (Vulkan_LIBRARY)
             message("using bundled vulkan")
             target_link_libraries(${PROJECT_NAME} PUBLIC ${Vulkan_LIBRARY})

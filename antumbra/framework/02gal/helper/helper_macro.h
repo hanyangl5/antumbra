@@ -70,7 +70,9 @@ __GAL_HELPER_MACRO__(gal_error_code, destroy_render_target, gal_context context,
 __GAL_HELPER_MACRO__(gal_error_code, create_swap_chain, gal_context context, gal_swap_chain_desc *desc,
                      gal_swap_chain *_swap_chain);
 __GAL_HELPER_MACRO__(gal_error_code, destroy_swap_chain, gal_context context, gal_swap_chain swap_chain);
+
 // pipeline
+
 //__GAL_HELPER_MACRO__(gal_error_code, create_shader, gal_context context, gal_shader_desc *desc, gal_shader *_shader);
 //__GAL_HELPER_MACRO__(gal_error_code, destroy_shader, gal_context context, gal_shader _shader);
 __GAL_HELPER_MACRO__(gal_error_code, create_shader_program, gal_context context, gal_shader_program_desc *desc, gal_shader_program *shader_program);

@@ -789,13 +789,13 @@ gal_error_code vk_destroy_render_target(gal_context context, gal_render_target r
 }
 
 // surface
-gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *desc, gal_swap_chain *_swap_chain) {
+gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *desc, gal_swap_chain *swap_chain) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    *_swap_chain = reinterpret_cast<gal_swap_chain>(ant::ant_alloc<vk_swap_chain>());
-    if (*_swap_chain) {
+    *swap_chain = reinterpret_cast<gal_swap_chain>(ant::ant_alloc<vk_swap_chain>());
+    if (!*swap_chain) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
     }
-    vk_swap_chain *vk_sc = reinterpret_cast<vk_swap_chain *>(*_swap_chain);
+    vk_swap_chain *vk_sc = reinterpret_cast<vk_swap_chain *>(*swap_chain);
     vk_sc->initialize(desc);
     VkResult result;
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
@@ -1046,10 +1046,10 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
 
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
-gal_error_code vk_destroy_swap_chain(gal_context context, gal_swap_chain _swap_chain) {
-    if (_swap_chain != gal_null) {
+gal_error_code vk_destroy_swap_chain(gal_context context, gal_swap_chain swap_chain) {
+    if (swap_chain != gal_null) {
         vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-        vk_swap_chain *vk_sc = reinterpret_cast<vk_swap_chain *>(_swap_chain);
+        vk_swap_chain *vk_sc = reinterpret_cast<vk_swap_chain *>(swap_chain);
 
         auto &rts = vk_sc->get_render_targets();
         for (auto &rt : rts) {
@@ -1063,7 +1063,7 @@ gal_error_code vk_destroy_swap_chain(gal_context context, gal_swap_chain _swap_c
 
         // resources are freed automatically
         ant::ant_free(vk_sc);
-        _swap_chain = gal_null;
+        swap_chain = gal_null;
     }
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }

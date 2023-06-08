@@ -91,7 +91,7 @@ TEST_CASE("test gal sampler") {
 }
 
 TEST_CASE("test gal render target") {
-    auto sampler_creation = [](gal::gal_api api) {
+    auto render_target_creation = [](gal::gal_api api) {
         gal::gal_context context = initialize(api);
 
         gal_render_target_desc desc{};
@@ -112,12 +112,12 @@ TEST_CASE("test gal render target") {
         REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
         destroy(context);
     };
-    sampler_creation(gal::gal_api::VULKAN);
+    render_target_creation(gal::gal_api::VULKAN);
     //sampler_creation(gal::RenderApi::d3d12);
 }
 
 TEST_CASE("test gal swapchain") {
-    auto sampler_creation = [](gal::gal_api api) {
+    auto swap_chain_creation = [](gal::gal_api api) {
         ant::ant_window window;
         ant::window_desc window_desc{};
         window_desc.b_vsync = true;
@@ -144,6 +144,6 @@ TEST_CASE("test gal swapchain") {
 
         ant::destroy_window(window);
     };
-    sampler_creation(gal::gal_api::VULKAN);
+    swap_chain_creation(gal::gal_api::VULKAN);
     //sampler_creation(gal::RenderApi::d3d12);
 }
