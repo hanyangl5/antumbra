@@ -51,8 +51,8 @@
 //
 //struct d3d12_semaphore {};
 //
-//struct d3d12_commandlist {
-//    ID3D12GraphicsCommandList6 *commandlist;
+//struct d3d12_command_list {
+//    ID3D12GraphicsCommandList6 *command_list;
 //};
 //
 //constexpr D3D12_RESOURCE_STATES util_to_dx12_resource_state(gal_resource_state state) {
@@ -1266,96 +1266,96 @@
 //    //d3d12_context *d3d12_ctx;
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
-//gal_error_code d3d12_allocate_commandlist() {
+//gal_error_code d3d12_allocate_command_list() {
 //    //d3d12_context *d3d12_ctx;
 //
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
-//gal_error_code d3d12_free_commandlist() {
+//gal_error_code d3d12_free_command_list() {
 //    //d3d12_context *d3d12_ctx;
-//    //d3d12_commandlist *d3d12_cmd;
-//    //d3d12_cmd->commandlist->Release();
-//    //d3d12_cmd->commandlist = nullptr;
+//    //d3d12_command_list *d3d12_cmd;
+//    //d3d12_cmd->command_list->Release();
+//    //d3d12_cmd->command_list = nullptr;
 //
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
-//gal_error_code d3d12_cmd_begin_recording() {
+//gal_error_code d3d12_cmd_begin() {
 //    //d3d12_context *d3d12_ctx;
-//    //d3d12_commandlist *d3d12_cmd;
+//    //d3d12_command_list *d3d12_cmd;
 //    //d3d12_cmd->command_list->Reset();
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
-//gal_error_code d3d12_cmd_end_recording() {
+//gal_error_code d3d12_cmd_end() {
 //    //d3d12_context *d3d12_ctx;
-//    //d3d12_commandlist *d3d12_cmd;
-//    //d3d12_cmd->commandlist->Close();
+//    //d3d12_command_list *d3d12_cmd;
+//    //d3d12_cmd->command_list->Close();
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
 //gal_error_code d3d12_cmd_resource_barrier() {
 //    //d3d12_context *d3d12_ctx;
-//    //d3d12_commandlist *d3d12_cmd;
-//    //d3d12_cmd->commandlist->ResourceBarrier();
+//    //d3d12_command_list *d3d12_cmd;
+//    //d3d12_cmd->command_list->ResourceBarrier();
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
 //gal_error_code d3d12_cmd_bind_index_buffer() {
 //    //d3d12_context *d3d12_ctx;
-//    //d3d12_commandlist *d3d12_cmd;
-//    //d3d12_cmd->commandlist->IASetIndexBuffer();
+//    //d3d12_command_list *d3d12_cmd;
+//    //d3d12_cmd->command_list->IASetIndexBuffer();
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
 //gal_error_code d3d12_cmd_bind_vertex_buffer() {
 //    //d3d12_context *d3d12_ctx;
-//    //d3d12_commandlist *d3d12_cmd;
-//    //d3d12_cmd->commandlist->IASetVertexBuffers();
+//    //d3d12_command_list *d3d12_cmd;
+//    //d3d12_cmd->command_list->IASetVertexBuffers();
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
 //gal_error_code d3d12_cmd_bind_descriptorset() {
 //    //d3d12_context *d3d12_ctx;
-//    //d3d12_commandlist *d3d12_cmd;
+//    //d3d12_command_list *d3d12_cmd;
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
 //gal_error_code d3d12_cmd_bind_pipeline() {
 //    //d3d12_context *d3d12_ctx;
-//    //d3d12_commandlist *d3d12_cmd;
-//    //d3d12_cmd->commandlist->SetPipelineState();
-//    //d3d12_cmd->commandlist->SetPipelineState1();
+//    //d3d12_command_list *d3d12_cmd;
+//    //d3d12_cmd->command_list->SetPipelineState();
+//    //d3d12_cmd->command_list->SetPipelineState1();
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
 //gal_error_code d3d12_cmd_begin_renderpass() {
 //    //d3d12_context *d3d12_ctx;
-//    //d3d12_commandlist *d3d12_cmd;
-//    //d3d12_cmd->commandlist->BeginRenderPass();
+//    //d3d12_command_list *d3d12_cmd;
+//    //d3d12_cmd->command_list->BeginRenderPass();
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
 //gal_error_code d3d12_cmd_end_renderpass() {
 //    //d3d12_context *d3d12_ctx;
-//    //d3d12_commandlist *d3d12_cmd;
-//    //d3d12_cmd->commandlist->EndRenderPass();
+//    //d3d12_command_list *d3d12_cmd;
+//    //d3d12_cmd->command_list->EndRenderPass();
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
 //gal_error_code d3d12_cmd_dispatch() {
 //    //d3d12_context *d3d12_ctx;
-//    //d3d12_commandlist *d3d12_cmd;
+//    //d3d12_command_list *d3d12_cmd;
 //    //
-//    //d3d12_cmd->commandlist->Dispatch();
+//    //d3d12_cmd->command_list->Dispatch();
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
 //gal_error_code d3d12_cmd_dispatch_indirect() {
 //    //d3d12_context *d3d12_ctx;
-//    //d3d12_commandlist *d3d12_cmd;
-//    //d3d12_cmd->commandlist->ExecuteIndirect();
+//    //d3d12_command_list *d3d12_cmd;
+//    //d3d12_cmd->command_list->ExecuteIndirect();
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
 //gal_error_code d3d12_cmd_draw_instanced() {
 //    //d3d12_context *d3d12_ctx;
-//    //d3d12_commandlist *d3d12_cmd;
-//    //d3d12_cmd->commandlist->DrawInstanced();
+//    //d3d12_command_list *d3d12_cmd;
+//    //d3d12_cmd->command_list->DrawInstanced();
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
 //gal_error_code d3d12_cmd_draw_indexed_instanced() {
 //    //d3d12_context *d3d12_ctx;
-//    //d3d12_commandlist *d3d12_cmd;
-//    //d3d12_cmd->commandlist->DrawIndexedInstanced();
+//    //d3d12_command_list *d3d12_cmd;
+//    //d3d12_cmd->command_list->DrawIndexedInstanced();
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
 //gal_error_code d3d12_cmd_draw_indirect_instanced() {
@@ -1368,8 +1368,8 @@
 //}
 //gal_error_code d3d12_cmd_draw_mesh_task() {
 //    //d3d12_context *d3d12_ctx;
-//    //d3d12_commandlist *d3d12_cmd;
-//    //d3d12_cmd->commandlist->DispatchMesh();
+//    //d3d12_command_list *d3d12_cmd;
+//    //d3d12_cmd->command_list->DispatchMesh();
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
 //gal_error_code d3d12_cmd_draw_indirect_mesh_task() {
@@ -1378,32 +1378,32 @@
 //}
 //gal_error_code d3d12_cmd_copy_texture() {
 //    //d3d12_context *d3d12_ctx;
-//    //d3d12_commandlist *d3d12_cmd;
-//    //d3d12_cmd->commandlist->CopyBufferRegion();
-//    //d3d12_cmd->commandlist->CopyResource();
+//    //d3d12_command_list *d3d12_cmd;
+//    //d3d12_cmd->command_list->CopyBufferRegion();
+//    //d3d12_cmd->command_list->CopyResource();
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
 //gal_error_code d3d12_cmd_copy_buffer() {
 //    //d3d12_context *d3d12_ctx;
-//    //d3d12_cmd->commandlist->CopyTextureRegion();
-//    //d3d12_cmd->commandlist->CopyResource();
+//    //d3d12_cmd->command_list->CopyTextureRegion();
+//    //d3d12_cmd->command_list->CopyResource();
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
 //// TODO(hyl5): deprecate the method, use compute shader instead
 //gal_error_code d3d12_cmd_fill_buffer() {
 //    //d3d12_context *d3d12_ctx;
-//    //d3d12_commandlist *d3d12_cmd;
-//    //d3d12_cmd->commandlist->ClearUnorderedAccessViewFloat();
-//    //d3d12_cmd->commandlist->ClearUnorderedAccessViewUint();
+//    //d3d12_command_list *d3d12_cmd;
+//    //d3d12_cmd->command_list->ClearUnorderedAccessViewFloat();
+//    //d3d12_cmd->command_list->ClearUnorderedAccessViewUint();
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
 //gal_error_code d3d12_cmd_fill_texture() {
 //    //d3d12_context *d3d12_ctx;
-//    //d3d12_commandlist *d3d12_cmd;
-//    //d3d12_cmd->commandlist->ClearUnorderedAccessViewFloat();
-//    //d3d12_cmd->commandlist->ClearUnorderedAccessViewUint();
-//    //d3d12_cmd->commandlist->ClearRenderTargetView();
-//    //d3d12_cmd->commandlist->ClearDepthStencilView();
+//    //d3d12_command_list *d3d12_cmd;
+//    //d3d12_cmd->command_list->ClearUnorderedAccessViewFloat();
+//    //d3d12_cmd->command_list->ClearUnorderedAccessViewUint();
+//    //d3d12_cmd->command_list->ClearRenderTargetView();
+//    //d3d12_cmd->command_list->ClearDepthStencilView();
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
 //gal_error_code d3d12_cmd_upload_buffer() {
@@ -1416,14 +1416,14 @@
 //}
 //gal_error_code d3d12_cmd_copy_buffer_to_texture() {
 //    //d3d12_context *d3d12_ctx;
-//    //d3d12_commandlist *d3d12_cmd;
-//    //d3d12_cmd->commandlist->CopyBufferRegion();
+//    //d3d12_command_list *d3d12_cmd;
+//    //d3d12_cmd->command_list->CopyBufferRegion();
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
 //gal_error_code d3d12_cmd_copy_texture_to_buffer() {
 //    //d3d12_context *d3d12_ctx;
-//    //d3d12_commandlist *d3d12_cmd;
-//    //d3d12_cmd->commandlist->CopyTextureRegion();
+//    //d3d12_command_list *d3d12_cmd;
+//    //d3d12_cmd->command_list->CopyTextureRegion();
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
 //#endif

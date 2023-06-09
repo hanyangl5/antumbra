@@ -218,7 +218,8 @@ CompiledShader *ShaderCompiler::Compile(const ShaderSourceBlob &blob, const Shad
 
     // entry point
     args.push_back(L"-E");
-    args.push_back(ant::wstr(desc.entry_point.begin(), desc.entry_point.end(), &stack_memory).c_str());
+    ant::wstr entry(desc.entry_point.begin(), desc.entry_point.end(), &stack_memory);
+    args.push_back(entry.c_str());
     // target profile
     args.push_back(L"-T");
     const wchar_t *tp = ToDxcTargetProfile(desc.target_profile);
@@ -247,14 +248,19 @@ CompiledShader *ShaderCompiler::Compile(const ShaderSourceBlob &blob, const Shad
     case ShaderOptimizationLevel::NONE:
         args.push_back(DXC_ARG_DEBUG);
         args.push_back(DXC_ARG_SKIP_OPTIMIZATIONS);
+        break;
     case ShaderOptimizationLevel::O0:
         args.push_back(DXC_ARG_OPTIMIZATION_LEVEL0);
+        break;
     case ShaderOptimizationLevel::O1:
         args.push_back(DXC_ARG_OPTIMIZATION_LEVEL1);
+        break;
     case ShaderOptimizationLevel::O2:
         args.push_back(DXC_ARG_OPTIMIZATION_LEVEL2);
+        break;
     case ShaderOptimizationLevel::O3:
         args.push_back(DXC_ARG_OPTIMIZATION_LEVEL3);
+        break;
     default:
         break;
     }
@@ -286,10 +292,11 @@ CompiledShader *ShaderCompiler::Compile(const ShaderSourceBlob &blob, const Shad
 
     HRESULT hrStatus;
     if (FAILED(compile_result->GetStatus(&hrStatus)) || FAILED(hrStatus)) {
-        LOG_ERROR("error");
+        // Compilation failed, but successful HRESULT was returned.
+        // Could reuse the compiler and allocator objects. For simplicity, exit here anyway
+        LOG_ERROR("compilation faild");
         return nullptr;
     }
-
     // Get compilation errors (if any).
     IDxcBlobUtf8 *errors = nullptr;
 
@@ -300,21 +307,22 @@ CompiledShader *ShaderCompiler::Compile(const ShaderSourceBlob &blob, const Shad
     }
 
     if (FAILED(compile_result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&byte_code), nullptr)) || byte_code == nullptr) {
-        LOG_ERROR("error");
+        LOG_ERROR("failed to get DXC_OUT_OBJECT");
         return nullptr;
     }
 
-    if (FAILED(compile_result->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(&pdb), nullptr)) || pdb == nullptr) {
-        LOG_ERROR("error");
-        return nullptr;
-    }
-    if (FAILED(compile_result->GetOutput(DXC_OUT_SHADER_HASH, IID_PPV_ARGS(&hash), nullptr))) {
-        LOG_ERROR("error");
+    // TODO(hylu): fix error when gte pdb
+    //if (FAILED(compile_result->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(&pdb), nullptr)) || pdb == nullptr) {
+    //    LOG_ERROR("failed to get DXC_OUT_PDB");
+    //    return nullptr;
+    //}
+    if (!b_spv && FAILED(compile_result->GetOutput(DXC_OUT_SHADER_HASH, IID_PPV_ARGS(&hash), nullptr))) {
+        LOG_ERROR("failed to get DXC_OUT_SHADER_HASH");
         return nullptr;
     }
 
     if (!b_spv && FAILED(compile_result->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&reflection), nullptr))) {
-        LOG_ERROR("error");
+        LOG_ERROR("failed tot get DXC_OUT_REFLECTION");
         return nullptr;
     }
 
@@ -329,10 +337,18 @@ CompiledShader *ShaderCompiler::Compile(const ShaderSourceBlob &blob, const Shad
 }
 
 void ant::CompiledShader::Release() {
-    reinterpret_cast<IDxcBlob *>(byte_code)->Release();
-    reinterpret_cast<IDxcBlob *>(reflection)->Release();
-    reinterpret_cast<IDxcBlob *>(pdb)->Release();
-    reinterpret_cast<IDxcBlob *>(hash)->Release();
+    if (byte_code) {
+        reinterpret_cast<IDxcBlob *>(byte_code)->Release();
+    }
+    if (reflection) {
+        reinterpret_cast<IDxcBlob *>(reflection)->Release();
+    }
+    if (pdb) {
+        reinterpret_cast<IDxcBlob *>(pdb)->Release();
+    }
+    if (hash) {
+        reinterpret_cast<IDxcBlob *>(hash)->Release();
+    }
     byte_code = nullptr;
     reflection = nullptr;
     pdb = nullptr;

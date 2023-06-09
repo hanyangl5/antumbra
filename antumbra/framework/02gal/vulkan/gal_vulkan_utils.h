@@ -1335,4 +1335,28 @@ constexpr VkPipelineRasterizationStateCreateInfo util_to_rasterizer_desc(const g
     return rs;
 }
 
+constexpr VkPipelineBindPoint utils_to_vk_pipeline_bind_point(gal_pipeline_type type) {
+    switch (type) {
+    case ant::gal::gal_pipeline_type::COMPUTE:
+        return VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_COMPUTE;
+    case ant::gal::gal_pipeline_type::GRAPHICS:
+        return VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS;
+    case ant::gal::gal_pipeline_type::RAYTRACING:
+        VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR;
+    default:
+        return VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_MAX_ENUM;
+    }
+}
+
+constexpr VkIndexType utils_to_vk_index_type(gal_index_type type) {
+    switch (type) {
+    case ant::gal::gal_index_type::u32:
+        return VkIndexType::VK_INDEX_TYPE_UINT32;
+    case ant::gal::gal_index_type::u16:
+        return VkIndexType::VK_INDEX_TYPE_UINT16;
+    default:
+        return VkIndexType::VK_INDEX_TYPE_MAX_ENUM;
+    }
+}
+
 } // namespace ant::gal

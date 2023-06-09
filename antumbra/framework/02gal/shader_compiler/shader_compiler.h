@@ -12,7 +12,8 @@
 #include "framework/01core/singleton/public_singleton.h"
 #include "framework/01core/utils/utils.h"
 
-#include "compile_settings.h"
+#include "compile_desc.h"
+
 namespace ant {
 
 class ShaderCompiler : public Singleton<ShaderCompiler> {

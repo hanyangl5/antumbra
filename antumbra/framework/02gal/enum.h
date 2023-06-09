@@ -40,6 +40,8 @@ inline constexpr u32 MAX_RESOURCE_NAME_LENGTH = 256;
 inline constexpr u32 MAX_RENDER_TARGET_ATTACHMENTS = 8;
 inline constexpr u32 MAX_VERTEX_BINDINGS = 15;
 inline constexpr u32 MAX_VERTEX_ATTRIBS = 15;
+// VkPhysicalDeviceLimits::maxVertexInputBindings
+inline constexpr u32 MAX_VERTEX_BUFFER_BINDING = 32;
 inline constexpr u32 MAX_SEMANTIC_NAME_LENGTH = 128;
 inline constexpr u32 MAX_DEBUG_NAME_LENGTH = 128;
 inline constexpr u32 MAX_MIP_LEVELS = 0xFFFFFFFF;
@@ -230,9 +232,9 @@ enum class PrimitiveTopology {
     PRIMITIVE_TOPO_COUNT,
 };
 
-enum class IndexType {
-    INDEX_TYPE_UINT32 = 0,
-    INDEX_TYPE_UINT16,
+enum class gal_index_type {
+    u32 = 0,
+    u16,
 };
 enum VertexAttribRate {
     VERTEX_ATTRIB_RATE_VERTEX = 0,
@@ -725,11 +727,12 @@ struct gal_pipeline_desc {
 };
 
 
-DECLARE_GAL_HANDLE(gal_pipeline) { 
+DECLARE_GAL_HANDLE(gal_pipeline) {
     gal_pipeline_desc m_desc;
     gal_pipeline_type m_type;
 };
-DECLARE_GAL_HANDLE(gal_commandlist){};
+DECLARE_GAL_HANDLE(gal_command_list) { gal_queue_type m_queue_type; };
+
 DECLARE_GAL_HANDLE(gal_descriptorpool){};
 
 struct gal_pipeline_cache_desc {
@@ -755,8 +758,6 @@ struct gal_pipeline_cache_desc {
 //    u32 mMaxRaysCount;
 //};
 
-struct gal_commandpool_desc {};
-
 // struct to consume descriptorset
 
 struct gal_descriptorset_desc {};
@@ -766,10 +767,21 @@ struct gal_rootsignature_desc {};
 struct gal_fence_desc {};
 
 struct gal_semaphore_desc {};
-struct gal_command_pool_desc {};
 
-// desc to allocate commandlist
-struct gal_commandlist_desc {};
+struct gal_command_pool_desc {
+    gal_queue_type queue_type;
+    bool b_transient;
+};
+
+
+
+DECLARE_GAL_HANDLE(gal_command_pool) { gal_queue_type queue_type; };
+
+// desc to allocate command_list
+struct gal_command_list_desc {
+    gal_command_pool command_pool;
+    bool b_secondary = false;
+};
 
 struct gal_renderpass_begin_desc {};
 

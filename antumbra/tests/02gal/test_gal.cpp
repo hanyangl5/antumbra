@@ -20,7 +20,7 @@ TEST_CASE("test gal buffer") {
         desc.size = 256;
         desc.initial_state = gal::gal_resource_state::RW_BUFFER;
         desc.descriptor_types = gal::gal_descriptor_type::CONSTANT_BUFFER | gal::gal_descriptor_type::RW_BUFFER |
-                              gal::gal_descriptor_type::INDIRECT_ARGUMENT;
+                                gal::gal_descriptor_type::INDIRECT_ARGUMENT;
         desc.memory_flags =
             gal_memory_flag::GPU_DEDICATED | gal_memory_flag::GPU_DOWNLOAD | gal_memory_flag::CPU_UPLOAD;
 
@@ -146,4 +146,31 @@ TEST_CASE("test gal swapchain") {
     };
     swap_chain_creation(gal::gal_api::VULKAN);
     //sampler_creation(gal::RenderApi::d3d12);
+}
+
+TEST_CASE("test gal command pool") {
+    auto command_test = [](gal::gal_api api) {
+        ant::gal::gal_command_pool cmd_pool{};
+        gal::gal_context context = initialize(api);
+        gal::gal_command_pool_desc desc{};
+        desc.b_transient = false;
+        desc.queue_type = gal_queue_type::graphcis;
+        gal_error_code result = gal::create_commandpool(context, &desc, &cmd_pool);
+        REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
+
+        gal_command_list cmd{};
+        gal_command_list_desc cmd_desc{};
+        cmd_desc.command_pool = cmd_pool;
+        cmd_desc.b_secondary = false;
+        result = gal::allocate_command_list(context, &cmd_desc, &cmd);
+        REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
+        gal::cmd_begin(cmd);
+        gal::cmd_end(cmd);
+        result = gal::reset_commandpool(context, cmd_pool);
+        REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
+        result = gal::destroy_commandpool(context, cmd_pool);
+        REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
+        destroy(context);
+    };
+    command_test(gal_api::VULKAN);
 }

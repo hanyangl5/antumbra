@@ -79,10 +79,15 @@ DECLARE_VK_HANDLE(swap_chain) {
     ant::fixed_array<VkImageView, MAX_SWAPCHAIN_IMAGES> swap_chain_image_views{};
 };
 
-struct vk_commandlist {};
+DECLARE_VK_HANDLE(command_pool) { VkCommandPool m_cmd_pool; };
+
+DECLARE_VK_HANDLE(command_list){ 
+    gal_command_pool m_cmd_pool;
+    VkCommandBuffer m_command; 
+    bool b_render_pass_bound;
+};
 
 DECLARE_VK_HANDLE(shader_program) {
-    
     ant::fixed_array<VkShaderModule, gal_shader_stage_count> m_shader_modules;
     ant::fixed_array<const char *, gal_shader_stage_count> m_entrys;
     VkSpecializationInfo *m_specialization_info;
@@ -91,7 +96,6 @@ DECLARE_VK_HANDLE(shader_program) {
 struct vk_rootsignature {
     VkPipelineLayout pipeline_layout;
 };
-
 
 
 DECLARE_VK_HANDLE(pipeline) {
