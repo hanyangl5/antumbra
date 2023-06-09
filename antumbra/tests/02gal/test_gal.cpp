@@ -155,7 +155,7 @@ TEST_CASE("test gal command pool") {
         gal::gal_command_pool_desc desc{};
         desc.b_transient = false;
         desc.queue_type = gal_queue_type::graphcis;
-        gal_error_code result = gal::create_commandpool(context, &desc, &cmd_pool);
+        gal_error_code result = gal::create_command_pool(context, &desc, &cmd_pool);
         REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
 
         gal_command_list cmd{};
@@ -166,9 +166,9 @@ TEST_CASE("test gal command pool") {
         REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
         gal::cmd_begin(cmd);
         gal::cmd_end(cmd);
-        result = gal::reset_commandpool(context, cmd_pool);
+        result = gal::reset_command_pool(context, cmd_pool);
         REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
-        result = gal::destroy_commandpool(context, cmd_pool);
+        result = gal::destroy_command_pool(context, cmd_pool);
         REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
         destroy(context);
     };

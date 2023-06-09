@@ -48,6 +48,7 @@ inline constexpr u32 MAX_MIP_LEVELS = 0xFFFFFFFF;
 inline constexpr u32 MAX_SWAPCHAIN_IMAGES = 3;
 inline constexpr u32 MAX_GPU_VENDOR_STRING_LENGTH = 64; //max size for GPUVendorPreset strings
 inline constexpr u32 MAX_SHADER_STAGE_COUNT = 5; //max size for GPUVendorPreset strings
+inline constexpr u32 MAX_TEXTURE_SUBRESOURCE_COUNT = 256;
 
 #ifndef MAKE_ENUM_FLAG
 #define MAKE_ENUM_FLAG(TYPE, ENUM_TYPE)                                                                                \
@@ -478,7 +479,7 @@ struct gal_texture_desc {
 
 DECLARE_GAL_HANDLE(gal_texture) {
   public:
-    gal_texture_desc m_gal_texture_desc;
+    gal_texture_desc m_desc;
 };
 
 struct gal_render_target_desc {
@@ -827,6 +828,11 @@ struct RenderTargetBarrier {
     uint16_t mArrayLayer;
 };
 
+struct gal_texture_subresource_desc {
+    u64 src_offset;
+    u32 mip_level;
+    u32 array_layer;
+};
 
 //enum class gal_descriptor_resource_type {
 //    UNDEFINED,

@@ -526,7 +526,7 @@ gal_error_code vk_create_texture(gal_context context, gal_texture_desc *desc, ga
     if (!*texture) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
     }
-    vk_tex->m_gal_texture_desc = *desc;
+    vk_tex->m_desc = *desc;
 
     u32 array_size = desc->array_size > 1u ? desc->array_size : 1u;
     u32 depth = desc->depth > 1u ? desc->depth : 1u;
@@ -596,7 +596,7 @@ gal_error_code vk_destroy_texture(gal_context context, gal_texture texture) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     if (texture != gal_null) {
         vk_texture *vk_tex = reinterpret_cast<vk_texture *>(texture);
-        if ((vk_tex->m_gal_texture_desc.texture_flags & gal_texture_flag::TEXTURE_CREATION_FLAG_IMPORT_BIT) ==
+        if ((vk_tex->m_desc.texture_flags & gal_texture_flag::TEXTURE_CREATION_FLAG_IMPORT_BIT) ==
             gal_texture_flag::TEXTURE_CREATION_FLAG_UNFEFINED) {
             vmaDestroyImage(vk_ctx->vma_allocator, vk_tex->m_image, vk_tex->m_allocation);
             //vkDestroyImageView(vk_ctx->device, vk_tex->image_view, nullptr);
@@ -1585,7 +1585,7 @@ gal_error_code vk_destroy_semaphore() {
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 // cmds
-gal_error_code vk_create_commandpool(gal_context context, gal_command_pool_desc *desc, gal_command_pool *command_pool) {
+gal_error_code vk_create_command_pool(gal_context context, gal_command_pool_desc *desc, gal_command_pool *command_pool) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_command_pool *vk_cmd_pool = ant::ant_alloc<ant::gal::vk_command_pool>();
     if (!vk_cmd_pool) {
@@ -1609,7 +1609,7 @@ gal_error_code vk_create_commandpool(gal_context context, gal_command_pool_desc 
     }
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
-gal_error_code vk_reset_commandpool(gal_context context, gal_command_pool command_pool) {
+gal_error_code vk_reset_command_pool(gal_context context, gal_command_pool command_pool) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_command_pool *vk_cmd_pool = reinterpret_cast<vk_command_pool *>(command_pool);
     VkResult result = vkResetCommandPool(vk_ctx->device, vk_cmd_pool->m_cmd_pool, 0);
@@ -1618,7 +1618,7 @@ gal_error_code vk_reset_commandpool(gal_context context, gal_command_pool comman
     }
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
-gal_error_code vk_destroy_commandpool(gal_context context, gal_command_pool command_pool) {
+gal_error_code vk_destroy_command_pool(gal_context context, gal_command_pool command_pool) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     if (command_pool != gal_null) {
         vk_command_pool *vk_cmd_pool = reinterpret_cast<vk_command_pool *>(command_pool);
@@ -1876,9 +1876,45 @@ gal_error_code vk_cmd_fill_texture() {
 }
 gal_error_code vk_cmd_upload_buffer() { return gal_error_code::GAL_ERRORCODE_SUCCESS; }
 gal_error_code vk_cmd_upload_texture() { return gal_error_code::GAL_ERRORCODE_SUCCESS; }
-gal_error_code vk_cmd_copy_buffer_to_texture() {
-    //vkCmdCopyBufferToImage();
-    //vkCmdCopyBufferToImage2();
+gal_error_code vk_cmd_update_subresources(gal_command_list command, gal_texture dst, gal_buffer src, u32 subresource_count, gal_texture_subresource_desc *descs) {
+    vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
+    if (subresource_count > MAX_TEXTURE_SUBRESOURCE_COUNT) {
+        return gal_error_code::GAL_ERRORCODE_ERROR;
+    }
+    const gal_texture_format fmt = dst->m_desc.format;
+
+    if (!gal_tf_is_single_plane(fmt)) {
+        return gal_error_code::GAL_ERRORCODE_ERROR;
+    }
+    auto stack_memory = ant::get_stack_memory_resource(MAX_TEXTURE_SUBRESOURCE_COUNT * sizeof(VkBufferCopy));
+    ant::vector<VkBufferImageCopy> regions(subresource_count, &stack_memory);
+
+    for (u32 i = 0; i < subresource_count; i++) {
+        if (!(descs + i)) {
+            LOG_ERROR("invalid subsource desc");
+            return gal_error_code::GAL_ERRORCODE_ERROR;
+        }
+        gal_texture_subresource_desc &desc = descs[i];
+        u32 width = _max<u32>(1, dst->m_desc.width >> desc.mip_level);
+        u32 height = _max<u32>(1, dst->m_desc.height >> desc.mip_level);
+        u32 depth = _max<u32>(1, dst->m_desc.depth >> desc.mip_level);
+
+        regions[i].imageOffset.x = 0;
+        regions[i].imageOffset.y = 0;
+        regions[i].imageOffset.z = 0;
+        regions[i].imageExtent.width = width;
+        regions[i].imageExtent.height = height;
+        regions[i].imageExtent.depth = depth;
+        regions[i].bufferOffset = desc.src_offset;
+        regions[i].imageSubresource.aspectMask = utils_to_vk_aspect_mask(fmt, false);
+        regions[i].imageSubresource.mipLevel = desc.mip_level; // update level 0
+        regions[i].imageSubresource.baseArrayLayer = desc.array_layer;
+        regions[i].imageSubresource.layerCount = 1;
+    }
+
+     vkCmdCopyBufferToImage(vk_cmd->m_command, reinterpret_cast<vk_buffer *>(src)->m_buffer,
+                           reinterpret_cast<vk_texture *>(dst)->m_image,
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_count, regions.data());
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_cmd_copy_texture_to_buffer() {
@@ -1886,6 +1922,26 @@ gal_error_code vk_cmd_copy_texture_to_buffer() {
     //vkCmdCopyImageToBuffer2();
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
+//
+//gal_error_code vk_map_buffer(gal_context context, gal_buffer buffer, ReadRange *pRange) {
+//    
+//    if ((buffer->m_gal_buffer_desc.memory_flags & gal_memory_flag::GPU_DEDICATED) == gal_memory_flag::UNDEFINED) {
+//        return gal_error_code::GAL_ERRORCODE_ERROR;
+//    };
+//    VkResult result = (
+//        vmaMapMemory(pRenderer->mVulkan.pVmaAllocator, pBuffer->mVulkan.pVkAllocation, &pBuffer->pCpuMappedAddress));
+//
+//    if (pRange) {
+//        pBuffer->pCpuMappedAddress = ((uint8_t *)pBuffer->pCpuMappedAddress + pRange->mOffset);
+//    }
+//}
+//
+//gal_error_code vk_unmap_buffer(gal_context context, gal_buffer *pBuffer) {
+//    ASSERT(pBuffer->mMemoryUsage != RESOURCE_MEMORY_USAGE_GPU_ONLY && "Trying to unmap non-cpu accessible resource");
+//
+//    vmaUnmapMemory(pRenderer->mVulkan.pVmaAllocator, pBuffer->mVulkan.pVkAllocation);
+//    pBuffer->pCpuMappedAddress = NULL;
+//}
 //gal_error_code vk_create_srvuav(gal_context context, gal_texture texture)
 //gal_error_code vk_create_srvuav(gal_context context, gal_buffer buffer)
 //{

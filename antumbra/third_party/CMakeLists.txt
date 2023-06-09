@@ -36,6 +36,8 @@ if(DXC_LIBRARY)
     message("found dxcompiler")
     target_include_directories(${PROJECT_NAME} PUBLIC ${DXC_LIB_PATH}/inc)
     target_link_libraries(${PROJECT_NAME} PUBLIC ${DXC_LIBRARY})
+    link_directories(${DXC_LIB_PATH}/bin/x64)
+
 else()
     message("dxcompiler not found")
 endif()

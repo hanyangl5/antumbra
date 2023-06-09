@@ -110,9 +110,9 @@ __GAL_HELPER_MACRO__(gal_error_code, wait_gpu);
 __GAL_HELPER_MACRO__(gal_error_code, create_semaphore);
 __GAL_HELPER_MACRO__(gal_error_code, destroy_semaphore);
 // cmds
-__GAL_HELPER_MACRO__(gal_error_code, create_commandpool, gal_context context, gal_command_pool_desc *desc, gal_command_pool *command_pool);
-__GAL_HELPER_MACRO__(gal_error_code, reset_commandpool, gal_context context, gal_command_pool command_pool);
-__GAL_HELPER_MACRO__(gal_error_code, destroy_commandpool, gal_context context, gal_command_pool command_pool);
+__GAL_HELPER_MACRO__(gal_error_code, create_command_pool, gal_context context, gal_command_pool_desc *desc, gal_command_pool *command_pool);
+__GAL_HELPER_MACRO__(gal_error_code, reset_command_pool, gal_context context, gal_command_pool command_pool);
+__GAL_HELPER_MACRO__(gal_error_code, destroy_command_pool, gal_context context, gal_command_pool command_pool);
 __GAL_HELPER_MACRO__(gal_error_code, allocate_command_list, gal_context context, gal_command_list_desc *desc, gal_command_list *command);
 __GAL_HELPER_MACRO__(gal_error_code, free_command_list, gal_context context, gal_command_list command);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_begin, gal_command_list command);
@@ -137,7 +137,7 @@ __GAL_HELPER_MACRO__(gal_error_code, cmd_fill_buffer);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_fill_texture);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_upload_buffer);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_upload_texture);
-__GAL_HELPER_MACRO__(gal_error_code, cmd_copy_buffer_to_texture);
+__GAL_HELPER_MACRO__(gal_error_code, cmd_update_subresources, gal_command_list command, gal_texture dst, gal_buffer src, u32 subresource_count, gal_texture_subresource_desc *descs);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_copy_texture_to_buffer);
 
 #ifdef __GAL_HELPER_MACRO__

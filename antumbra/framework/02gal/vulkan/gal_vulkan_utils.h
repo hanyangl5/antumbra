@@ -1359,4 +1359,18 @@ constexpr VkIndexType utils_to_vk_index_type(gal_index_type type) {
     }
 }
 
+constexpr VkImageAspectFlags utils_to_vk_aspect_mask(gal_texture_format format, [[maybe_unused]]bool b_has_stencil) {
+    VkImageAspectFlags flags = 0;
+    if (gal_tf_has_depth_or_stencil(format)) {
+        if (gal_tf_has_stencil(format)) {
+            flags |= VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
+        if (gal_tf_has_depth(format)) {
+            flags |= VK_IMAGE_ASPECT_DEPTH_BIT;
+        }
+        return flags;
+    }
+    flags |= VK_IMAGE_ASPECT_COLOR_BIT;
+    return flags;
+}
 } // namespace ant::gal

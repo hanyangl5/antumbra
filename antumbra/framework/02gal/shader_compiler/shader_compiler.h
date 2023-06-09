@@ -21,10 +21,7 @@ class ShaderCompiler : public Singleton<ShaderCompiler> {
     ShaderCompiler() noexcept;
     virtual ~ShaderCompiler() noexcept;
 
-    constexpr ShaderCompiler(const ShaderCompiler &rhs) noexcept = delete;
-    constexpr ShaderCompiler &operator=(const ShaderCompiler &rhs) noexcept = delete;
-    constexpr ShaderCompiler(ShaderCompiler &&rhs) noexcept = delete;
-    constexpr ShaderCompiler &operator=(ShaderCompiler &&rhs) noexcept = delete;
+    DELETE_COPY_MOVE(ShaderCompiler)
 
     //static void Compile(const ant::str &blob, const ShaderCompileDesc &compile_args);
 

@@ -1252,17 +1252,17 @@
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
 //// cmds
-//gal_error_code d3d12_create_commandpool() {
+//gal_error_code d3d12_create_command_pool() {
 //    //d3d12_context *d3d12_ctx;
 //    //d3d12_ctx->device->CreateCommandAllocator();
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
-//gal_error_code d3d12_reset_commandpool() {
+//gal_error_code d3d12_reset_command_pool() {
 //    //d3d12_context *d3d12_ctx;
 //
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}
-//gal_error_code d3d12_destroy_commandpool() {
+//gal_error_code d3d12_destroy_command_pool() {
 //    //d3d12_context *d3d12_ctx;
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;
 //}

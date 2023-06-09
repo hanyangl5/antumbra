@@ -29,6 +29,11 @@ namespace ant {
 //static std::filesystem::path cached_shader_dir = cached_project_dir / "shader";
 
 ShaderCompiler::ShaderCompiler() noexcept {
+    //HMODULE dxil_module = ::LoadLibrary("dxil.dll");
+    //if (!dxil_module) {
+    //LOG_ERROR("failed to find dxil library");
+    //    return;
+    //}
     HRESULT hr;
     hr = (DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&idxc_compiler)));
     if (FAILED(hr)) {
