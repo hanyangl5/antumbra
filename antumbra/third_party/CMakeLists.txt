@@ -27,10 +27,14 @@ add_subdirectory(tinygltf)
 
 # dxc
 
-find_library(DXC_LIBRARY dxcompiler PATHS libs/dxc_2023_03_01/lib/x64)
+set(ANT_LIB_PATH antumbralibs)
+set(VK_LIB_PATH ${ANT_LIB_PATH}/vulkan)
+set(DXC_LIB_PATH ${ANT_LIB_PATH}/dxc_2023_03_01)
+
+find_library(DXC_LIBRARY dxcompiler PATHS ${DXC_LIB_PATH}/lib/x64)
 if(DXC_LIBRARY)
     message("found dxcompiler")
-    target_include_directories(${PROJECT_NAME} PUBLIC libs/dxc_2023_03_01/inc)
+    target_include_directories(${PROJECT_NAME} PUBLIC ${DXC_LIB_PATH}/inc)
     target_link_libraries(${PROJECT_NAME} PUBLIC ${DXC_LIBRARY})
 else()
     message("dxcompiler not found")
@@ -46,7 +50,7 @@ if(ANTUMBRA_BUILD_VK)
     else()
         target_include_directories(${PROJECT_NAME} PUBLIC
         Vulkan-Headers/include)
-        find_library(Vulkan_LIBRARY NAMES vulkan-1 PATHS libs/vulkan/windows) 
+        find_library(Vulkan_LIBRARY NAMES vulkan-1 PATHS ${VK_LIB_PATH}/windows) 
         if (Vulkan_LIBRARY)
             message("using bundled vulkan")
             target_link_libraries(${PROJECT_NAME} PUBLIC ${Vulkan_LIBRARY})

@@ -84,3 +84,6 @@
 [submodule "antumbra/third_party/magic_enum"]
 	path = antumbra/third_party/magic_enum
 	url = https://github.com/Neargye/magic_enum.git
+[submodule "antumbra/third_party/antumbralibs"]
+	path = antumbra/third_party/antumbralibs
+	url = https://github.com/hanyangl5/antumbralibs
