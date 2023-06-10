@@ -116,6 +116,8 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${HEADER_FILES} ${SOURCE_F
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
+copy_dxil(${PROJECT_NAME} ${CMAKE_CURRENT_BINARY_DIR})
+
 configure_compile_options(tests)
 
 # include directories

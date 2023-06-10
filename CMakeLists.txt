@@ -7,6 +7,8 @@ include(cmake/Doxygen.cmake)
 
 include(cmake/ProjectOptions.cmake)
 
+include(cmake/CopyDll.cmake)
+
 set(ANTUMBRA_PROJECT_DIR .)
 set(ANTUMBRA_SRC_DIR antumbra)
 set(ANTUMBRA_THIR_PARTY_DIR ${ANTUMBRA_SRC_DIR}/third_party)

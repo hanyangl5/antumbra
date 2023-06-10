@@ -4,8 +4,8 @@
 #include <filesystem>
 
 // third party libraries
-#include <dxc/d3d12shader.h>
-#include <dxc/dxcapi.h>
+#include <dxcompiler/d3d12shader.h>
+#include <dxcompiler/dxcapi.h>
 
 // project headers
 #include "framework/01core/memory/container.h"
