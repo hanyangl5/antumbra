@@ -1,6 +1,6 @@
 draft design 
 
-render graph is resposible to handle gpu resource dependency, aliasing, and lifetime management.
+render graph is resposible to handle gpu resource dependency, aliasing, and lifetime management, gal resource cache.
 shader/pipeline hot reload 
 need an scripting language to describe the render pipeline
 
@@ -57,6 +57,7 @@ pass1 :{
     pass_type: graphics
     shader: gfx_shader
     pipeline_desc :{
+        // using reflected vertex layout?
         vertex_input_attributes: {
             vertex: stride, format, ...
             normal:

@@ -1,6 +1,7 @@
 #include "framework/01core/logging/log.h"
 #include "framework/01core/input/input.h"
 #include "framework/02gal/gal.h"
+#include "framework/02gal/shader/shader_compiler.h"
 #include <catch2/catch_test_macros.hpp>
 using namespace ant;
 
