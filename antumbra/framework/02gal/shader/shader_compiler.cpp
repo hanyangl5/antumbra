@@ -3,7 +3,6 @@
 #include "framework/01core/io/file_system.h"
 #include "framework/01core/logging/log.h"
 #include "framework/01core/memory/memory.h"
-#include <regex>
 
 //namespace std {
 //template <typename X, typename Y> struct std::hash<std::pair<X, Y>> {
@@ -13,7 +12,7 @@
 //};
 //} // namespace std
 
-namespace ant {
+namespace ant::gal {
 
 //struct ShaderCompilationSetting {
 //    const std::filesystem::path path; // key to index the shader_text map
@@ -28,31 +27,31 @@ namespace ant {
 //static std::filesystem::path cached_project_dir = std::filesystem::temp_directory_path() / "horizon";
 //static std::filesystem::path cached_shader_dir = cached_project_dir / "shader";
 
-ShaderCompiler::ShaderCompiler() noexcept {
+shader_compiler::shader_compiler() noexcept {
     //HMODULE dxil_module = ::LoadLibrary("dxil.dll");
     //if (!dxil_module) {
     //LOG_ERROR("failed to find dxil library");
     //    return;
     //}
     HRESULT hr;
-    hr = (DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&idxc_compiler)));
+    hr = (DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&m_idxc_compiler)));
     if (FAILED(hr)) {
         LOG_ERROR("failed to create idxc compiler");
         return;
     }
-    hr = (DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&idxc_utils)));
+    hr = (DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&m_idxc_utils)));
     if (FAILED(hr)) {
         LOG_ERROR("failed to create idxc utils");
         return;
     }
-    hr = (idxc_utils->CreateDefaultIncludeHandler((&idxc_include_handler)));
+    hr = (m_idxc_utils->CreateDefaultIncludeHandler((&m_idxc_include_handler)));
     if (FAILED(hr)) {
         LOG_ERROR("failed to create idxc include handler");
         return;
     }
 }
 
-ShaderCompiler::~ShaderCompiler() noexcept {}
+shader_compiler::~shader_compiler() noexcept {}
 //// we read once to build dependency graph and cache
 //void IterateHeaderFiles(const std::filesystem::path &path,
 //                        ant::hash_map<std::filesystem::path, FileNode> &dependency_map) {
@@ -100,7 +99,7 @@ ShaderCompiler::~ShaderCompiler() noexcept {}
 //    return current_node.need_compile;
 //}
 //
-//void ShaderCompiler::CompileShaders(const ShaderCompilationSettings &settings) {
+//void shader_compiler::CompileShaders(const ShaderCompilationSettings &settings) {
 //    // create cached directory
 //    if (!std::filesystem::exists(cached_project_dir)) {
 //        std::filesystem::create_directory(cached_project_dir);
@@ -165,7 +164,7 @@ ShaderCompiler::~ShaderCompiler() noexcept {}
 //    //                          auto &[shader_text, need_compile] = shader_texts[shader.path];
 //    //                          if (settings.force_recompile == true || need_compile) {
 //    //                              LOG_INFO("compiling {}, {}", shader.path.string(), need_compile);
-//    //                              ShaderCompiler::Compile(shader_text, shader.args);
+//    //                              shader_compiler::Compile(shader_text, shader.args);
 //    //                          }
 //    //                      }
 //    //                  });
@@ -176,16 +175,16 @@ ShaderCompiler::~ShaderCompiler() noexcept {}
 //            continue;
 //        }
 //
-//        ShaderCompiler::Compile(shader_texts[shader.path], shader.args);
+//        shader_compiler::Compile(shader_texts[shader.path], shader.args);
 //    }
 //}
 
-CompiledShader *ShaderCompiler::Compile(const ShaderSourceBlob &blob, const ShaderCompileDesc &desc) {
+compiled_shader *shader_compiler::compile(const shader_source_blob &blob, const shader_compile_desc &desc) {
     IDxcBlobEncoding *hlsl_blob;
 
-    bool b_spv = desc.target_api == ShaderBlobType::SPIRV ? true : false;
+    bool b_spv = desc.target_api == shader_blob_type::SPIRV ? true : false;
 
-    HRESULT hr = (idxc_utils->CreateBlob(blob.data, static_cast<u32>(blob.size), 0, &hlsl_blob));
+    HRESULT hr = (m_idxc_utils->CreateBlob(blob.data(), static_cast<u32>(blob.size()), 0, &hlsl_blob));
     if (FAILED(hr)) {
         LOG_ERROR("failed to create blob");
         return nullptr;
@@ -200,7 +199,7 @@ CompiledShader *ShaderCompiler::Compile(const ShaderSourceBlob &blob, const Shad
     args.push_back(entry);
     // target profile
     args.push_back(L"-T");
-    const wchar_t *tp = ToDxcTargetProfile(desc.target_profile);
+    const wchar_t *tp = utils_to_hlsl_target_profile(desc.target_profile);
     args.push_back(tp);
 
     args.push_back(DXC_ARG_WARNINGS_ARE_ERRORS); // warning are errors
@@ -223,20 +222,20 @@ CompiledShader *ShaderCompiler::Compile(const ShaderSourceBlob &blob, const Shad
     }
 
     switch (desc.optimization_level) {
-    case ShaderOptimizationLevel::NONE:
+    case shader_optimization_level::NONE:
         args.push_back(DXC_ARG_DEBUG);
         args.push_back(DXC_ARG_SKIP_OPTIMIZATIONS);
         break;
-    case ShaderOptimizationLevel::O0:
+    case shader_optimization_level::O0:
         args.push_back(DXC_ARG_OPTIMIZATION_LEVEL0);
         break;
-    case ShaderOptimizationLevel::O1:
+    case shader_optimization_level::O1:
         args.push_back(DXC_ARG_OPTIMIZATION_LEVEL1);
         break;
-    case ShaderOptimizationLevel::O2:
+    case shader_optimization_level::O2:
         args.push_back(DXC_ARG_OPTIMIZATION_LEVEL2);
         break;
-    case ShaderOptimizationLevel::O3:
+    case shader_optimization_level::O3:
         args.push_back(DXC_ARG_OPTIMIZATION_LEVEL3);
         break;
     default:
@@ -257,8 +256,8 @@ CompiledShader *ShaderCompiler::Compile(const ShaderSourceBlob &blob, const Shad
     source_buffer.Encoding = 0;
 
     IDxcResult *compile_result;
-    if (FAILED(idxc_compiler->Compile(&source_buffer, args.data(), static_cast<u32>(args.size()), idxc_include_handler,
-                                      IID_PPV_ARGS(&compile_result)))) {
+    if (FAILED(m_idxc_compiler->Compile(&source_buffer, args.data(), static_cast<u32>(args.size()),
+                                        m_idxc_include_handler, IID_PPV_ARGS(&compile_result)))) {
         LOG_ERROR("{}", "Internal error or API misuse! Compile Failed");
         return nullptr;
     }
@@ -268,13 +267,13 @@ CompiledShader *ShaderCompiler::Compile(const ShaderSourceBlob &blob, const Shad
     IDxcBlob *hash = nullptr;
     IDxcBlob *reflection = nullptr;
 
-    HRESULT hrStatus;
-    if (FAILED(compile_result->GetStatus(&hrStatus)) || FAILED(hrStatus)) {
-        // Compilation failed, but successful HRESULT was returned.
-        // Could reuse the compiler and allocator objects. For simplicity, exit here anyway
-        LOG_ERROR("compilation faild");
-        return nullptr;
-    }
+    //HRESULT hrStatus;
+    //if (FAILED(compile_result->GetStatus(&hrStatus)) || FAILED(hrStatus)) {
+    //    // Compilation failed, but successful HRESULT was returned.
+    //    // Could reuse the compiler and allocator objects. For simplicity, exit here anyway
+    //    LOG_ERROR("compilation faild");
+    //    return nullptr;
+    //}
     // Get compilation errors (if any).
     IDxcBlobUtf8 *errors = nullptr;
 
@@ -304,33 +303,52 @@ CompiledShader *ShaderCompiler::Compile(const ShaderSourceBlob &blob, const Shad
         return nullptr;
     }
 
-    CompiledShader *ret = ant::ant_alloc<CompiledShader>();
+    compiled_shader *ret = ant::ant_alloc<compiled_shader>();
+    if (byte_code) {
+        ret->m_byte_code.set(byte_code->GetBufferPointer(), byte_code->GetBufferSize());
+        ret->m_p_byte_code = byte_code;
+    }
+    if (pdb) {
+        ret->m_pdb.set(pdb->GetBufferPointer(), pdb->GetBufferSize());
+        ret->m_p_pdb = pdb;
+    }
+    if (hash) {
+        ret->m_hash.set(hash->GetBufferPointer(), hash->GetBufferSize());
+        ret->m_p_hash = hash;
+    }
+    if (reflection) {
+        ret->m_dxc_reflection.set(reflection->GetBufferPointer(), reflection->GetBufferSize());
+        ret->m_p_dxc_reflection = reflection;
+    }
+    ret->m_entry = desc.entry;
+    ret->m_type = desc.target_api;
 
-    ret->byte_code = byte_code;
-    ret->reflection = reflection;
-    ret->pdb = pdb;
-    ret->hash = hash;
-    ret->entry = desc.entry;
+    if (b_spv) {
+        ret->m_reflection = ant::ant_alloc<shader_reflection>();
+        ret->create_shader_reflection();
+    }
+
     return ret;
 }
 
-void ant::CompiledShader::Release() {
-    if (byte_code) {
-        reinterpret_cast<IDxcBlob *>(byte_code)->Release();
+void compiled_shader::release() {
+    if (m_p_byte_code) {
+        reinterpret_cast<IDxcBlob *>(m_p_byte_code)->Release();
+        m_byte_code.reset();
     }
-    if (reflection) {
-        reinterpret_cast<IDxcBlob *>(reflection)->Release();
+    if (m_p_dxc_reflection) {
+        reinterpret_cast<IDxcBlob *>(m_p_dxc_reflection)->Release();
+        m_dxc_reflection.reset();
     }
-    if (pdb) {
-        reinterpret_cast<IDxcBlob *>(pdb)->Release();
+    if (m_p_pdb) {
+        reinterpret_cast<IDxcBlob *>(m_p_pdb)->Release();
+        m_pdb.reset();
     }
-    if (hash) {
-        reinterpret_cast<IDxcBlob *>(hash)->Release();
+    if (m_p_hash) {
+        reinterpret_cast<IDxcBlob *>(m_p_hash)->Release();
+        m_hash.reset();
     }
-    byte_code = nullptr;
-    reflection = nullptr;
-    pdb = nullptr;
-    hash = nullptr;
+    ant_free(m_reflection);
 }
 
-} // namespace ant
+} // namespace ant::gal

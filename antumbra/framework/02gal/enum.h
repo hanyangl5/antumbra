@@ -33,11 +33,9 @@
 #include "framework/01core/utils/utils.h"
 #include "framework/01core/memory/container.h"
 #include "format.h"
-#include "framework/02gal/shader/compile_desc.h"
 
 namespace ant::gal {
-
-struct PipelineReflection;
+struct compiled_shader;
 
 inline constexpr u32 MAX_RESOURCE_NAME_LENGTH = 256;
 inline constexpr u32 MAX_RENDER_TARGET_ATTACHMENTS = 8;
@@ -563,27 +561,20 @@ DECLARE_GAL_HANDLE(gal_swap_chain) {
 //    void *data;
 //};
 
-DECLARE_GAL_HANDLE(gal_shader) {
-    gal_shader_stage stage_flag : 31;
-    u32 mNumThreadsPerGroup[3];
-    PipelineReflection *pReflection;
-};
-
-//struct BinaryShaderStageDesc {
-//    /// Byte code array
-//    void *byte_code;
-//    u64 size;
-//    const char *entry;
+//DECLARE_GAL_HANDLE(gal_shader) {
+//    gal_shader_stage stage_flag : 31;
+//    u32 mNumThreadsPerGroup[3];
+//    PipelineReflection *pReflection;
 //};
 
 struct gal_shader_program_desc {
     gal_shader_stage stage_flags;
-    CompiledShader vert;
-    CompiledShader frag;
-    CompiledShader geom;
-    CompiledShader hull;
-    CompiledShader domain;
-    CompiledShader comp;
+    compiled_shader* vert;
+    compiled_shader* frag;
+    compiled_shader* geom;
+    compiled_shader* hull;
+    compiled_shader* domain;
+    compiled_shader* comp;
 };
 
 // shader program is a set of shader for single pipeline
@@ -592,7 +583,7 @@ DECLARE_GAL_HANDLE(gal_shader_program) {
     u32 m_stage_count;
     //ShaderStage mStages : 31;
     //uint32_t mNumThreadsPerGroup[3];
-    //PipelineReflection *pReflection;
+    //shader::pipeline_reflection *pReflection;
 };
 
 DECLARE_GAL_HANDLE(gal_rootsignature){};

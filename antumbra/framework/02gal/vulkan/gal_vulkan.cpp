@@ -48,18 +48,13 @@
 //#endif // !NDEBUG
 #include <vk_mem_alloc.h>
 
-#include <dxcompiler/d3d12shader.h>
-#include <dxcompiler/dxcapi.h>
-
 #include "framework/01core/io/file_system.h"
 #include "framework/01core/logging/log.h"
 #include "framework/01core/math/math.h"
 #include "framework/01core/memory/memory.h"
+#include "framework/02gal/shader/shader_compiler.h"
 #include "gal_vulkan_enum.h"
 #include "gal_vulkan_utils.h"
-#include "framework/02gal/shader/shader_reflection.h"
-#include "framework/02gal/shader/spirv_reflection.h"
-
 #define ANT_VK_API_VERSION VK_API_VERSION_1_3
 
 namespace ant::gal {
@@ -1123,9 +1118,6 @@ gal_error_code vk_create_shader_program(gal_context context, gal_shader_program_
     vk_sp->m_stage_count = stage_count;
 
     VkResult result;
-
-    ShaderReflection stageReflections[MAX_SHADER_STAGE_COUNT] = {};
-
     for (u32 i = 0; i < gal_shader_stage_count; ++i) {
         gal_shader_stage stage_mask = (gal_shader_stage)(1 << i);
         if (stage_mask == (desc->stage_flags & stage_mask)) {
@@ -1136,59 +1128,59 @@ gal_error_code vk_create_shader_program(gal_context context, gal_shader_program_
             //const BinaryShaderStageDesc *pStageDesc = nullptr;
             switch (stage_mask) {
             case gal_shader_stage::VERT: {
-                create_info.codeSize = reinterpret_cast<IDxcBlob *>(desc->vert.byte_code)->GetBufferSize();
-
-                create_info.pCode = static_cast<const u32 *>(desc->vert.byte_code);
+                desc->comp->byte_code();
+                create_info.codeSize = desc->vert->byte_code()->size();
+                create_info.pCode = static_cast<const u32 *>(desc->vert->byte_code()->data());
                 result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
                 if (result != VK_SUCCESS) {
                     return gal_error_code::GAL_ERRORCODE_ERROR;
                 }
-                vk_sp->m_entrys[i] = desc->vert.entry;
+                vk_sp->m_entrys[i] = desc->vert->entry();
             } break;
             case gal_shader_stage::TESC: {
-                create_info.codeSize = reinterpret_cast<IDxcBlob *>(desc->hull.byte_code)->GetBufferSize();
-                create_info.pCode = (const u32 *)desc->hull.byte_code;
+                create_info.codeSize = desc->hull->byte_code()->size();
+                create_info.pCode = static_cast<u32*>(desc->hull->byte_code()->data());
                 result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
                 if (result != VK_SUCCESS) {
                     return gal_error_code::GAL_ERRORCODE_ERROR;
                 }
-                vk_sp->m_entrys[i] = desc->hull.entry;
+                vk_sp->m_entrys[i] = desc->hull->entry();
             } break;
             case gal_shader_stage::TESE: {
-                create_info.codeSize = reinterpret_cast<IDxcBlob *>(desc->domain.byte_code)->GetBufferSize();
-                create_info.pCode = (const u32 *)desc->domain.byte_code;
+                create_info.codeSize = desc->domain->byte_code()->size();
+                create_info.pCode = static_cast<u32 *>(desc->domain->byte_code()->data());
                 result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
                 if (result != VK_SUCCESS) {
                     return gal_error_code::GAL_ERRORCODE_ERROR;
                 }
-                vk_sp->m_entrys[i] = desc->domain.entry;
+                vk_sp->m_entrys[i] = desc->domain->entry();
             } break;
             case gal_shader_stage::GEOM: {
-                create_info.codeSize = reinterpret_cast<IDxcBlob *>(desc->geom.byte_code)->GetBufferSize();
-                create_info.pCode = (const u32 *)desc->geom.byte_code;
+                create_info.codeSize = desc->geom->byte_code()->size();
+                create_info.pCode = static_cast<u32 *>(desc->geom->byte_code()->data());
                 result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
                 if (result != VK_SUCCESS) {
                     return gal_error_code::GAL_ERRORCODE_ERROR;
                 }
-                vk_sp->m_entrys[i] = desc->geom.entry;
+                vk_sp->m_entrys[i] = desc->geom->entry();
             } break;
             case gal_shader_stage::FRAG: {
-                create_info.codeSize = reinterpret_cast<IDxcBlob *>(desc->frag.byte_code)->GetBufferSize();
-                create_info.pCode = (const u32 *)desc->frag.byte_code;
+                create_info.codeSize = desc->frag->byte_code()->size();
+                create_info.pCode = static_cast<u32 *>(desc->frag->byte_code()->data());
                 result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
                 if (result != VK_SUCCESS) {
                     return gal_error_code::GAL_ERRORCODE_ERROR;
                 }
-                vk_sp->m_entrys[i] = desc->frag.entry;
+                vk_sp->m_entrys[i] = desc->frag->entry();
             } break;
             case gal_shader_stage::COMP: {
-                create_info.codeSize = reinterpret_cast<IDxcBlob *>(desc->comp.byte_code)->GetBufferSize();
-                create_info.pCode = (const u32 *)desc->comp.byte_code;
+                create_info.codeSize = desc->comp->byte_code()->size();
+                create_info.pCode = static_cast<u32 *>(desc->comp->byte_code()->data());
                 result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
                 if (result != VK_SUCCESS) {
                     return gal_error_code::GAL_ERRORCODE_ERROR;
                 }
-                vk_sp->m_entrys[i] = desc->comp.entry;
+                vk_sp->m_entrys[i] = desc->comp->entry();
             } break;
             default:
                 assert(false && "Shader Stage not supported!");
