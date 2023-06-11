@@ -82,14 +82,39 @@ constexpr VkBufferUsageFlags util_to_vk_buffer_usage(gal_descriptor_type types) 
 
 constexpr VkImageType utils_to_vk_image_type(gal_texture_dimension dimension) {
     switch (dimension) {
-    case ant::gal::gal_texture_dimension::td_1D:
+    case ant::gal::gal_texture_dimension::_1D:
         return VK_IMAGE_TYPE_1D;
-    case ant::gal::gal_texture_dimension::td_2D:
+    case ant::gal::gal_texture_dimension::_2D:
         return VK_IMAGE_TYPE_2D;
-    case ant::gal::gal_texture_dimension::td_3D:
+    case ant::gal::gal_texture_dimension::_3D:
         return VK_IMAGE_TYPE_3D;
     default:
         return VK_IMAGE_TYPE_MAX_ENUM;
+    }
+}
+
+constexpr VkImageViewType utils_to_vk_image_view_type(gal_texture_dimension dimension) {
+    switch (dimension) {
+    case ant::gal::gal_texture_dimension::_1D:
+        return VK_IMAGE_VIEW_TYPE_1D;
+    case ant::gal::gal_texture_dimension::_2D:
+        return VK_IMAGE_VIEW_TYPE_2D;
+    case ant::gal::gal_texture_dimension::_3D:
+        return VK_IMAGE_VIEW_TYPE_3D;
+    case ant::gal::gal_texture_dimension::CUBE:
+        return VK_IMAGE_VIEW_TYPE_CUBE;
+    case ant::gal::gal_texture_dimension::_1D_ARRAY:
+        return VK_IMAGE_VIEW_TYPE_1D_ARRAY;
+    case ant::gal::gal_texture_dimension::_2D_ARRAY:
+        return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+    case ant::gal::gal_texture_dimension::CUBE_ARRAY:
+        return VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+    case ant::gal::gal_texture_dimension::_2D_MS_ARRAY:
+    case ant::gal::gal_texture_dimension::_2D_MS:
+        // TODO(hyl5): how ms map to vk?
+        return VK_IMAGE_VIEW_TYPE_MAX_ENUM;
+    default:
+        return VK_IMAGE_VIEW_TYPE_MAX_ENUM;
     }
 }
 

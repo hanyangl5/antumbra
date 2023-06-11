@@ -9,6 +9,16 @@ option(MI_BUILD_SHARED "Build shared library" OFF)
 option(MI_BUILD_OBJECT "" OFF)
 add_subdirectory(mimalloc)
 add_subdirectory(spdlog)
+option(SPIRV_CROSS_CLI "Build the CLI binary. Requires SPIRV_CROSS_STATIC." OFF)
+option(SPIRV_CROSS_ENABLE_TESTS "Enable SPIRV-Cross tests." OFF)
+option(SPIRV_CROSS_ENABLE_GLSL "Enable GLSL support." OFF)
+option(SPIRV_CROSS_ENABLE_HLSL "Enable HLSL target support." OFF)
+option(SPIRV_CROSS_ENABLE_MSL "Enable MSL target support." OFF)
+option(SPIRV_CROSS_ENABLE_CPP "Enable C++ target support." off)
+option(SPIRV_CROSS_ENABLE_REFLECT "Enable JSON reflection target support." OFF)
+option(SPIRV_CROSS_ENABLE_C_API "Enable C API wrapper support in static library." OFF)
+option(SPIRV_CROSS_ENABLE_UTIL "Enable util module support." OFF)
+
 add_subdirectory(SPIRV-Cross)
 add_subdirectory(Catch2)
 option(FLECS_SHARED "Build static flecs lib" OFF)
@@ -75,6 +85,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     magic_enum/include
     sol2/include
     mimalloc/include
+    SPIRV-Cross/
     #JoltPhysics/ # this will include some useless folder
     lua
 )
@@ -99,6 +110,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     sol2
     #Jolt
     tinygltf
+    spirv-cross-core
 )
 
 if(ANTUMBRA_BUILD_D3D12)
@@ -116,16 +128,16 @@ set_property(TARGET
     glfw
     mimalloc-static
     flecs_static
-    spirv-cross
-    spirv-cross-c
-    spirv-cross-c
+    #spirv-cross
+    # spirv-cross-c
+    # spirv-cross-c
     spirv-cross-core
-    spirv-cross-cpp
-    spirv-cross-glsl
-    spirv-cross-hlsl
-    spirv-cross-msl
-    spirv-cross-reflect
-    spirv-cross-util
+    # spirv-cross-cpp
+    # spirv-cross-glsl
+    # spirv-cross-hlsl
+    # spirv-cross-msl
+    # spirv-cross-reflect
+    # spirv-cross-util
     TracyClient
     # Jolt
     tinygltf

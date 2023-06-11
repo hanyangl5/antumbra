@@ -47,7 +47,7 @@ TEST_CASE("test gal texture") {
         texture_desc.mip_level = 1;
         texture_desc.array_size = 1;
         texture_desc.format = gal_texture_format::R8G8B8A8_UNORM;
-        texture_desc.dimension = gal_texture_dimension::td_2D;
+        texture_desc.dimension = gal_texture_dimension::_2D;
         texture_desc.descriptor_types = gal_descriptor_type::TEXTURE | gal_descriptor_type::RW_TEXTURE;
         texture_desc.initial_state = gal_resource_state::RW_TEXTURE;
         texture_desc.memory_flags = gal_memory_flag::GPU_DEDICATED;
@@ -100,7 +100,7 @@ TEST_CASE("test gal render target") {
         desc.depth = 1;
         desc.mip_level = 1;
         desc.format = gal_texture_format::R8G8B8A8_UNORM;
-        desc.dimension = gal_texture_dimension::td_2D;
+        desc.dimension = gal_texture_dimension::_2D;
         desc.descriptor_types = gal_descriptor_type::COLOR_RT;
         desc.initial_state = gal_resource_state::RENDER_TARGET;
         desc.sample_count = gal_texture_sample_count::SAMPLE_COUNT_1;

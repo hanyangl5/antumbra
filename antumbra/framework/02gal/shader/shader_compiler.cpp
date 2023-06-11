@@ -53,34 +53,6 @@ ShaderCompiler::ShaderCompiler() noexcept {
 }
 
 ShaderCompiler::~ShaderCompiler() noexcept {}
-
-ShaderTargetProfile GetShaderTargetProfile(const char *str, ShaderModuleVersion version) {
-    constexpr ShaderModuleVersion base_version = ShaderModuleVersion::SM_6_0;
-    ShaderTargetProfile base_profile;
-    if (std::strcmp(str, "VS_MAIN") == 0) {
-        base_profile = ShaderTargetProfile::VS_6_0;
-    } else if (std::strcmp(str, "PS_MAIN") == 0) {
-        base_profile = ShaderTargetProfile::PS_6_0;
-    } else if (std::strcmp(str, "CS_MAIN") == 0) {
-        base_profile = ShaderTargetProfile::CS_6_0;
-    } else if (std::strcmp(str, "GS_MAIN") == 0) {
-        base_profile = ShaderTargetProfile::GS_6_0;
-    } else if (std::strcmp(str, "GS_MAIN") == 0) {
-        base_profile = ShaderTargetProfile::HS_6_0;
-    } else if (std::strcmp(str, "DS_MAIN") == 0) {
-        base_profile = ShaderTargetProfile::DS_6_0;
-    } else if (std::strcmp(str, "MS_MAIN") == 0) {
-        base_profile = ShaderTargetProfile::MS_6_0;
-    } else {
-        LOG_ERROR("invalid shader type");
-        return ShaderTargetProfile::INVALID;
-    }
-
-    u32 version_offset = static_cast<u32>(version) - static_cast<u32>(base_version);
-    u32 target_version = static_cast<u32>(base_profile) + version_offset;
-    return static_cast<ShaderTargetProfile>(target_version);
-}
-
 //// we read once to build dependency graph and cache
 //void IterateHeaderFiles(const std::filesystem::path &path,
 //                        ant::hash_map<std::filesystem::path, FileNode> &dependency_map) {
@@ -211,7 +183,7 @@ ShaderTargetProfile GetShaderTargetProfile(const char *str, ShaderModuleVersion 
 CompiledShader *ShaderCompiler::Compile(const ShaderSourceBlob &blob, const ShaderCompileDesc &desc) {
     IDxcBlobEncoding *hlsl_blob;
 
-    bool b_spv = desc.target_api == ShaderTargetAPI::SPIRV ? true : false;
+    bool b_spv = desc.target_api == ShaderBlobType::SPIRV ? true : false;
 
     HRESULT hr = (idxc_utils->CreateBlob(blob.data, static_cast<u32>(blob.size), 0, &hlsl_blob));
     if (FAILED(hr)) {
@@ -223,8 +195,9 @@ CompiledShader *ShaderCompiler::Compile(const ShaderSourceBlob &blob, const Shad
 
     // entry point
     args.push_back(L"-E");
-    ant::wstr entry(desc.entry_point.begin(), desc.entry_point.end(), &stack_memory);
-    args.push_back(entry.c_str());
+    WCHAR entry[64];
+    swprintf(entry, 64, L"%hs", desc.entry);
+    args.push_back(entry);
     // target profile
     args.push_back(L"-T");
     const wchar_t *tp = ToDxcTargetProfile(desc.target_profile);
@@ -337,7 +310,7 @@ CompiledShader *ShaderCompiler::Compile(const ShaderSourceBlob &blob, const Shad
     ret->reflection = reflection;
     ret->pdb = pdb;
     ret->hash = hash;
-
+    ret->entry = desc.entry;
     return ret;
 }
 

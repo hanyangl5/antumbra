@@ -1,5 +1,6 @@
 #include "framework/01core/io/file_system.h"
-#include "framework/02gal/shader_compiler/shader_compiler.h"
+#include "framework/02gal/shader/shader_compiler.h"
+#include "framework/02gal/shader/spirv_reflection.h"
 #include <catch2/catch_test_macros.hpp>
 
 #include <iostream>
@@ -23,15 +24,15 @@ TEST_CASE("compile single shader ") {
     source.data = test_fs.data();
     source.size = test_fs.size();
     ShaderCompileDesc desc;
-    desc.entry_point = "PSMain";
+    desc.entry = "PSMain";
     desc.optimization_level = ShaderOptimizationLevel::NONE;
-    desc.target_api = ShaderTargetAPI::DXIL;
+    desc.target_api = ShaderBlobType::DXIL;
     desc.target_profile = ShaderTargetProfile::PS_6_0;
 
     CompiledShader *ret = sc.Compile(source, desc);
     REQUIRE(ret != nullptr);
     ret->Release();
-    desc.target_api = ShaderTargetAPI::SPIRV;
+    desc.target_api = ShaderBlobType::SPIRV;
     CompiledShader *ret2 = sc.Compile(source, desc);
     REQUIRE(ret2 != nullptr);
     ret2->Release();

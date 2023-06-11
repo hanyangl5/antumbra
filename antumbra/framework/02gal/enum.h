@@ -33,8 +33,11 @@
 #include "framework/01core/utils/utils.h"
 #include "framework/01core/memory/container.h"
 #include "format.h"
+#include "framework/02gal/shader/compile_desc.h"
 
 namespace ant::gal {
+
+struct PipelineReflection;
 
 inline constexpr u32 MAX_RESOURCE_NAME_LENGTH = 256;
 inline constexpr u32 MAX_RENDER_TARGET_ATTACHMENTS = 8;
@@ -139,7 +142,18 @@ enum class gal_pipeline_type {
     PIPELINE_TYPE_COUNT,
 };
 
-enum class gal_texture_dimension { UNDEFINED, td_1D, td_2D, td_3D };
+enum class gal_texture_dimension {
+    UNDEFINED,
+    _1D,
+    _2D,
+    _2D_MS, // multiple slices?
+    _3D,
+    CUBE,
+    _1D_ARRAY,
+    _2D_ARRAY,
+    _2D_MS_ARRAY,
+    CUBE_ARRAY
+};
 
 enum class gal_texture_sample_count {
     UNDEFINED,
@@ -544,122 +558,10 @@ DECLARE_GAL_HANDLE(gal_swap_chain) {
     ant::fixed_array<gal_render_target, MAX_SWAPCHAIN_IMAGES> m_render_targets;
 };
 
-enum class TextureDimension {
-    TEXTURE_DIM_1D,
-    TEXTURE_DIM_2D,
-    TEXTURE_DIM_2DMS,
-    TEXTURE_DIM_3D,
-    TEXTURE_DIM_CUBE,
-    TEXTURE_DIM_1D_ARRAY,
-    TEXTURE_DIM_2D_ARRAY,
-    TEXTURE_DIM_2DMS_ARRAY,
-    TEXTURE_DIM_CUBE_ARRAY,
-    TEXTURE_DIM_COUNT,
-    TEXTURE_DIM_UNDEFINED,
-};
-
-struct VertexInput {
-    // resource name
-    const char *name;
-
-    // The size of the attribute
-    u32 size;
-
-    // name size
-    u32 name_size;
-};
-
-struct ShaderResource {
-    // resource Type
-    gal_descriptor_type type;
-
-    // The resource set for binding frequency
-    u32 set;
-
-    // The resource binding location
-    u32 reg;
-
-    // The size of the resource. This will be the DescriptorInfo array size for textures
-    u32 size;
-
-    // what stages use this resource
-    gal_shader_stage used_stages;
-
-    // resource name
-    const char *name;
-
-    // name size
-    u32 name_size;
-
-    // 1D / 2D / Array / MSAA / ...
-    TextureDimension dim;
-};
-
-struct ShaderVariable {
-    // Variable name
-    const char *name;
-
-    // parents resource index
-    u32 parent_index;
-
-    // The offset of the Variable.
-    u32 offset;
-
-    // The size of the Variable.
-    u32 size;
-
-    // name size
-    u32 name_size;
-};
-
-struct ShaderReflection {
-    // single large allocation for names to reduce number of allocations
-    char *pNamePool;
-    VertexInput *pVertexInputs;
-    ShaderResource *pShaderResources;
-    ShaderVariable *pVariables;
-
-#if defined(VULKAN)
-    char *pEntryPoint;
-#endif
-
-    gal_shader_stage mShaderStage;
-
-    u32 mNamePoolSize;
-    u32 mVertexInputsCount;
-    u32 mShaderResourceCount;
-    u32 mVariableCount;
-
-    // Thread group size for compute shader
-    u32 mNumThreadsPerGroup[3];
-
-    //number of tessellation control point
-    u32 mNumControlPoint;
-};
-
-struct PipelineReflection {
-    gal_shader_stage mShaderStages;
-    // the individual stages reflection data.
-    ShaderReflection mStageReflections[MAX_SHADER_STAGE_COUNT];
-    u32 mStageReflectionCount;
-
-    u32 mVertexStageIndex;
-    u32 mHullStageIndex;
-    u32 mDomainStageIndex;
-    u32 mGeometryStageIndex;
-    u32 mPixelStageIndex;
-
-    ShaderResource *pShaderResources;
-    u32 mShaderResourceCount;
-
-    ShaderVariable *pVariables;
-    u32 mVariableCount;
-};
-
-struct gal_shader_desc {
-    u64 size;
-    void *data;
-};
+//struct gal_shader_desc {
+//    u64 size;
+//    void *data;
+//};
 
 DECLARE_GAL_HANDLE(gal_shader) {
     gal_shader_stage stage_flag : 31;
@@ -667,22 +569,21 @@ DECLARE_GAL_HANDLE(gal_shader) {
     PipelineReflection *pReflection;
 };
 
-
-struct BinaryShaderStageDesc {
-    /// Byte code array
-    void *byte_code;
-    u64 size;
-    const char *entry;
-};
+//struct BinaryShaderStageDesc {
+//    /// Byte code array
+//    void *byte_code;
+//    u64 size;
+//    const char *entry;
+//};
 
 struct gal_shader_program_desc {
-    gal_shader_stage stage_flag;
-    BinaryShaderStageDesc vert;
-    BinaryShaderStageDesc frag;
-    BinaryShaderStageDesc geom;
-    BinaryShaderStageDesc hull;
-    BinaryShaderStageDesc domain;
-    BinaryShaderStageDesc comp;
+    gal_shader_stage stage_flags;
+    CompiledShader vert;
+    CompiledShader frag;
+    CompiledShader geom;
+    CompiledShader hull;
+    CompiledShader domain;
+    CompiledShader comp;
 };
 
 // shader program is a set of shader for single pipeline

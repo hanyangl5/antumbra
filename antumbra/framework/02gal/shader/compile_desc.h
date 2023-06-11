@@ -1,6 +1,9 @@
 #pragma once
 
+#include <filesystem>
+
 namespace ant {
+
 
 enum class ShaderOptimizationLevel { NONE, O0, O1, O2, O3 };
 
@@ -195,31 +198,29 @@ constexpr wchar_t *ToDxcTargetProfile(ShaderTargetProfile tp) {
     }
 }
 
-enum class ShaderTargetAPI { SPIRV, DXIL };
+enum class ShaderBlobType { SPIRV, DXIL };
 
 // TODO(hylu): some setting might be shader dependent
-struct ShaderCompilationSettings {
-    ShaderModuleVersion sm_version{ShaderModuleVersion::SM_6_6};
-    ShaderOptimizationLevel optimization_level;
-    ShaderTargetAPI target_api;
-    std::filesystem::path input_dir, output_dir;
-    ant::vector<std::filesystem::path> shader_list;
-    bool force_recompile{false};
-};
+//struct ShaderCompilationSettings {
+//    ShaderModuleVersion sm_version{ShaderModuleVersion::SM_6_6};
+//    ShaderOptimizationLevel optimization_level;
+//    ShaderBlobType target_api;
+//    std::filesystem::path input_dir, output_dir;
+//    ant::vector<std::filesystem::path> shader_list;
+//    bool force_recompile{false};
+//};
 
 // compile desc of a single shader stage
 struct ShaderCompileDesc {
     //std::filesystem::path filename;
     //std::filesystem::path output_filename;
-    ant::str entry_point;
+    const char* entry;
     ShaderTargetProfile target_profile;
     ShaderOptimizationLevel optimization_level;
-    ShaderTargetAPI target_api;
+    ShaderBlobType target_api;
     ant::vector<std::filesystem::path> include_search_path;
     ant::vector<std::filesystem::path> defines;
 };
-
-
 
 inline constexpr ant::fixed_array<char, 4> hsb_header{'h', 's', 'b', '1'};
 
@@ -236,16 +237,18 @@ struct ShaderSourceBlob {
     u64 size;
 };
 
-
 struct CompiledShader {
     void Release();
-    ShaderTargetAPI type;
+    ShaderBlobType type;
     // IDxcBlob *
     void *byte_code = nullptr;
     void *pdb = nullptr;
     void *hash = nullptr;
     void *reflection = nullptr;
+    const char *entry; // can be reflected using spirv_cross
 };
+
+
 
 
 } // namespace ant

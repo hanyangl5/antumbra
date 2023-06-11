@@ -5,7 +5,7 @@ include(CheckCXXCompilerFlag)
 
 function(configure_compile_options proj_name)
     set(CMAKE_CXX_STANDARD 17)
-
+    target_compile_options(${PROJECT_NAME} PRIVATE -DNOMINMAX)
     if(WIN32)
         if(MSVC)
             message("using MSVC under windows")
