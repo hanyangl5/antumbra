@@ -314,7 +314,8 @@ struct shader_reflection {
     // single large allocation for names to reduce number of allocations
     char *pNamePool;
     VertexInput *pVertexInputs;
-    ant::vector<ShaderResource> resources;
+    ant::hash_set<ShaderResource> resources;
+    ant::vector<u32> sets;
     ShaderVariable *pVariables;
 
     const char *entry;
@@ -333,26 +334,28 @@ struct shader_reflection {
 };
 
 struct pipeline_reflection {
-    gal_shader_stage mShaderStages;
+    ant::vector<ShaderResource> m_resources;
+    //gal_shader_stage mShaderStages;
     // the individual stages reflection data.
-    shader_reflection mStageReflections[MAX_SHADER_STAGE_COUNT];
-    u32 mStageReflectionCount;
+    //shader_reflection mStageReflections[MAX_SHADER_STAGE_COUNT];
+    //u32 mStageReflectionCount;
 
-    u32 mVertexStageIndex;
-    u32 mHullStageIndex;
-    u32 mDomainStageIndex;
-    u32 mGeometryStageIndex;
-    u32 mPixelStageIndex;
+    //u32 mVertexStageIndex;
+    //u32 mHullStageIndex;
+    //u32 mDomainStageIndex;
+    //u32 mGeometryStageIndex;
+    //u32 mPixelStageIndex;
 
-    ShaderResource *pShaderResources;
-    u32 mShaderResourceCount;
+    //ShaderResource *pShaderResources;
+    //u32 mShaderResourceCount;
 
-    ShaderVariable *pVariables;
-    u32 mVariableCount;
+    //ShaderVariable *pVariables;
+    //u32 mVariableCount;
 };
-} // namespace ant::gal
 
-namespace ant::gal {
+struct pipeline_reflection_vk : public pipeline_reflection {
+    
+};
 
 class shader_compiler;
 
@@ -405,9 +408,12 @@ struct compiled_shader_group {
     compiled_shader *geom();
     compiled_shader *domain();
     compiled_shader *comp();
+    gal_shader_stage stages();
+    pipeline_reflection *reflection();
   private:
     void create_pipeline_reflection();
   private:
+    gal_shader_stage m_stage_flags = gal_shader_stage::UNDEFINED;
     compiled_shader *m_vert = nullptr;
     compiled_shader *m_frag = nullptr;
     compiled_shader *m_geom = nullptr;

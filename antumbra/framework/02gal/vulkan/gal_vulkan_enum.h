@@ -70,7 +70,6 @@ DECLARE_VK_HANDLE(render_target) {
 struct vk_fence {};
 struct vk_semaphore {};
 DECLARE_VK_HANDLE(swap_chain) {
-    void initialize(gal_swap_chain_desc * desc) { m_desc = *desc; }
     ant::fixed_array<gal_render_target, MAX_SWAPCHAIN_IMAGES> &get_render_targets() { return m_render_targets; }
     VkSwapchainKHR m_swap_chain = VK_NULL_HANDLE;
     VkSurfaceKHR m_surface = VK_NULL_HANDLE;

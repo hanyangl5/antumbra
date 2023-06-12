@@ -568,7 +568,6 @@ DECLARE_GAL_HANDLE(gal_swap_chain) {
 //};
 
 struct gal_shader_program_desc {
-    gal_shader_stage stage_flags;
     compiled_shader_group *shader_group;
 };
 
@@ -650,7 +649,9 @@ struct gal_pipeline_cache_desc {
 
 struct gal_descriptorset_desc {};
 
-struct gal_rootsignature_desc {};
+struct gal_rootsignature_desc {
+    compiled_shader_group *shader;
+};
 
 struct gal_fence_desc {};
 

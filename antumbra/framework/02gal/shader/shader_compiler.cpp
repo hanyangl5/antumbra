@@ -358,6 +358,24 @@ void compiled_shader_group::set(compiled_shader_gourp_desc *desc) {
     m_hull = desc->hull;
     m_geom = desc->geom;
     m_comp = desc->comp;
+    if (desc->vert) {
+        m_stage_flags |= gal_shader_stage::VERT;
+    }
+    if (desc->frag) {
+        m_stage_flags |= gal_shader_stage::FRAG;
+    }
+    if (desc->comp) {
+        m_stage_flags |= gal_shader_stage::COMP;
+    }
+    if (desc->domain) {
+        m_stage_flags |= gal_shader_stage::DOMN;
+    }
+    if (desc->hull) {
+        m_stage_flags |= gal_shader_stage::HULL;
+    }
+    if (desc->geom) {
+        m_stage_flags |= gal_shader_stage::GEOM;
+    }
 
     create_pipeline_reflection();
 }
@@ -378,6 +396,8 @@ compiled_shader *compiled_shader_group::geom() { return m_geom != nullptr ? m_ge
 compiled_shader *compiled_shader_group::hull() { return m_hull != nullptr ? m_hull : nullptr; }
 compiled_shader *compiled_shader_group::comp() { return m_comp != nullptr ? m_comp : nullptr; }
 
-void compiled_shader_group::create_pipeline_reflection() {}
+gal_shader_stage compiled_shader_group::stages() { return m_stage_flags; }
+
+pipeline_reflection *compiled_shader_group::reflection() { return m_pipeline_reflection; }
 
 } // namespace ant::gal

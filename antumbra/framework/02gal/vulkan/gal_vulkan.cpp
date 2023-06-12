@@ -801,7 +801,7 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
     if (!*swap_chain) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
     }
-    vk_sc->initialize(desc);
+    vk_sc->m_desc = *desc;
     VkResult result;
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
     VkWin32SurfaceCreateInfoKHR add_info{};
@@ -1078,17 +1078,17 @@ gal_error_code vk_create_shader_program(gal_context context, gal_shader_program_
 
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_shader_program *vk_sp = ant::ant_alloc<ant::gal::vk_shader_program>();
-
+    vk_sp->m_desc = *desc;
     *shader_program = reinterpret_cast<gal_shader_program>(vk_sp);
     if (!shader_program) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
     }
-
+    
     u32 stage_count = 0;
     // count stage count
     for (u32 i = 0; i < gal_shader_stage_count; ++i) {
         gal_shader_stage stage_mask = (gal_shader_stage)(1 << i);
-        if (stage_mask == (desc->stage_flags & stage_mask)) {
+        if (stage_mask == (desc->shader_group->stages() & stage_mask)) {
             switch (stage_mask) {
             case gal_shader_stage::VERT:
                 stage_count++;
@@ -1120,7 +1120,7 @@ gal_error_code vk_create_shader_program(gal_context context, gal_shader_program_
     VkResult result;
     for (u32 i = 0; i < gal_shader_stage_count; ++i) {
         gal_shader_stage stage_mask = (gal_shader_stage)(1 << i);
-        if (stage_mask == (desc->stage_flags & stage_mask)) {
+        if (stage_mask == (desc->shader_group->stages() & stage_mask)) {
             VkShaderModuleCreateInfo create_info{};
             create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
             create_info.pNext = nullptr;
@@ -1298,10 +1298,10 @@ gal_error_code vk_create_graphics_pipeline(gal_context context, gal_pipeline_des
     ant::fixed_array<VkPipelineShaderStageCreateInfo, 5> stages;
 
     gal_shader_program_desc *sp_desc = &vk_sp->m_desc;
-
+    
     for (u32 i = 0; i < 5; ++i) {
         gal_shader_stage stage_mask = static_cast<gal_shader_stage>(1 << i);
-        if (stage_mask == (sp_desc->stage_flags & stage_mask)) {
+        if (stage_mask == (sp_desc->shader_group->stages() & stage_mask)) {
             stages[stage_count].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
             stages[stage_count].pNext = nullptr;
             stages[stage_count].flags = 0;
@@ -1416,8 +1416,8 @@ gal_error_code vk_create_graphics_pipeline(gal_context context, gal_pipeline_des
     ia.primitiveRestartEnable = VK_FALSE;
 
     VkPipelineTessellationStateCreateInfo ts{};
-    if ((sp_desc->stage_flags & gal_shader_stage::TESC) != gal_shader_stage::UNDEFINED &&
-        (sp_desc->stage_flags & gal_shader_stage::TESE) != gal_shader_stage::UNDEFINED) {
+    if ((sp_desc->shader_group->stages() & gal_shader_stage::TESC) != gal_shader_stage::UNDEFINED &&
+        (sp_desc->shader_group->stages() & gal_shader_stage::TESE) != gal_shader_stage::UNDEFINED) {
         ts.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
         ts.pNext = nullptr;
         ts.flags = 0;
@@ -1478,8 +1478,8 @@ gal_error_code vk_create_graphics_pipeline(gal_context context, gal_pipeline_des
     add_info.pVertexInputState = &vi;
     add_info.pInputAssemblyState = &ia;
 
-    if ((sp_desc->stage_flags & gal_shader_stage::TESC) != gal_shader_stage::UNDEFINED &&
-        (sp_desc->stage_flags & gal_shader_stage::TESE) != gal_shader_stage::UNDEFINED)
+    if ((sp_desc->shader_group->stages() & gal_shader_stage::TESC) != gal_shader_stage::UNDEFINED &&
+        (sp_desc->shader_group->stages() & gal_shader_stage::TESE) != gal_shader_stage::UNDEFINED)
         add_info.pTessellationState = &ts;
     else
         add_info.pTessellationState = nullptr; // set tessellation state to null if we have no tessellation
@@ -1539,7 +1539,8 @@ gal_error_code vk_free_descriptorset() {
     //vkFreeDescriptorSets()
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
-gal_error_code vk_create_rootsignature() {
+gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_desc* desc, gal_rootsignature* root_signature) {
+    desc->shader->reflection()->m_resources;
     //vkCreatePipelineLayout();
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }

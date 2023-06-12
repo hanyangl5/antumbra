@@ -222,12 +222,12 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
     gal::gal_shader_program sp{};
     gal::compiled_shader_group sg{};
     gal::compiled_shader_gourp_desc sg_desc{};
+
     sg_desc.comp = ret;
     sg.set(&sg_desc);
 
     gal::gal_shader_program_desc sp_desc{};
     sp_desc.shader_group = &sg;
-    sp_desc.stage_flags = gal_shader_stage::COMP;
 
     gal_error_code result = gal::create_shader_program(context, &sp_desc, &sp);
     REQUIRE(result == gal_error_code::GAL_ERRORCODE_SUCCESS);
