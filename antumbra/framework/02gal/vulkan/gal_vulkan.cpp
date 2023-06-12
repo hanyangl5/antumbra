@@ -1128,59 +1128,58 @@ gal_error_code vk_create_shader_program(gal_context context, gal_shader_program_
             //const BinaryShaderStageDesc *pStageDesc = nullptr;
             switch (stage_mask) {
             case gal_shader_stage::VERT: {
-                desc->comp->byte_code();
-                create_info.codeSize = desc->vert->byte_code()->size();
-                create_info.pCode = static_cast<const u32 *>(desc->vert->byte_code()->data());
+                create_info.codeSize = desc->shader_group->vert()->byte_code()->size();
+                create_info.pCode = static_cast<const u32 *>(desc->shader_group->vert()->byte_code()->data());
                 result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
                 if (result != VK_SUCCESS) {
                     return gal_error_code::GAL_ERRORCODE_ERROR;
                 }
-                vk_sp->m_entrys[i] = desc->vert->entry();
+                vk_sp->m_entrys[i] = desc->shader_group->vert()->entry();
             } break;
             case gal_shader_stage::TESC: {
-                create_info.codeSize = desc->hull->byte_code()->size();
-                create_info.pCode = static_cast<u32*>(desc->hull->byte_code()->data());
+                create_info.codeSize = desc->shader_group->hull()->byte_code()->size();
+                create_info.pCode = static_cast<u32 *>(desc->shader_group->hull()->byte_code()->data());
                 result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
                 if (result != VK_SUCCESS) {
                     return gal_error_code::GAL_ERRORCODE_ERROR;
                 }
-                vk_sp->m_entrys[i] = desc->hull->entry();
+                vk_sp->m_entrys[i] = desc->shader_group->hull()->entry();
             } break;
             case gal_shader_stage::TESE: {
-                create_info.codeSize = desc->domain->byte_code()->size();
-                create_info.pCode = static_cast<u32 *>(desc->domain->byte_code()->data());
+                create_info.codeSize = desc->shader_group->domain()->byte_code()->size();
+                create_info.pCode = static_cast<u32 *>(desc->shader_group->domain()->byte_code()->data());
                 result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
                 if (result != VK_SUCCESS) {
                     return gal_error_code::GAL_ERRORCODE_ERROR;
                 }
-                vk_sp->m_entrys[i] = desc->domain->entry();
+                vk_sp->m_entrys[i] = desc->shader_group->domain()->entry();
             } break;
             case gal_shader_stage::GEOM: {
-                create_info.codeSize = desc->geom->byte_code()->size();
-                create_info.pCode = static_cast<u32 *>(desc->geom->byte_code()->data());
+                create_info.codeSize = desc->shader_group->geom()->byte_code()->size();
+                create_info.pCode = static_cast<u32 *>(desc->shader_group->geom()->byte_code()->data());
                 result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
                 if (result != VK_SUCCESS) {
                     return gal_error_code::GAL_ERRORCODE_ERROR;
                 }
-                vk_sp->m_entrys[i] = desc->geom->entry();
+                vk_sp->m_entrys[i] = desc->shader_group->geom()->entry();
             } break;
             case gal_shader_stage::FRAG: {
-                create_info.codeSize = desc->frag->byte_code()->size();
-                create_info.pCode = static_cast<u32 *>(desc->frag->byte_code()->data());
+                create_info.codeSize = desc->shader_group->frag()->byte_code()->size();
+                create_info.pCode = static_cast<u32 *>(desc->shader_group->frag()->byte_code()->data());
                 result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
                 if (result != VK_SUCCESS) {
                     return gal_error_code::GAL_ERRORCODE_ERROR;
                 }
-                vk_sp->m_entrys[i] = desc->frag->entry();
+                vk_sp->m_entrys[i] = desc->shader_group->frag()->entry();
             } break;
             case gal_shader_stage::COMP: {
-                create_info.codeSize = desc->comp->byte_code()->size();
-                create_info.pCode = static_cast<u32 *>(desc->comp->byte_code()->data());
+                create_info.codeSize = desc->shader_group->comp()->byte_code()->size();
+                create_info.pCode = static_cast<u32 *>(desc->shader_group->comp()->byte_code()->data());
                 result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
                 if (result != VK_SUCCESS) {
                     return gal_error_code::GAL_ERRORCODE_ERROR;
                 }
-                vk_sp->m_entrys[i] = desc->comp->entry();
+                vk_sp->m_entrys[i] = desc->shader_group->comp()->entry();
             } break;
             default:
                 assert(false && "Shader Stage not supported!");

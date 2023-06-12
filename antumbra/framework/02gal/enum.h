@@ -35,7 +35,7 @@
 #include "format.h"
 
 namespace ant::gal {
-struct compiled_shader;
+struct compiled_shader_group;
 
 inline constexpr u32 MAX_RESOURCE_NAME_LENGTH = 256;
 inline constexpr u32 MAX_RENDER_TARGET_ATTACHMENTS = 8;
@@ -569,12 +569,7 @@ DECLARE_GAL_HANDLE(gal_swap_chain) {
 
 struct gal_shader_program_desc {
     gal_shader_stage stage_flags;
-    compiled_shader* vert;
-    compiled_shader* frag;
-    compiled_shader* geom;
-    compiled_shader* hull;
-    compiled_shader* domain;
-    compiled_shader* comp;
+    compiled_shader_group *shader_group;
 };
 
 // shader program is a set of shader for single pipeline

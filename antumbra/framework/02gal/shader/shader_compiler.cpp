@@ -351,4 +351,33 @@ void compiled_shader::release() {
     ant_free(m_reflection);
 }
 
+void compiled_shader_group::set(compiled_shader_gourp_desc *desc) {
+    m_vert = desc->vert;
+    m_frag = desc->frag;
+    m_domain = desc->domain;
+    m_hull = desc->hull;
+    m_geom = desc->geom;
+    m_comp = desc->comp;
+
+    create_pipeline_reflection();
+}
+
+void compiled_shader_group::release() {
+    m_vert->release();
+    m_frag->release();
+    m_domain->release();
+    m_hull->release();
+    m_geom->release();
+    m_comp->release();
+}
+
+compiled_shader *compiled_shader_group::vert() { return m_vert != nullptr ? m_vert : nullptr; }
+compiled_shader *compiled_shader_group::frag() { return m_frag != nullptr ? m_frag : nullptr; }
+compiled_shader *compiled_shader_group::domain() { return m_domain != nullptr ? m_domain : nullptr; }
+compiled_shader *compiled_shader_group::geom() { return m_geom != nullptr ? m_geom : nullptr; }
+compiled_shader *compiled_shader_group::hull() { return m_hull != nullptr ? m_hull : nullptr; }
+compiled_shader *compiled_shader_group::comp() { return m_comp != nullptr ? m_comp : nullptr; }
+
+void compiled_shader_group::create_pipeline_reflection() {}
+
 } // namespace ant::gal

@@ -350,7 +350,7 @@ struct pipeline_reflection {
     ShaderVariable *pVariables;
     u32 mVariableCount;
 };
-}
+} // namespace ant::gal
 
 namespace ant::gal {
 
@@ -360,19 +360,20 @@ struct compiled_shader {
     friend class shader_compiler;
   public:
     void release();
-    void create_shader_reflection();
     const blob *byte_code() const;
     const blob *pdb() const;
     const blob *hash() const;
     const blob *dxc_reflection() const;
     const char *entry();
   private:
+    void create_shader_reflection();
     void create_shader_reflection_from_spirv();
+
   private:
     shader_blob_type m_type;
     // IDxcBlob *
     blob m_byte_code;
-    void* m_p_byte_code;
+    void *m_p_byte_code;
     blob m_pdb;
     void *m_p_pdb;
     blob m_hash;
@@ -383,16 +384,45 @@ struct compiled_shader {
     shader_reflection *m_reflection;
 };
 
+struct compiled_shader_gourp_desc {
+    compiled_shader *vert;
+    compiled_shader *frag;
+    compiled_shader *geom;
+    compiled_shader *hull;
+    compiled_shader *domain;
+    compiled_shader *comp;
+};
+
+// FIXME(hyl5): I think oop interface is not consistent with the gal degisn
+struct compiled_shader_group {
+  public:
+    void set(compiled_shader_gourp_desc *desc);
+    void release();
+
+    compiled_shader *vert();
+    compiled_shader *frag();
+    compiled_shader *hull();
+    compiled_shader *geom();
+    compiled_shader *domain();
+    compiled_shader *comp();
+  private:
+    void create_pipeline_reflection();
+  private:
+    compiled_shader *m_vert = nullptr;
+    compiled_shader *m_frag = nullptr;
+    compiled_shader *m_geom = nullptr;
+    compiled_shader *m_hull = nullptr;
+    compiled_shader *m_domain = nullptr;
+    compiled_shader *m_comp = nullptr;
+    pipeline_reflection *m_pipeline_reflection = nullptr;
+};
+
 class shader_compiler : public Singleton<shader_compiler> {
   public:
     shader_compiler() noexcept;
     virtual ~shader_compiler() noexcept;
 
     DELETE_COPY_MOVE(shader_compiler)
-
-    //static void Compile(const ant::str &blob, const ShaderCompileDesc &compile_args);
-
-    //static void CompileShaders(const ShaderCompilationSettings &settings);
 
     compiled_shader *compile(const shader_source_blob &blob, const shader_compile_desc &desc);
 
