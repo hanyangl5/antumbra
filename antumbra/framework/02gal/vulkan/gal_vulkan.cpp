@@ -1540,8 +1540,76 @@ gal_error_code vk_free_descriptorset() {
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_desc* desc, gal_rootsignature* root_signature) {
-    desc->shader->reflection()->m_resources;
-    //vkCreatePipelineLayout();
+//gal_error_code vk_create_rootsignature() {
+    const auto& refl = desc->shader->reflection();
+    u32 set_count = static_cast<u32>(refl->sets.size());
+    // TODO(hyl5): seperate descriptor set layouts for caching
+
+    auto &stack_memory = ant::get_stack_memory_resource(1024);
+    if (set_count > MAX_DESCRIPTOR_SET_COUNT) {
+        LOG_ERROR("maximum of descriptor set count is: {}, current is: {}", MAX_DESCRIPTOR_SET_COUNT, set_count);
+        return gal_error_code::GAL_ERRORCODE_ERROR;
+    }
+
+    ant::fixed_array<VkDescriptorSetLayoutCreateInfo, MAX_DESCRIPTOR_SET_COUNT> dslcis();
+    ant::vector<VkDescriptorSetLayoutBinding> bindings(&stack_memory);
+    ant::vector<u32> binding_prefix_sum(refl->sets.size(), & stack_memory);
+    
+    u32 binding_count = 0;
+
+    for (u32 i = 0; i < refl->sets.size(); i++) {
+        u32 set_index = (refl->sets[i] & 0xffff) >> 16; // first 16bit
+        u32 set_binding_count = refl->sets[i] & 0xffff0000; // last 16bit
+        binding_count += set_binding_count;
+        binding_prefix_sum[i] = set_binding_count;
+    }
+
+    bindings.resize(binding_count);
+    
+    for (auto &resource : refl->m_resources) {
+        VkDescriptorSetLayoutBinding binding{};
+        binding.binding = resource.reg;
+        binding.descriptorCount = resource.size;
+        binding.descriptorType = utils_to_vk_descriptor_type(resource.descriptor_type);
+        binding.stageFlags = util_to_vk_shader_stage_flags(desc->shader->stages());
+        //resource.set;
+        //bindings[]
+        bindings[p] = std::move(binding);
+    }
+
+    for (u32 i = 0; i < set_count; i++) {
+        ant::vector<ant::vector<VkDescriptorSetLayoutBinding>> bindings(set_count, &stack_memory);
+        
+
+        //for (u32 j = 0; j < ; j++) {
+        //    const auto &binding = refl->sets[i].bindings[j];
+        //    VkDescriptorSetLayoutBinding &vk_binding = bindings[j];
+        //    vk_binding.binding = binding.binding;
+        //    vk_binding.descriptorType = utils_to_vk_descriptor_type(binding.type);
+        //    vk_binding.descriptorCount = binding.count;
+        //    vk_binding.stageFlags = utils_to_vk_shader_stage_flags(binding.stages);
+        //    vk_binding.pImmutableSamplers = nullptr;
+        //}
+        VkDescriptorSetLayoutCreateInfo& dslci = dslcis[i];
+        dslci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        dslci.pNext = nullptr;
+        dslci.flags = 0;
+        dslci.bindingCount = static_cast<u32>(refl->sets[i].bindings.size());
+
+        dslci.pBindings = bindings.data();
+
+    }
+    VkPipelineLayoutCreateInfo plci{};
+    plci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    plci.pNext = nullptr;
+    plci.flags = 0;
+    plci.setLayoutCount = 0;
+    plci.pSetLayouts = nullptr;
+    plci.pushConstantRangeCount = 0;
+    plci.pPushConstantRanges = nullptr;
+
+
+    vkCreatePipelineLayout();
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_destroy_rootsignature() {

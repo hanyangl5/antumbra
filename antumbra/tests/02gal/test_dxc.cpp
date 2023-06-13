@@ -53,11 +53,11 @@ TEST_CASE("compile single shader ") {
     desc.target_api = shader_blob_type::DXIL;
     desc.target_profile = shader_target_profile::PS_6_0;
 
-    compiled_shader *ret = sc.compile(source, desc);
+    compiled_shader *ret = sc.compile(&source, &desc);
     REQUIRE(ret != nullptr);
     ret->release();
     desc.target_api = shader_blob_type::SPIRV;
-    compiled_shader *ret2 = sc.compile(source, desc);
+    compiled_shader *ret2 = sc.compile(&source, &desc);
     REQUIRE(ret2 != nullptr);
     ret2->release();
 }
@@ -73,11 +73,25 @@ TEST_CASE("shader reflection test") {
     desc.target_api = shader_blob_type::DXIL;
     desc.target_profile = shader_target_profile::CS_6_0;
 
-    compiled_shader *ret = sc.compile(source, desc);
+    compiled_shader *ret = sc.compile(&source, &desc);
     REQUIRE(ret != nullptr);
     ret->release();
     desc.target_api = shader_blob_type::SPIRV;
-    compiled_shader *ret2 = sc.compile(source, desc);
+    compiled_shader *ret2 = sc.compile(&source, &desc);
     REQUIRE(ret2 != nullptr);
     ret2->release();
+}
+
+TEST_CASE("shader group from source test") {
+    //using namespace ant::gal;
+    //shader_compiler sc;
+    //shader_source_blob source;
+    //source.set(test_cs.data(), test_cs.size());
+    //shader_compile_desc desc;
+    //desc.entry = "CS_MAIN";
+    //desc.optimization_level = shader_optimization_level::NONE;
+    //desc.target_api = shader_blob_type::DXIL;
+    //desc.target_profile = shader_target_profile::CS_6_0;
+
+    //
 }

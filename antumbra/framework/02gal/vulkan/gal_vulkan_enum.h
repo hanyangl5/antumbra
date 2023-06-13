@@ -93,6 +93,7 @@ DECLARE_VK_HANDLE(shader_program) {
 };
 
 struct vk_rootsignature {
+    ant::fixed_array<VkDescriptorSetLayout, MAX_DESCRIPTOR_SET_COUNT> set_layouts;
     VkPipelineLayout pipeline_layout;
 };
 

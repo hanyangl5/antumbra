@@ -214,17 +214,14 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
     desc.target_api = shader_blob_type::SPIRV;
     desc.target_profile = shader_target_profile::CS_6_0;
 
-    compiled_shader *ret = sc.compile(source, desc);
-    REQUIRE(ret != nullptr);
-
     gal::gal_context context = initialize(gal_api::VULKAN);
 
     gal::gal_shader_program sp{};
     gal::compiled_shader_group sg{};
-    gal::compiled_shader_gourp_desc sg_desc{};
+    gal::shader_gourp_source_desc sg_desc{};
 
-    sg_desc.comp = ret;
-    sg.set(&sg_desc);
+    sg_desc.desc_comp = &desc;
+    sg.set_from_source(&source, &sg_desc);
 
     gal::gal_shader_program_desc sp_desc{};
     sp_desc.shader_group = &sg;
@@ -244,7 +241,7 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
     gal::gal_pipeline comp_pipe{};
     result = gal::create_compute_pipeline(context, &pipe_desc, &comp_pipe);
     REQUIRE(result == gal_error_code::GAL_ERRORCODE_SUCCESS);
-    ret->release();
+    sg.release();
 }
 
 TEST_CASE("test graphics pipeline creation") {}

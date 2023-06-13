@@ -179,12 +179,12 @@ shader_compiler::~shader_compiler() noexcept {}
 //    }
 //}
 
-compiled_shader *shader_compiler::compile(const shader_source_blob &blob, const shader_compile_desc &desc) {
+compiled_shader *shader_compiler::compile(shader_source_blob *blob, shader_compile_desc *desc) {
     IDxcBlobEncoding *hlsl_blob;
 
-    bool b_spv = desc.target_api == shader_blob_type::SPIRV ? true : false;
+    bool b_spv = desc->target_api == shader_blob_type::SPIRV ? true : false;
 
-    HRESULT hr = (m_idxc_utils->CreateBlob(blob.data(), static_cast<u32>(blob.size()), 0, &hlsl_blob));
+    HRESULT hr = (m_idxc_utils->CreateBlob(blob->data(), static_cast<u32>(blob->size()), 0, &hlsl_blob));
     if (FAILED(hr)) {
         LOG_ERROR("failed to create blob");
         return nullptr;
@@ -195,22 +195,22 @@ compiled_shader *shader_compiler::compile(const shader_source_blob &blob, const 
     // entry point
     args.push_back(L"-E");
     WCHAR entry[64];
-    swprintf(entry, 64, L"%hs", desc.entry);
+    swprintf(entry, 64, L"%hs", desc->entry);
     args.push_back(entry);
     // target profile
     args.push_back(L"-T");
-    const wchar_t *tp = utils_to_hlsl_target_profile(desc.target_profile);
+    const wchar_t *tp = utils_to_hlsl_target_profile(desc->target_profile);
     args.push_back(tp);
 
     args.push_back(DXC_ARG_WARNINGS_ARE_ERRORS); // warning are errors
     args.push_back(DXC_ARG_ALL_RESOURCES_BOUND);
 
-    for (auto &d : desc.defines) {
+    for (auto &d : desc->defines) {
         args.push_back(L"-D");
         args.push_back(d.wstring().c_str());
     }
 
-    for (auto &i : desc.include_search_path) {
+    for (auto &i : desc->include_search_path) {
         args.push_back(L"-I");
         args.push_back(i.wstring().c_str());
     }
@@ -221,7 +221,7 @@ compiled_shader *shader_compiler::compile(const shader_source_blob &blob, const 
         args.push_back(DXC_ARG_PACK_MATRIX_ROW_MAJOR);
     }
 
-    switch (desc.optimization_level) {
+    switch (desc->optimization_level) {
     case shader_optimization_level::NONE:
         args.push_back(DXC_ARG_DEBUG);
         args.push_back(DXC_ARG_SKIP_OPTIMIZATIONS);
@@ -320,8 +320,8 @@ compiled_shader *shader_compiler::compile(const shader_source_blob &blob, const 
         ret->m_dxc_reflection.set(reflection->GetBufferPointer(), reflection->GetBufferSize());
         ret->m_p_dxc_reflection = reflection;
     }
-    ret->m_entry = desc.entry;
-    ret->m_type = desc.target_api;
+    ret->m_entry = desc->entry;
+    ret->m_type = desc->target_api;
 
     if (b_spv) {
         ret->m_reflection = ant::ant_alloc<shader_reflection>();
@@ -349,6 +349,67 @@ void compiled_shader::release() {
         m_hash.reset();
     }
     ant_free(m_reflection);
+}
+
+void compiled_shader_group::set_from_source(shader_source_blob *source, shader_gourp_source_desc *descs) {
+    shader_compiler sc;
+    if (descs->desc_vert != nullptr) {
+        compiled_shader *ret = sc.compile(source, descs->desc_vert);
+        if (!ret) {
+            LOG_ERROR("failed to compile vertex shader");
+            return;
+        }
+        m_vert = ret;
+        m_stage_flags |= gal_shader_stage::VERT;
+    }
+    if (descs->desc_frag != nullptr) {
+        compiled_shader *ret = sc.compile(source, descs->desc_frag);
+        if (!ret) {
+            LOG_ERROR("failed to compile hull shader");
+            return;
+        }
+        m_frag = ret;
+        m_stage_flags |= gal_shader_stage::FRAG;
+    }
+    if (descs->desc_geom != nullptr) {
+        compiled_shader *ret = sc.compile(source, descs->desc_geom);
+        if (!ret) {
+            LOG_ERROR("failed to compile geometry shader");
+            return;
+        }
+        m_geom = ret;
+        m_stage_flags |= gal_shader_stage::GEOM;
+    }
+    if (descs->desc_hull != nullptr) {
+        compiled_shader *ret = sc.compile(source, descs->desc_hull);
+        if (!ret) {
+            LOG_ERROR("failed to compile hull shader");
+            return;
+        }
+        m_hull = sc.compile(source, descs->desc_hull);
+        m_stage_flags |= gal_shader_stage::HULL;
+    }
+    if (descs->desc_domin != nullptr) {
+        compiled_shader *ret = sc.compile(source, descs->desc_domin);
+        if (!ret) {
+            LOG_ERROR("failed to compile domain shader");
+            return;
+        }
+        m_domain = ret;
+        m_stage_flags |= gal_shader_stage::DOMN;
+    }
+    if (descs->desc_comp != nullptr) {
+        compiled_shader *ret = sc.compile(source, descs->desc_comp);
+        if (!ret) {
+            LOG_ERROR("failed to compile compute shader");
+            return;
+        }
+        m_comp = ret;
+        m_stage_flags |= gal_shader_stage::COMP;
+    }
+    // FIXME(hyl5): error handling? release memory?
+    m_b_same_root_signature = true;
+    create_pipeline_reflection();
 }
 
 void compiled_shader_group::set(compiled_shader_gourp_desc *desc) {

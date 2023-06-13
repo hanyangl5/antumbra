@@ -45,6 +45,23 @@ constexpr void offload_gal_vk_functions() {
 #undef VK_LOAD_FUNCTION_PTRS
 }
 
+constexpr VkDescriptorType utils_to_vk_descriptor_type(gal_descriptor_type type) {
+    switch (type) {
+    case gal_descriptor_type::CONSTANT_BUFFER:
+        return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    case gal_descriptor_type::RW_BUFFER:
+        return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    case gal_descriptor_type::TEXTURE:
+        return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    case gal_descriptor_type::RW_TEXTURE:
+        return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    case gal_descriptor_type::SAMPLER:
+        return VK_DESCRIPTOR_TYPE_SAMPLER;
+    default:
+        return VK_DESCRIPTOR_TYPE_MAX_ENUM;
+    }
+}
+
 constexpr VkFilter utils_to_vk_filter(gal_sampler_filter_mode filter) {
     switch (filter) {
     case gal_sampler_filter_mode::POINT:

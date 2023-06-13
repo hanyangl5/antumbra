@@ -41,6 +41,8 @@ inline constexpr u32 MAX_RESOURCE_NAME_LENGTH = 256;
 inline constexpr u32 MAX_RENDER_TARGET_ATTACHMENTS = 8;
 inline constexpr u32 MAX_VERTEX_BINDINGS = 15;
 inline constexpr u32 MAX_VERTEX_ATTRIBS = 15;
+inline constexpr u32 MAX_DESCRIPTOR_SET_COUNT = 8;
+inline constexpr u32 MAX_SET_BINDING_COUNT = 64;
 // VkPhysicalDeviceLimits::maxVertexInputBindings
 inline constexpr u32 MAX_VERTEX_BUFFER_BINDING = 32;
 inline constexpr u32 MAX_SEMANTIC_NAME_LENGTH = 128;

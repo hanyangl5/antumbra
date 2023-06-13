@@ -230,6 +230,7 @@ struct shader_compile_desc {
     shader_target_profile target_profile;
     shader_optimization_level optimization_level;
     shader_blob_type target_api;
+    //bool b_need_reflection;
     ant::vector<std::filesystem::path> include_search_path;
     ant::vector<std::filesystem::path> defines;
 };
@@ -271,7 +272,7 @@ struct ShaderResource {
     u32 vec_size = UINT_MAX;
     u32 array_size = 1;
     u32 columns = UINT_MAX;
-    u32 binding = UINT_MAX;
+    //u32 binding = UINT_MAX;
     // The resource binding location
     u32 reg = UINT_MAX;
 
@@ -314,7 +315,7 @@ struct shader_reflection {
     // single large allocation for names to reduce number of allocations
     char *pNamePool;
     VertexInput *pVertexInputs;
-    ant::hash_set<ShaderResource> resources;
+    ant::hash_map<ant::str, ShaderResource> resources;
     ant::vector<u32> sets;
     ShaderVariable *pVariables;
 
@@ -335,6 +336,8 @@ struct shader_reflection {
 
 struct pipeline_reflection {
     ant::vector<ShaderResource> m_resources;
+    ant::vector<u32> sets; // 16bit set count, 16 bit binding count;
+    //ant::vector<std::pair<const char*, ShaderResource>> m_resources;
     //gal_shader_stage mShaderStages;
     // the individual stages reflection data.
     //shader_reflection mStageReflections[MAX_SHADER_STAGE_COUNT];
@@ -367,6 +370,7 @@ struct compiled_shader {
     const blob *pdb() const;
     const blob *hash() const;
     const blob *dxc_reflection() const;
+    const shader_reflection *reflection() const;
     const char *entry();
   private:
     void create_shader_reflection();
@@ -395,11 +399,23 @@ struct compiled_shader_gourp_desc {
     compiled_shader *domain;
     compiled_shader *comp;
 };
+struct shader_gourp_source_desc {
+    shader_compile_desc *desc_vert;
+    shader_compile_desc *desc_frag;
+    shader_compile_desc *desc_geom;
+    shader_compile_desc *desc_domin;
+    shader_compile_desc *desc_hull;
+    shader_compile_desc *desc_comp;
+};
 
 // FIXME(hyl5): I think oop interface is not consistent with the gal degisn
+// TODO(hyl5): serializer/deserialzer for compiled_shader_group, the dxil/spirv/reflection shouldn't be generated in runtime.
 struct compiled_shader_group {
   public:
+    // set from compiled shaders
     void set(compiled_shader_gourp_desc *desc);
+    // set a shader group from source code and compile descs
+    void set_from_source(shader_source_blob *source, shader_gourp_source_desc *descs);
     void release();
 
     compiled_shader *vert();
@@ -412,7 +428,10 @@ struct compiled_shader_group {
     pipeline_reflection *reflection();
   private:
     void create_pipeline_reflection();
+
   private:
+    // the shader group is created from one shader
+    bool m_b_same_root_signature = false;
     gal_shader_stage m_stage_flags = gal_shader_stage::UNDEFINED;
     compiled_shader *m_vert = nullptr;
     compiled_shader *m_frag = nullptr;
@@ -430,7 +449,7 @@ class shader_compiler : public Singleton<shader_compiler> {
 
     DELETE_COPY_MOVE(shader_compiler)
 
-    compiled_shader *compile(const shader_source_blob &blob, const shader_compile_desc &desc);
+    compiled_shader *compile(shader_source_blob *blob, shader_compile_desc *desc);
 
   private:
     IDxcUtils *m_idxc_utils;

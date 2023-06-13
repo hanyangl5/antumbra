@@ -78,6 +78,8 @@ void compiled_shader::create_shader_reflection() {
 
 const blob *compiled_shader::byte_code() const { return &m_byte_code; }
 
+const shader_reflection *compiled_shader::reflection() const { return m_reflection ? m_reflection : nullptr; }
+
 const char *compiled_shader::entry() { return m_entry; }
 
 void compiled_shader::create_shader_reflection_from_spirv() {
@@ -115,17 +117,13 @@ void compiled_shader::create_shader_reflection_from_spirv() {
 
     // push constants
     count += static_cast<u32>(resources.push_constant_buffers.size()); // push constants
-    // count += (uint32_t)resources.acceleration_structures.size(); // raytracing structures
-
-    //m_reflection->resources.resize(count);
-
-    u32 current_resource = 0;
-    
-    ant::hash_set<u32> used_sets;
+    // count += (u32)resources.acceleration_structures.size(); // raytracing structures
+    auto stack_memory = get_stack_memory_resource(128);
+    ant::hash_map<u32, u32> used_sets(&stack_memory);
     // stage inputs
     for (auto &input : resources.stage_inputs) {
         ShaderResource resource;
-        resource.binding =
+        resource.reg =
             compiler.get_decoration(input.id, spv::DecorationLocation); // location is the binding point for inputs
         resource.resource_type = ShaderResourceType::INPUT;
         resource.used_stages = stage;
@@ -134,14 +132,14 @@ void compiled_shader::create_shader_reflection_from_spirv() {
         //resource.size = (type.width / 8) * type.vecsize;
         read_resource_vec_size(compiler, input, resource);
         read_resource_array_size(compiler, input, resource);
-        m_reflection->resources.insert(std::move(resource));
+        m_reflection->resources.emplace(std::move(resource.name), std::move(resource));
     }
     // stage output
     for (u32 i = 0; i < static_cast<u32>(resources.stage_outputs.size()); ++i) {
         spirv_cross::Resource &input = resources.stage_outputs[i];
         ShaderResource resource;
 
-        resource.binding =
+        resource.reg =
             compiler.get_decoration(input.id, spv::DecorationLocation); // location is the binding point for inputs
         resource.resource_type = ShaderResourceType::OUTPUT;
         resource.used_stages = stage;
@@ -150,7 +148,7 @@ void compiled_shader::create_shader_reflection_from_spirv() {
         //resource.size = (type.width / 8) * type.vecsize;
         read_resource_vec_size(compiler, input, resource);
         read_resource_array_size(compiler, input, resource);
-        m_reflection->resources.insert(std::move(resource));
+        m_reflection->resources.emplace(std::move(resource.name), std::move(resource));
     }
 
     // push constants
@@ -162,7 +160,7 @@ void compiled_shader::create_shader_reflection_from_spirv() {
         spirv_cross::SPIRType type = compiler.get_type(input.type_id);
         resource.size = static_cast<u32>(compiler.get_declared_struct_size(type));
         resource.name = std::move(input.name);
-        m_reflection->resources.insert(std::move(resource));
+        m_reflection->resources.emplace(std::move(resource.name), std::move(resource));
     }
 
     // resources
@@ -175,11 +173,11 @@ void compiled_shader::create_shader_reflection_from_spirv() {
         resource.name = std::move(input.name);
 
         resource.set = compiler.get_decoration(input.id, spv::DecorationDescriptorSet);
-        used_sets.insert(resource.set);
-        resource.binding = compiler.get_decoration(input.id, spv::DecorationBinding);
+        used_sets[resource.set++];
+        resource.reg = compiler.get_decoration(input.id, spv::DecorationBinding);
         read_resource_size(compiler, input, resource);
         read_resource_array_size(compiler, input, resource);
-        m_reflection->resources.insert(std::move(resource));
+        m_reflection->resources.emplace(std::move(resource.name), std::move(resource));
     }
 
     for (auto &input : resources.storage_buffers) {
@@ -191,10 +189,11 @@ void compiled_shader::create_shader_reflection_from_spirv() {
         resource.name = std::move(input.name);
 
         resource.set = compiler.get_decoration(input.id, spv::DecorationDescriptorSet);
-        resource.binding = compiler.get_decoration(input.id, spv::DecorationBinding);
+        used_sets[resource.set++];
+        resource.reg = compiler.get_decoration(input.id, spv::DecorationBinding);
         read_resource_size(compiler, input, resource);
         read_resource_array_size(compiler, input, resource);
-        m_reflection->resources.insert(std::move(resource));
+        m_reflection->resources.emplace(resource.name.c_str(), std::move(resource));
     }
 
     for (auto &input : resources.separate_images) {
@@ -206,10 +205,11 @@ void compiled_shader::create_shader_reflection_from_spirv() {
         resource.name = std::move(input.name);
 
         resource.set = compiler.get_decoration(input.id, spv::DecorationDescriptorSet);
-        resource.binding = compiler.get_decoration(input.id, spv::DecorationBinding);
+        used_sets[resource.set++];
+        resource.reg = compiler.get_decoration(input.id, spv::DecorationBinding);
         read_resource_array_size(compiler, input, resource);
         //resource.dim = compiler.get_type(input.id).image.dim;
-        m_reflection->resources.insert(std::move(resource));
+        m_reflection->resources.emplace(std::move(resource.name), std::move(resource));
     }
 
     for (auto &input : resources.storage_images) {
@@ -221,10 +221,11 @@ void compiled_shader::create_shader_reflection_from_spirv() {
         resource.name = std::move(input.name);
 
         resource.set = compiler.get_decoration(input.id, spv::DecorationDescriptorSet);
-        resource.binding = compiler.get_decoration(input.id, spv::DecorationBinding);
+        used_sets[resource.set++];
+        resource.reg = compiler.get_decoration(input.id, spv::DecorationBinding);
         //resource.dim = compiler.get_type(input.id).image.dim;
         read_resource_array_size(compiler, input, resource);
-        m_reflection->resources.insert(std::move(resource));
+        m_reflection->resources.emplace(std::move(resource.name), std::move(resource));
     }
 
     for (auto &input : resources.separate_samplers) {
@@ -234,10 +235,14 @@ void compiled_shader::create_shader_reflection_from_spirv() {
         resource.used_stages = stage;
         resource.name = std::move(input.name);
         resource.set = compiler.get_decoration(input.id, spv::DecorationDescriptorSet);
-        resource.binding = compiler.get_decoration(input.id, spv::DecorationBinding);
+        used_sets[resource.set++];
+        resource.reg = compiler.get_decoration(input.id, spv::DecorationBinding);
         read_resource_array_size(compiler, input, resource);
-        m_reflection->resources.insert(std::move(resource));
+        m_reflection->resources.emplace(std::move(resource.name), std::move(resource));
     }
+    m_reflection->sets = ant::vector<u32>(used_sets.begin(), used_sets.end());
+    std::transform(used_sets.begin(), used_sets.end(), std::back_inserter(m_reflection->sets),
+                   [](const auto &p) { return (p.first << 16) & p.second; });
 }
 
 void compiled_shader_group::create_pipeline_reflection() {
@@ -247,9 +252,27 @@ void compiled_shader_group::create_pipeline_reflection() {
         return;
     }
 
+    m_pipeline_reflection = ant_alloc<pipeline_reflection>();
+
+    if (m_b_same_root_signature) {
+        // we only need to set from one shader beacuse all shader in one shader group share the same root signature
+        shader_reflection *refl;
+        refl = m_vert ? const_cast<shader_reflection *>(m_vert->reflection()) : nullptr;
+        // vert/comp must exist for a shader group
+        refl = m_comp ? const_cast<shader_reflection *>(m_comp->reflection()) : nullptr;
+
+        //m_pipeline_reflection->m_resources =
+        //    ant::vector<std::pair<const char *, ShaderResource>>(refl->resources.begin(), refl->resources.end());
+
+        std::transform(refl->resources.begin(), refl->resources.end(),
+                       std::back_inserter(m_pipeline_reflection->m_resources), [](const auto &p) { return p.second; });
+        m_pipeline_reflection->sets = std::move((refl->sets));
+        return;
+    }
+
     //// Sanity check to make sure we don't have repeated stages.
     //ShaderStage combinedShaderStages = (ShaderStage)0;
-    //for (uint32_t i = 0; i < stageCount; ++i) {
+    //for (u32 i = 0; i < stageCount; ++i) {
     //    if ((combinedShaderStages & pReflection[i].mShaderStage) != 0) {
     //       LOG_ERROR("Duplicate shader stage was detected in shader reflection array.");
     //        return;
@@ -260,147 +283,147 @@ void compiled_shader_group::create_pipeline_reflection() {
     // Combine all shaders
     // this will have a large amount of looping
     // 1. count number of resources
-    uint32_t vertexStageIndex = ~0u;
-    uint32_t hullStageIndex = ~0u;
-    uint32_t domainStageIndex = ~0u;
-    uint32_t geometryStageIndex = ~0u;
-    uint32_t pixelStageIndex = ~0u;
-    ShaderResource *pResources = NULL;
-    uint32_t resourceCount = 0;
-    ShaderVariable *pVariables = NULL;
-    uint32_t variableCount = 0;
-    
-    
+    //u32 vertexStageIndex = ~0u;
+    //u32 hullStageIndex = ~0u;
+    //u32 domainStageIndex = ~0u;
+    //u32 geometryStageIndex = ~0u;
+    //u32 pixelStageIndex = ~0u;
+    //ShaderResource *pResources = NULL;
+    //u32 resourceCount = 0;
+    //ShaderVariable *pVariables = NULL;
+    //u32 variableCount = 0;
 
-    //Should we be using dynamic arrays for these? Perhaps we can add std::vector
-    // like functionality?
-    ShaderResource *uniqueResources[512];
-    ShaderStage shaderUsage[512];
-    ShaderVariable *uniqueVariable[512];
-    ShaderResource *uniqueVariableParent[512];
-    for (uint32_t i = 0; i < stageCount; ++i) {
-        ShaderReflection *pSrcRef = pReflection + i;
-        pOutReflection->mStageReflections[i] = *pSrcRef;
-
-        if (pSrcRef->mShaderStage == gal_shader_stage::VERT) {
-            vertexStageIndex = i;
-        }
-#if !defined(METAL)
-        else if (pSrcRef->mShaderStage == gal_shader_stage::HULL) {
-            hullStageIndex = i;
-        } else if (pSrcRef->mShaderStage == gal_shader_stage::DOMN) {
-            domainStageIndex = i;
-        } else if (pSrcRef->mShaderStage == gal_shader_stage::GEOM) {
-            geometryStageIndex = i;
-        }
-#endif
-        else if (pSrcRef->mShaderStage == gal_shader_stage::FRAG) {
-            pixelStageIndex = i;
-        }
-
-        //Loop through all shader resources
-        for (uint32_t j = 0; j < pSrcRef->mShaderResourceCount; ++j) {
-            bool unique = true;
-
-            //Go through all already added shader resources to see if this shader
-            // resource was already added from a different shader stage. If we find a
-            // duplicate shader resource, we add the shader stage to the shader stage
-            // mask of that resource instead.
-            for (uint32_t k = 0; k < resourceCount; ++k) {
-                unique = !ShaderResourceCmp(&pSrcRef->pShaderResources[j], uniqueResources[k]);
-                if (unique == false) {
-                    // update shader usage
-                    // NOT SURE
-                    //shaderUsage[k] = (ShaderStage)(shaderUsage[k] & pSrcRef->pShaderResources[j].used_stages);
-                    shaderUsage[k] |= pSrcRef->pShaderResources[j].used_stages;
-                    break;
-                }
-            }
-
-            //If it's unique, we add it to the list of shader resourceas
-            if (unique == true) {
-                shaderUsage[resourceCount] = pSrcRef->pShaderResources[j].used_stages;
-                uniqueResources[resourceCount] = &pSrcRef->pShaderResources[j];
-                resourceCount++;
-            }
-        }
-
-        //Loop through all shader variables (constant/uniform buffer members)
-        for (uint32_t j = 0; j < pSrcRef->mVariableCount; ++j) {
-            bool unique = true;
-            //Go through all already added shader variables to see if this shader
-            // variable was already added from a different shader stage. If we find a
-            // duplicate shader variables, we don't add it.
-            for (uint32_t k = 0; k < variableCount; ++k) {
-                unique = !ShaderVariableCmp(&pSrcRef->pVariables[j], uniqueVariable[k]);
-                if (unique == false)
-                    break;
-            }
-
-            //If it's unique we add it to the list of shader variables
-            if (unique) {
-                uniqueVariableParent[variableCount] = &pSrcRef->pShaderResources[pSrcRef->pVariables[j].parent_index];
-                uniqueVariable[variableCount] = &pSrcRef->pVariables[j];
-                variableCount++;
-            }
-        }
-    }
-
-    //Copy over the shader resources in a dynamic array of the correct size
-    if (resourceCount) {
-        pResources = (ShaderResource *)ant_calloc(resourceCount, sizeof(ShaderResource));
-
-        for (uint32_t i = 0; i < resourceCount; ++i) {
-            pResources[i] = *uniqueResources[i];
-            pResources[i].used_stages = shaderUsage[i];
-        }
-    }
-
-    //Copy over the shader variables in a dynamic array of the correct size
-    if (variableCount) {
-        pVariables = (ShaderVariable *)ant_malloc(sizeof(ShaderVariable) * variableCount);
-
-        for (uint32_t i = 0; i < variableCount; ++i) {
-            pVariables[i] = *uniqueVariable[i];
-            ShaderResource *parentResource = uniqueVariableParent[i];
-            // look for parent
-            for (uint32_t j = 0; j < resourceCount; ++j) {
-                if (ShaderResourceCmp(&pResources[j], parentResource)) //-V522
-                {
-                    pVariables[i].parent_index = j;
-                    break;
-                }
-            }
-        }
-    }
-
-    // all refection structs should be built now
-    pOutReflection->mShaderStages = combinedShaderStages;
-
-    pOutReflection->mStageReflectionCount = stageCount;
-
-    pOutReflection->mVertexStageIndex = vertexStageIndex;
-    pOutReflection->mHullStageIndex = hullStageIndex;
-    pOutReflection->mDomainStageIndex = domainStageIndex;
-    pOutReflection->mGeometryStageIndex = geometryStageIndex;
-    pOutReflection->mPixelStageIndex = pixelStageIndex;
-
-    pOutReflection->pShaderResources = pResources;
-    pOutReflection->mShaderResourceCount = resourceCount;
-
-    pOutReflection->pVariables = pVariables;
-    pOutReflection->mVariableCount = variableCount;
+    //
+    //
+    //    //Should we be using dynamic arrays for these? Perhaps we can add std::vector
+    //    // like functionality?
+    //    ShaderResource *uniqueResources[512];
+    //    ShaderStage shaderUsage[512];
+    //    ShaderVariable *uniqueVariable[512];
+    //    ShaderResource *uniqueVariableParent[512];
+    //    for (u32 i = 0; i < stageCount; ++i) {
+    //        ShaderReflection *pSrcRef = pReflection + i;
+    //        pOutReflection->mStageReflections[i] = *pSrcRef;
+    //
+    //        if (pSrcRef->mShaderStage == gal_shader_stage::VERT) {
+    //            vertexStageIndex = i;
+    //        }
+    //#if !defined(METAL)
+    //        else if (pSrcRef->mShaderStage == gal_shader_stage::HULL) {
+    //            hullStageIndex = i;
+    //        } else if (pSrcRef->mShaderStage == gal_shader_stage::DOMN) {
+    //            domainStageIndex = i;
+    //        } else if (pSrcRef->mShaderStage == gal_shader_stage::GEOM) {
+    //            geometryStageIndex = i;
+    //        }
+    //#endif
+    //        else if (pSrcRef->mShaderStage == gal_shader_stage::FRAG) {
+    //            pixelStageIndex = i;
+    //        }
+    //
+    //        //Loop through all shader resources
+    //        for (u32 j = 0; j < pSrcRef->mShaderResourceCount; ++j) {
+    //            bool unique = true;
+    //
+    //            //Go through all already added shader resources to see if this shader
+    //            // resource was already added from a different shader stage. If we find a
+    //            // duplicate shader resource, we add the shader stage to the shader stage
+    //            // mask of that resource instead.
+    //            for (u32 k = 0; k < resourceCount; ++k) {
+    //                unique = !ShaderResourceCmp(&pSrcRef->pShaderResources[j], uniqueResources[k]);
+    //                if (unique == false) {
+    //                    // update shader usage
+    //                    // NOT SURE
+    //                    //shaderUsage[k] = (ShaderStage)(shaderUsage[k] & pSrcRef->pShaderResources[j].used_stages);
+    //                    shaderUsage[k] |= pSrcRef->pShaderResources[j].used_stages;
+    //                    break;
+    //                }
+    //            }
+    //
+    //            //If it's unique, we add it to the list of shader resourceas
+    //            if (unique == true) {
+    //                shaderUsage[resourceCount] = pSrcRef->pShaderResources[j].used_stages;
+    //                uniqueResources[resourceCount] = &pSrcRef->pShaderResources[j];
+    //                resourceCount++;
+    //            }
+    //        }
+    //
+    //        //Loop through all shader variables (constant/uniform buffer members)
+    //        for (u32 j = 0; j < pSrcRef->mVariableCount; ++j) {
+    //            bool unique = true;
+    //            //Go through all already added shader variables to see if this shader
+    //            // variable was already added from a different shader stage. If we find a
+    //            // duplicate shader variables, we don't add it.
+    //            for (u32 k = 0; k < variableCount; ++k) {
+    //                unique = !ShaderVariableCmp(&pSrcRef->pVariables[j], uniqueVariable[k]);
+    //                if (unique == false)
+    //                    break;
+    //            }
+    //
+    //            //If it's unique we add it to the list of shader variables
+    //            if (unique) {
+    //                uniqueVariableParent[variableCount] = &pSrcRef->pShaderResources[pSrcRef->pVariables[j].parent_index];
+    //                uniqueVariable[variableCount] = &pSrcRef->pVariables[j];
+    //                variableCount++;
+    //            }
+    //        }
+    //    }
+    //
+    //    //Copy over the shader resources in a dynamic array of the correct size
+    //    if (resourceCount) {
+    //        pResources = (ShaderResource *)ant_calloc(resourceCount, sizeof(ShaderResource));
+    //
+    //        for (u32 i = 0; i < resourceCount; ++i) {
+    //            pResources[i] = *uniqueResources[i];
+    //            pResources[i].used_stages = shaderUsage[i];
+    //        }
+    //    }
+    //
+    //    //Copy over the shader variables in a dynamic array of the correct size
+    //    if (variableCount) {
+    //        pVariables = (ShaderVariable *)ant_malloc(sizeof(ShaderVariable) * variableCount);
+    //
+    //        for (u32 i = 0; i < variableCount; ++i) {
+    //            pVariables[i] = *uniqueVariable[i];
+    //            ShaderResource *parentResource = uniqueVariableParent[i];
+    //            // look for parent
+    //            for (u32 j = 0; j < resourceCount; ++j) {
+    //                if (ShaderResourceCmp(&pResources[j], parentResource)) //-V522
+    //                {
+    //                    pVariables[i].parent_index = j;
+    //                    break;
+    //                }
+    //            }
+    //        }
+    //    }
+    //
+    //    // all refection structs should be built now
+    //    pOutReflection->mShaderStages = combinedShaderStages;
+    //
+    //    pOutReflection->mStageReflectionCount = stageCount;
+    //
+    //    pOutReflection->mVertexStageIndex = vertexStageIndex;
+    //    pOutReflection->mHullStageIndex = hullStageIndex;
+    //    pOutReflection->mDomainStageIndex = domainStageIndex;
+    //    pOutReflection->mGeometryStageIndex = geometryStageIndex;
+    //    pOutReflection->mPixelStageIndex = pixelStageIndex;
+    //
+    //    pOutReflection->pShaderResources = pResources;
+    //    pOutReflection->mShaderResourceCount = resourceCount;
+    //
+    //    pOutReflection->pVariables = pVariables;
+    //    pOutReflection->mVariableCount = variableCount;
 }
 
-void destroyPipelineReflection(PipelineReflection *pReflection) {
-    if (pReflection == NULL)
-        return;
-
-    for (uint32_t i = 0; i < pReflection->mStageReflectionCount; ++i)
-        destroyShaderReflection(&pReflection->mStageReflections[i]);
-
-    ant_free(pReflection->pShaderResources);
-    ant_free(pReflection->pVariables);
-}
+//void destroyPipelineReflection(PipelineReflection *pReflection) {
+//    if (pReflection == NULL)
+//        return;
+//
+//    for (u32 i = 0; i < pReflection->mStageReflectionCount; ++i)
+//        destroyShaderReflection(&pReflection->mStageReflections[i]);
+//
+//    ant_free(pReflection->pShaderResources);
+//    ant_free(pReflection->pVariables);
+//}
 
 } // namespace ant::gal
