@@ -55,7 +55,7 @@
 #include "framework/02gal/shader/shader_compiler.h"
 #include "gal_vulkan_enum.h"
 #include "gal_vulkan_utils.h"
-#define ANT_VK_API_VERSION VK_API_VERSION_1_3
+#define ANT_VK_API_VERSION VK_API_VERSION_1_2
 
 namespace ant::gal {
 
@@ -725,7 +725,7 @@ gal_error_code vk_create_render_target(gal_context context, gal_render_target_de
     if (gal_result != gal_error_code::GAL_ERRORCODE_SUCCESS) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
     }
-    
+
     VkImageViewType view_type = utils_to_vk_image_view_type(desc->dimension);
 
     vk_texture *vk_tex = reinterpret_cast<vk_texture *>(vk_rt->m_texture);
@@ -927,8 +927,8 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
     u32 swapChainImageCount = 0;
     ant::vector<VkPresentModeKHR> modes(&stack_memory);
     // Get present mode count
-    result =
-        (vkGetPhysicalDeviceSurfacePresentModesKHR(vk_ctx->active_gpu, vk_sc->m_surface, &swapChainImageCount, nullptr));
+    result = (vkGetPhysicalDeviceSurfacePresentModesKHR(vk_ctx->active_gpu, vk_sc->m_surface, &swapChainImageCount,
+                                                        nullptr));
     if (result != VK_SUCCESS) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
     }
@@ -1083,7 +1083,7 @@ gal_error_code vk_create_shader_program(gal_context context, gal_shader_program_
     if (!shader_program) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
     }
-    
+
     u32 stage_count = 0;
     // count stage count
     for (u32 i = 0; i < gal_shader_stage_count; ++i) {
@@ -1287,18 +1287,17 @@ gal_error_code vk_create_graphics_pipeline(gal_context context, gal_pipeline_des
 
     vk_pipe->m_desc = *desc;
     vk_pipe->m_type = gal_pipeline_type::GRAPHICS;
-   
+
     gal_graphics_pipeline_desc gfx_desc = std::get<gal_graphics_pipeline_desc>(desc->desc);
 
     vk_shader_program *vk_sp = reinterpret_cast<vk_shader_program *>(gfx_desc.shader);
-
 
     gal_vertex_layout *pVertexLayout = gfx_desc.pVertexLayout;
     u32 stage_count = 0;
     ant::fixed_array<VkPipelineShaderStageCreateInfo, 5> stages;
 
     gal_shader_program_desc *sp_desc = &vk_sp->m_desc;
-    
+
     for (u32 i = 0; i < 5; ++i) {
         gal_shader_stage stage_mask = static_cast<gal_shader_stage>(1 << i);
         if (stage_mask == (sp_desc->shader_group->stages() & stage_mask)) {
@@ -1497,9 +1496,8 @@ gal_error_code vk_create_graphics_pipeline(gal_context context, gal_pipeline_des
                                          ? VK_NULL_HANDLE
                                          : reinterpret_cast<vk_pipeline_cache *>(desc->pipeline_cache)->pipeline_cache;
 
-
-    VkResult result = (vkCreateGraphicsPipelines(vk_ctx->device, pipeline_cache, 1, &add_info, nullptr,
-                                                 &vk_pipe->pipeline));
+    VkResult result =
+        (vkCreateGraphicsPipelines(vk_ctx->device, pipeline_cache, 1, &add_info, nullptr, &vk_pipe->pipeline));
 
     if (result != VK_SUCCESS || vk_pipe->pipeline == gal_null) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
@@ -1539,77 +1537,88 @@ gal_error_code vk_free_descriptorset() {
     //vkFreeDescriptorSets()
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
-gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_desc* desc, gal_rootsignature* root_signature) {
-//gal_error_code vk_create_rootsignature() {
-    const auto& refl = desc->shader->reflection();
+gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_desc *desc,
+                                       gal_rootsignature *root_signature) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
+    vk_rootsignature *vk_rs = ant::ant_alloc<ant::gal::vk_rootsignature>();
+    if (!vk_rs) {
+        return gal_error_code::GAL_ERRORCODE_ERROR;
+    }
+    *root_signature = reinterpret_cast<gal_rootsignature>(vk_rs);
+
+    const auto &refl = desc->shader->reflection();
     u32 set_count = static_cast<u32>(refl->sets.size());
     // TODO(hyl5): seperate descriptor set layouts for caching
 
-    auto &stack_memory = ant::get_stack_memory_resource(1024);
+    auto stack_memory = ant::get_stack_memory_resource(1024);
     if (set_count > MAX_DESCRIPTOR_SET_COUNT) {
         LOG_ERROR("maximum of descriptor set count is: {}, current is: {}", MAX_DESCRIPTOR_SET_COUNT, set_count);
         return gal_error_code::GAL_ERRORCODE_ERROR;
     }
 
-    ant::fixed_array<VkDescriptorSetLayoutCreateInfo, MAX_DESCRIPTOR_SET_COUNT> dslcis();
+    ant::fixed_array<VkDescriptorSetLayoutCreateInfo, MAX_DESCRIPTOR_SET_COUNT> set_layouts_ci;
+    //ant::fixed_array<u32, MAX_DESCRIPTOR_SET_COUNT> set_binding_offsets;
     ant::vector<VkDescriptorSetLayoutBinding> bindings(&stack_memory);
-    ant::vector<u32> binding_prefix_sum(refl->sets.size(), & stack_memory);
-    
+    //ant::vector<u32> binding_prefix_sum(refl->sets.size(), &stack_memory);
+    ant::vector<u32> binding_offsets(refl->sets.size(), &stack_memory);
     u32 binding_count = 0;
-
+    ant::map<int, int> set_index_map;
     for (u32 i = 0; i < refl->sets.size(); i++) {
-        u32 set_index = (refl->sets[i] & 0xffff) >> 16; // first 16bit
-        u32 set_binding_count = refl->sets[i] & 0xffff0000; // last 16bit
+        u32 set_index = (refl->sets[i] >> 16) & 0x0000ffff; // first 16bit
+        u32 set_binding_count = refl->sets[i] & 0x0000ffff; // last 16bit
+
+        set_index_map.insert({i, set_index});
+        binding_offsets[i] = binding_count;
         binding_count += set_binding_count;
-        binding_prefix_sum[i] = set_binding_count;
+        //binding_prefix_sum[i] = set_binding_count;
     }
 
     bindings.resize(binding_count);
-    
+
+    ant::vector<VkPushConstantRange> push_constants(&stack_memory);
+    VkShaderStageFlags stages = util_to_vk_shader_stage_flags(desc->shader->stages());
+
+    // iterate all bindings and push constants
     for (auto &resource : refl->m_resources) {
-        VkDescriptorSetLayoutBinding binding{};
-        binding.binding = resource.reg;
-        binding.descriptorCount = resource.size;
-        binding.descriptorType = utils_to_vk_descriptor_type(resource.descriptor_type);
-        binding.stageFlags = util_to_vk_shader_stage_flags(desc->shader->stages());
-        //resource.set;
-        //bindings[]
-        bindings[p] = std::move(binding);
+        if (resource.resource_type == ShaderResourceType::RESOURCE) {
+            VkDescriptorSetLayoutBinding binding{};
+            binding.binding = resource.reg;
+            binding.descriptorCount = resource.size;
+            binding.descriptorType = utils_to_vk_descriptor_type(resource.descriptor_type);
+            binding.stageFlags = stages;
+            bindings[binding_offsets[set_index_map[resource.set]]++] = std::move(binding);
+        } else if (resource.resource_type == ShaderResourceType::PUSH_CONSTANT) {
+            push_constants.emplace_back(VkPushConstantRange{stages, 0, 0});
+        }
     }
 
+    VkResult result = VK_SUCCESS;
+
     for (u32 i = 0; i < set_count; i++) {
-        ant::vector<ant::vector<VkDescriptorSetLayoutBinding>> bindings(set_count, &stack_memory);
-        
-
-        //for (u32 j = 0; j < ; j++) {
-        //    const auto &binding = refl->sets[i].bindings[j];
-        //    VkDescriptorSetLayoutBinding &vk_binding = bindings[j];
-        //    vk_binding.binding = binding.binding;
-        //    vk_binding.descriptorType = utils_to_vk_descriptor_type(binding.type);
-        //    vk_binding.descriptorCount = binding.count;
-        //    vk_binding.stageFlags = utils_to_vk_shader_stage_flags(binding.stages);
-        //    vk_binding.pImmutableSamplers = nullptr;
-        //}
-        VkDescriptorSetLayoutCreateInfo& dslci = dslcis[i];
-        dslci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        dslci.pNext = nullptr;
-        dslci.flags = 0;
-        dslci.bindingCount = static_cast<u32>(refl->sets[i].bindings.size());
-
-        dslci.pBindings = bindings.data();
-
+        VkDescriptorSetLayoutCreateInfo &ci = set_layouts_ci[i];
+        ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ci.pNext = nullptr;
+        ci.flags = 0;
+        ci.bindingCount = (i == 0) ? binding_offsets[i] : (binding_offsets[i] - binding_offsets[i - 1]);
+        ci.pBindings = bindings.data() + ((i == 0) ? 0 : binding_offsets[i - 1]);
+        result = vkCreateDescriptorSetLayout(vk_ctx->device, &ci, nullptr, &vk_rs->set_layouts[i]);
+        if (result != VK_SUCCESS) {
+            return gal_error_code::GAL_ERRORCODE_ERROR;
+        }
     }
     VkPipelineLayoutCreateInfo plci{};
     plci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     plci.pNext = nullptr;
     plci.flags = 0;
-    plci.setLayoutCount = 0;
-    plci.pSetLayouts = nullptr;
-    plci.pushConstantRangeCount = 0;
-    plci.pPushConstantRanges = nullptr;
+    plci.setLayoutCount = set_count;
+    plci.pSetLayouts = vk_rs->set_layouts.data();
+    plci.pushConstantRangeCount = static_cast<u32>(push_constants.size());
+    plci.pPushConstantRanges = push_constants.data();
 
-
-    vkCreatePipelineLayout();
+    result = vkCreatePipelineLayout(vk_ctx->device, &plci, nullptr, &vk_rs->pipeline_layout);
+    if (result != VK_SUCCESS) {
+        return gal_error_code::GAL_ERRORCODE_ERROR;
+    }
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_destroy_rootsignature() {
@@ -1642,7 +1651,8 @@ gal_error_code vk_destroy_semaphore() {
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 // cmds
-gal_error_code vk_create_command_pool(gal_context context, gal_command_pool_desc *desc, gal_command_pool *command_pool) {
+gal_error_code vk_create_command_pool(gal_context context, gal_command_pool_desc *desc,
+                                      gal_command_pool *command_pool) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_command_pool *vk_cmd_pool = ant::ant_alloc<ant::gal::vk_command_pool>();
     if (!vk_cmd_pool) {
@@ -1654,7 +1664,7 @@ gal_error_code vk_create_command_pool(gal_context context, gal_command_pool_desc
     ci.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     ci.pNext = nullptr;
     ci.flags = 0;
-    
+
     ci.queueFamilyIndex = utils_to_vk_queue_family_index(desc->queue_type, vk_ctx);
     if (desc->b_transient) {
         ci.flags |= VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
@@ -1684,7 +1694,6 @@ gal_error_code vk_destroy_command_pool(gal_context context, gal_command_pool com
         command_pool = gal_null;
     }
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
-
 }
 
 gal_error_code vk_allocate_command_list(gal_context context, gal_command_list_desc *desc, gal_command_list *command) {
@@ -1710,7 +1719,7 @@ gal_error_code vk_allocate_command_list(gal_context context, gal_command_list_de
 
 gal_error_code vk_free_command_list(gal_context context, gal_command_list command) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    
+
     if (command != gal_null) {
         vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
         vkFreeCommandBuffers(vk_ctx->device, reinterpret_cast<vk_command_pool *>(vk_cmd->m_cmd_pool)->m_cmd_pool, 1,
@@ -1834,10 +1843,11 @@ gal_error_code vk_cmd_bind_descriptorset() {
 }
 gal_error_code vk_cmd_bind_pipeline(gal_command_list command, gal_pipeline pipeline) {
     vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
-    vkCmdBindPipeline(vk_cmd->m_command, utils_to_vk_pipeline_bind_point(pipeline->m_type), reinterpret_cast<vk_pipeline*>(pipeline)->pipeline);
+    vkCmdBindPipeline(vk_cmd->m_command, utils_to_vk_pipeline_bind_point(pipeline->m_type),
+                      reinterpret_cast<vk_pipeline *>(pipeline)->pipeline);
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
-gal_error_code vk_cmd_begin_renderpass(gal_command_list command, gal_renderpass_begin_desc* desc) {
+gal_error_code vk_cmd_begin_renderpass(gal_command_list command, gal_renderpass_begin_desc *desc) {
     vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
     if (desc) {
 
@@ -1862,16 +1872,18 @@ gal_error_code vk_cmd_dispatch(gal_command_list command, u32 group_count_x, u32 
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 
-gal_error_code vk_cmd_draw_instanced(gal_command_list command, u32 vertex_count, u32 first_vertex, u32 instance_count, u32 first_instance) {
+gal_error_code vk_cmd_draw_instanced(gal_command_list command, u32 vertex_count, u32 first_vertex, u32 instance_count,
+                                     u32 first_instance) {
     vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
 
     vkCmdDraw(vk_cmd->m_command, vertex_count, instance_count, first_vertex, first_instance);
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
-gal_error_code vk_cmd_draw_indexed_instanced(gal_command_list command, u32 index_count, u32 first_index, u32 instance_count, u32 first_instance, u32 first_vertex) {
+gal_error_code vk_cmd_draw_indexed_instanced(gal_command_list command, u32 index_count, u32 first_index,
+                                             u32 instance_count, u32 first_instance, u32 first_vertex) {
     vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
 
-    vkCmdDrawIndexed(vk_cmd->m_command, index_count,instance_count, first_index, first_vertex, first_instance);
+    vkCmdDrawIndexed(vk_cmd->m_command, index_count, instance_count, first_index, first_vertex, first_instance);
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 
@@ -1933,7 +1945,8 @@ gal_error_code vk_cmd_fill_texture() {
 }
 gal_error_code vk_cmd_upload_buffer() { return gal_error_code::GAL_ERRORCODE_SUCCESS; }
 gal_error_code vk_cmd_upload_texture() { return gal_error_code::GAL_ERRORCODE_SUCCESS; }
-gal_error_code vk_cmd_update_subresources(gal_command_list command, gal_texture dst, gal_buffer src, u32 subresource_count, gal_texture_subresource_desc *descs) {
+gal_error_code vk_cmd_update_subresources(gal_command_list command, gal_texture dst, gal_buffer src,
+                                          u32 subresource_count, gal_texture_subresource_desc *descs) {
     vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
     if (subresource_count > MAX_TEXTURE_SUBRESOURCE_COUNT) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
@@ -1969,9 +1982,9 @@ gal_error_code vk_cmd_update_subresources(gal_command_list command, gal_texture 
         regions[i].imageSubresource.layerCount = 1;
     }
 
-     vkCmdCopyBufferToImage(vk_cmd->m_command, reinterpret_cast<vk_buffer *>(src)->m_buffer,
-                           reinterpret_cast<vk_texture *>(dst)->m_image,
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_count, regions.data());
+    vkCmdCopyBufferToImage(vk_cmd->m_command, reinterpret_cast<vk_buffer *>(src)->m_buffer,
+                           reinterpret_cast<vk_texture *>(dst)->m_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                           subresource_count, regions.data());
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 gal_error_code vk_cmd_copy_texture_to_buffer() {
@@ -1981,7 +1994,7 @@ gal_error_code vk_cmd_copy_texture_to_buffer() {
 }
 //
 //gal_error_code vk_map_buffer(gal_context context, gal_buffer buffer, ReadRange *pRange) {
-//    
+//
 //    if ((buffer->m_gal_buffer_desc.memory_flags & gal_memory_flag::GPU_DEDICATED) == gal_memory_flag::UNDEFINED) {
 //        return gal_error_code::GAL_ERRORCODE_ERROR;
 //    };

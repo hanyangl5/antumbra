@@ -173,7 +173,7 @@ void compiled_shader::create_shader_reflection_from_spirv() {
         resource.name = std::move(input.name);
 
         resource.set = compiler.get_decoration(input.id, spv::DecorationDescriptorSet);
-        used_sets[resource.set++];
+        used_sets[resource.set]++;
         resource.reg = compiler.get_decoration(input.id, spv::DecorationBinding);
         read_resource_size(compiler, input, resource);
         read_resource_array_size(compiler, input, resource);
@@ -189,7 +189,7 @@ void compiled_shader::create_shader_reflection_from_spirv() {
         resource.name = std::move(input.name);
 
         resource.set = compiler.get_decoration(input.id, spv::DecorationDescriptorSet);
-        used_sets[resource.set++];
+        used_sets[resource.set]++;
         resource.reg = compiler.get_decoration(input.id, spv::DecorationBinding);
         read_resource_size(compiler, input, resource);
         read_resource_array_size(compiler, input, resource);
@@ -205,7 +205,7 @@ void compiled_shader::create_shader_reflection_from_spirv() {
         resource.name = std::move(input.name);
 
         resource.set = compiler.get_decoration(input.id, spv::DecorationDescriptorSet);
-        used_sets[resource.set++];
+        used_sets[resource.set]++;
         resource.reg = compiler.get_decoration(input.id, spv::DecorationBinding);
         read_resource_array_size(compiler, input, resource);
         //resource.dim = compiler.get_type(input.id).image.dim;
@@ -221,7 +221,7 @@ void compiled_shader::create_shader_reflection_from_spirv() {
         resource.name = std::move(input.name);
 
         resource.set = compiler.get_decoration(input.id, spv::DecorationDescriptorSet);
-        used_sets[resource.set++];
+        used_sets[resource.set]++;
         resource.reg = compiler.get_decoration(input.id, spv::DecorationBinding);
         //resource.dim = compiler.get_type(input.id).image.dim;
         read_resource_array_size(compiler, input, resource);
@@ -235,14 +235,14 @@ void compiled_shader::create_shader_reflection_from_spirv() {
         resource.used_stages = stage;
         resource.name = std::move(input.name);
         resource.set = compiler.get_decoration(input.id, spv::DecorationDescriptorSet);
-        used_sets[resource.set++];
+        used_sets[resource.set]++;
         resource.reg = compiler.get_decoration(input.id, spv::DecorationBinding);
         read_resource_array_size(compiler, input, resource);
         m_reflection->resources.emplace(std::move(resource.name), std::move(resource));
     }
-    m_reflection->sets = ant::vector<u32>(used_sets.begin(), used_sets.end());
-    std::transform(used_sets.begin(), used_sets.end(), std::back_inserter(m_reflection->sets),
-                   [](const auto &p) { return (p.first << 16) & p.second; });
+    std::transform(used_sets.begin(), used_sets.end(), std::back_inserter(m_reflection->sets), [](const auto &s) {
+        return (s.first << 16) | s.second;
+    });
 }
 
 void compiled_shader_group::create_pipeline_reflection() {

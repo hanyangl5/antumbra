@@ -205,16 +205,17 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
 }";
 
     using namespace ant::gal;
+    // compile shader from source
+    gal::gal_context context = initialize(gal_api::VULKAN);
     shader_compiler sc;
     shader_source_blob source;
     source.set(test_cs.data(), test_cs.size());
+
     shader_compile_desc desc;
     desc.entry = "CS_MAIN";
     desc.optimization_level = shader_optimization_level::NONE;
     desc.target_api = shader_blob_type::SPIRV;
     desc.target_profile = shader_target_profile::CS_6_0;
-
-    gal::gal_context context = initialize(gal_api::VULKAN);
 
     gal::gal_shader_program sp{};
     gal::compiled_shader_group sg{};
@@ -223,14 +224,22 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
     sg_desc.desc_comp = &desc;
     sg.set_from_source(&source, &sg_desc);
 
+    // root signature
+    gal::gal_rootsignature rs{};
+    gal::gal_rootsignature_desc rs_desc{};
+    rs_desc.shader = &sg;
+    gal::create_rootsignature(context, &rs_desc, &rs);
+
+
+    // create shader program
     gal::gal_shader_program_desc sp_desc{};
     sp_desc.shader_group = &sg;
 
     gal_error_code result = gal::create_shader_program(context, &sp_desc, &sp);
     REQUIRE(result == gal_error_code::GAL_ERRORCODE_SUCCESS);
-    //gal::gal_rootsignature rs{};
-    //gal::create_rootsignature(context, &rs_desc, &rs);
 
+
+    // create pso
     gal_compute_pipeline_desc comp_pipe_desc{};
     comp_pipe_desc.root_signature;
     comp_pipe_desc.shader = &sp;

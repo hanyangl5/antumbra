@@ -100,7 +100,7 @@ __GAL_HELPER_MACRO__(gal_error_code, destroy_descriptorpool);
 // consume the descriptorset from pool
 __GAL_HELPER_MACRO__(gal_error_code, consume_descriptorset);
 __GAL_HELPER_MACRO__(gal_error_code, free_descriptorset);
-__GAL_HELPER_MACRO__(gal_error_code, create_rootsignature);
+__GAL_HELPER_MACRO__(gal_error_code, create_rootsignature, gal_context context, gal_rootsignature_desc* desc, gal_rootsignature* root_signature);
 __GAL_HELPER_MACRO__(gal_error_code, destroy_rootsignature);
 // sync
 __GAL_HELPER_MACRO__(gal_error_code, create_fence);
