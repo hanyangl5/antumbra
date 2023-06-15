@@ -87,3 +87,6 @@
 [submodule "antumbra/third_party/antumbralibs"]
 	path = antumbra/third_party/antumbralibs
 	url = https://github.com/hanyangl5/antumbralibs
+# [submodule "antumbra/third_party/protobuf"]
+# 	path = antumbra/third_party/protobuf
+# 	url = https://github.com/protocolbuffers/protobuf.git

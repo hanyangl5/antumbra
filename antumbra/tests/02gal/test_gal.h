@@ -1,11 +1,13 @@
 #include "framework/01core/logging/log.h"
 #include "framework/01core/input/input.h"
+#include "framework/01core/memory/memory.h"
 #include "framework/02gal/gal.h"
 #include "framework/02gal/shader/shader_compiler.h"
 #include <catch2/catch_test_macros.hpp>
 using namespace ant;
 
 gal::gal_context initialize(ant::gal::gal_api api) {
+    ant::initialize_memory_system();
     gal::gal_context context{};
     gal::gal_error_code result = ant::gal::init_gal(api, &context);
     REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
@@ -36,4 +38,5 @@ void destroy(gal::gal_context &context) {
     REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
     result = ant::gal::destroy_gal(context);
     REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
+    ant::destroy_memory_system();
 };
