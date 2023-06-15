@@ -83,7 +83,7 @@ constexpr u32 utils_to_vk_queue_family_index(gal_queue_type queue_type, vk_conte
 }
 
 gal_error_code vk_init_gal(gal_context *context) {
-    *context = reinterpret_cast<gal_context>(ant::ant_alloc<vk_context>(allocator::default_memory_allocator));
+    *context = reinterpret_cast<gal_context>(ant::memory::alloc<vk_context>(memory::default_memory_allocator));
     if (!*context) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
     }
@@ -97,7 +97,7 @@ gal_error_code vk_init_gal(gal_context *context) {
 gal_error_code vk_destroy_gal(gal_context context) {
     if (context != gal_null) {
         vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-        ant::ant_free(vk_ctx, allocator::default_memory_allocator);
+        ant::memory::afree(vk_ctx, memory::default_memory_allocator);
         context = gal_null;
         offload_gal_vk_functions();
     }
@@ -108,7 +108,7 @@ gal_error_code vk_create_instance(gal_desc *gal_desc, gal_context *context) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(*context);
     vk_ctx->m_gal_desc = *gal_desc;
 
-    ant::stack_allocator stack_memory(2048);
+    ant::memory::stack_allocator stack_memory(2048);
     ant::vector<const char *> required_instance_layers(&stack_memory);
     ant::vector<const char *> required_instance_extensions(&stack_memory);
 
@@ -196,8 +196,8 @@ gal_error_code vk_destroy_instance(gal_context *context) {
 gal_error_code vk_create_device(gal_desc *gal_desc, gal_context *context) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(*context);
 
-    //ant::stack_allocator stack_memory(1024u);
-    ant::stack_allocator stack_memory(1024u);
+    //ant::memory::stack_allocator stack_memory(1024u);
+    ant::memory::stack_allocator stack_memory(1024u);
     ant::vector<const char *> required_device_extensions(&stack_memory);
     ant::vector<const char *> required_device_layers(&stack_memory);
     if (gal_desc->b_swap_chain) {
@@ -465,7 +465,7 @@ gal_error_code vk_destroy_memory_allocator(gal_context *context) {
 
 gal_error_code vk_create_buffer(gal_context context, gal_buffer_desc *desc, gal_buffer *buffer) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_buffer *vk_buf = ant::ant_alloc<ant::gal::vk_buffer>(ant::allocator::default_memory_allocator);
+    vk_buffer *vk_buf = ant::memory::alloc<ant::gal::vk_buffer>(ant::memory::default_memory_allocator);
     if (!vk_buf) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
     }
@@ -514,7 +514,7 @@ gal_error_code vk_destroy_buffer(gal_context context, gal_buffer buffer) {
     if (buffer != gal_null) {
         vk_buffer *vk_buf = reinterpret_cast<vk_buffer *>(buffer);
         vmaDestroyBuffer(vk_ctx->vma_allocator, vk_buf->m_buffer, vk_buf->m_allocation);
-        ant::ant_free(vk_buf, ant::allocator::default_memory_allocator);
+        ant::memory::afree(vk_buf, ant::memory::default_memory_allocator);
         buffer = gal_null;
     }
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
@@ -522,7 +522,7 @@ gal_error_code vk_destroy_buffer(gal_context context, gal_buffer buffer) {
 
 gal_error_code vk_create_texture(gal_context context, gal_texture_desc *desc, gal_texture *texture) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_texture *vk_tex = ant::ant_alloc<ant::gal::vk_texture>(ant::allocator::default_memory_allocator);
+    vk_texture *vk_tex = ant::memory::alloc<ant::gal::vk_texture>(ant::memory::default_memory_allocator);
     *texture = reinterpret_cast<gal_texture>(vk_tex);
     if (!*texture) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
@@ -602,7 +602,7 @@ gal_error_code vk_destroy_texture(gal_context context, gal_texture texture) {
             vmaDestroyImage(vk_ctx->vma_allocator, vk_tex->m_image, vk_tex->m_allocation);
             //vkDestroyImageView(vk_ctx->device, vk_tex->image_view, nullptr);
         }
-        ant::ant_free(vk_tex, ant::allocator::default_memory_allocator);
+        ant::memory::afree(vk_tex, ant::memory::default_memory_allocator);
         texture = gal_null;
     }
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
@@ -610,7 +610,7 @@ gal_error_code vk_destroy_texture(gal_context context, gal_texture texture) {
 
 gal_error_code vk_create_sampler(gal_context context, gal_sampler_desc *sampler_desc, gal_sampler *sampler) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_sampler *vk_spl = ant::ant_alloc<ant::gal::vk_sampler>(ant::allocator::default_memory_allocator);
+    vk_sampler *vk_spl = ant::memory::alloc<ant::gal::vk_sampler>(ant::memory::default_memory_allocator);
     *sampler = reinterpret_cast<gal_sampler>(vk_spl);
     if (!*sampler) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
@@ -647,7 +647,7 @@ gal_error_code vk_destroy_sampler(gal_context context, gal_sampler sampler) {
     if (sampler != gal_null) {
         vk_sampler *vk_spl = reinterpret_cast<vk_sampler *>(sampler);
         vkDestroySampler(vk_ctx->device, vk_spl->m_sampler, nullptr);
-        ant::ant_free(vk_spl, ant::allocator::default_memory_allocator);
+        ant::memory::afree(vk_spl, ant::memory::default_memory_allocator);
         sampler = gal_null;
     }
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
@@ -656,7 +656,7 @@ gal_error_code vk_destroy_sampler(gal_context context, gal_sampler sampler) {
 gal_error_code vk_create_render_target(gal_context context, gal_render_target_desc *desc,
                                        gal_render_target *render_target) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_render_target *vk_rt = ant::ant_alloc<vk_render_target>(ant::allocator::default_memory_allocator);
+    vk_render_target *vk_rt = ant::memory::alloc<vk_render_target>(ant::memory::default_memory_allocator);
     *render_target = reinterpret_cast<gal_render_target>(vk_rt);
     if (!*render_target) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
@@ -788,7 +788,7 @@ gal_error_code vk_destroy_render_target(gal_context context, gal_render_target r
         for (u32 i = 0; i < vk_rt->m_desc.mip_level; ++i) {
             vkDestroyImageView(vk_ctx->device, vk_rt->pVkSliceDescriptors[i], nullptr);
         }
-        ant::ant_free(vk_rt, ant::allocator::default_memory_allocator);
+        ant::memory::afree(vk_rt, ant::memory::default_memory_allocator);
         render_target = gal_null;
     }
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
@@ -797,7 +797,7 @@ gal_error_code vk_destroy_render_target(gal_context context, gal_render_target r
 // surface
 gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *desc, gal_swap_chain *swap_chain) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_swap_chain *vk_sc = ant::ant_alloc<vk_swap_chain>(ant::allocator::default_memory_allocator);
+    vk_swap_chain *vk_sc = ant::memory::alloc<vk_swap_chain>(ant::memory::default_memory_allocator);
     *swap_chain = reinterpret_cast<gal_swap_chain>(vk_sc);
     if (!*swap_chain) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
@@ -852,7 +852,7 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
 #error PLATFORM NOT SUPPORTED
 #endif
 
-    ant::stack_allocator stack_memory(256);
+    ant::memory::stack_allocator stack_memory(256);
 
     // Image count
     if (0 == desc->image_count) {
@@ -1068,7 +1068,7 @@ gal_error_code vk_destroy_swap_chain(gal_context context, gal_swap_chain swap_ch
         vkDestroySurfaceKHR(vk_ctx->instance, vk_sc->m_surface, nullptr);
 
         // resources are freed automatically
-        ant::ant_free(vk_sc, ant::allocator::default_memory_allocator);
+        ant::memory::afree(vk_sc, ant::memory::default_memory_allocator);
         swap_chain = gal_null;
     }
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
@@ -1078,7 +1078,7 @@ gal_error_code vk_create_shader_program(gal_context context, gal_shader_program_
                                         gal_shader_program *shader_program) {
 
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_shader_program *vk_sp = ant::ant_alloc<ant::gal::vk_shader_program>(ant::allocator::default_memory_allocator);
+    vk_shader_program *vk_sp = ant::memory::alloc<ant::gal::vk_shader_program>(ant::memory::default_memory_allocator);
     vk_sp->m_desc = *desc;
     *shader_program = reinterpret_cast<gal_shader_program>(vk_sp);
     if (!shader_program) {
@@ -1198,7 +1198,7 @@ gal_error_code vk_create_shader_program(gal_context context, gal_shader_program_
 gal_error_code vk_create_pipeline_cache(gal_context context, gal_pipeline_cache_desc *desc,
                                         gal_pipeline_cache *pipeline_cache) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_pipeline_cache *vk_pc = ant::ant_alloc<ant::gal::vk_pipeline_cache>(ant::allocator::default_memory_allocator);
+    vk_pipeline_cache *vk_pc = ant::memory::alloc<ant::gal::vk_pipeline_cache>(ant::memory::default_memory_allocator);
     *pipeline_cache = reinterpret_cast<gal_pipeline_cache>(vk_pc);
     if (*pipeline_cache) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
@@ -1223,7 +1223,7 @@ gal_error_code vk_destroy_pipeline_cache(gal_context context, gal_pipeline_cache
     if (_pipeline_cache != gal_null) {
         vk_pipeline_cache *vk_pc = reinterpret_cast<vk_pipeline_cache *>(_pipeline_cache);
         vkDestroyPipelineCache(vk_ctx->device, vk_pc->pipeline_cache, nullptr);
-        ant::ant_free(vk_pc, ant::allocator::default_memory_allocator);
+        ant::memory::afree(vk_pc, ant::memory::default_memory_allocator);
         _pipeline_cache = gal_null;
     }
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
@@ -1241,7 +1241,7 @@ gal_error_code vk_get_pipeline_cache_data(gal_context context, gal_pipeline_cach
 
 gal_error_code vk_create_compute_pipeline(gal_context context, gal_pipeline_desc *desc, gal_pipeline *pipeline) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_pipeline *vk_pipe = ant::ant_alloc<ant::gal::vk_pipeline>(ant::allocator::default_memory_allocator);
+    vk_pipeline *vk_pipe = ant::memory::alloc<ant::gal::vk_pipeline>(ant::memory::default_memory_allocator);
     *pipeline = reinterpret_cast<gal_pipeline>(vk_pipe);
 
     if (!*pipeline) {
@@ -1283,7 +1283,7 @@ gal_error_code vk_create_compute_pipeline(gal_context context, gal_pipeline_desc
 
 gal_error_code vk_create_graphics_pipeline(gal_context context, gal_pipeline_desc *desc, gal_pipeline *pipeline) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_pipeline *vk_pipe = ant::ant_alloc<ant::gal::vk_pipeline>(ant::allocator::default_memory_allocator);
+    vk_pipeline *vk_pipe = ant::memory::alloc<ant::gal::vk_pipeline>(ant::memory::default_memory_allocator);
     *pipeline = reinterpret_cast<gal_pipeline>(vk_pipe);
 
     vk_pipe->m_desc = *desc;
@@ -1541,7 +1541,7 @@ gal_error_code vk_free_descriptorset() {
 gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_desc *desc,
                                        gal_rootsignature *root_signature) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_rootsignature *vk_rs = ant::ant_alloc<ant::gal::vk_rootsignature>(ant::allocator::default_memory_allocator);
+    vk_rootsignature *vk_rs = ant::memory::alloc<ant::gal::vk_rootsignature>(ant::memory::default_memory_allocator);
     if (!vk_rs) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
     }
@@ -1551,7 +1551,7 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
     u32 set_count = static_cast<u32>(refl->sets.size());
     // TODO(hyl5): seperate descriptor set layouts for caching
 
-    ant::stack_allocator stack_memory(1024);
+    ant::memory::stack_allocator stack_memory(1024);
     if (set_count > MAX_DESCRIPTOR_SET_COUNT) {
         LOG_ERROR("maximum of descriptor set count is: {}, current is: {}", MAX_DESCRIPTOR_SET_COUNT, set_count);
         return gal_error_code::GAL_ERRORCODE_ERROR;
@@ -1655,7 +1655,7 @@ gal_error_code vk_destroy_semaphore() {
 gal_error_code vk_create_command_pool(gal_context context, gal_command_pool_desc *desc,
                                       gal_command_pool *command_pool) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_command_pool *vk_cmd_pool = ant::ant_alloc<ant::gal::vk_command_pool>(ant::allocator::default_memory_allocator);
+    vk_command_pool *vk_cmd_pool = ant::memory::alloc<ant::gal::vk_command_pool>(ant::memory::default_memory_allocator);
     if (!vk_cmd_pool) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
     }
@@ -1691,7 +1691,7 @@ gal_error_code vk_destroy_command_pool(gal_context context, gal_command_pool com
     if (command_pool != gal_null) {
         vk_command_pool *vk_cmd_pool = reinterpret_cast<vk_command_pool *>(command_pool);
         vkDestroyCommandPool(vk_ctx->device, vk_cmd_pool->m_cmd_pool, nullptr);
-        ant::ant_free(vk_cmd_pool, ant::allocator::default_memory_allocator);
+        ant::memory::afree(vk_cmd_pool, ant::memory::default_memory_allocator);
         command_pool = gal_null;
     }
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
@@ -1699,7 +1699,7 @@ gal_error_code vk_destroy_command_pool(gal_context context, gal_command_pool com
 
 gal_error_code vk_allocate_command_list(gal_context context, gal_command_list_desc *desc, gal_command_list *command) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_command_list *vk_cmd = ant::ant_alloc<ant::gal::vk_command_list>(ant::allocator::default_memory_allocator);
+    vk_command_list *vk_cmd = ant::memory::alloc<ant::gal::vk_command_list>(ant::memory::default_memory_allocator);
     if (!vk_cmd) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
     }
@@ -1725,7 +1725,7 @@ gal_error_code vk_free_command_list(gal_context context, gal_command_list comman
         vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
         vkFreeCommandBuffers(vk_ctx->device, reinterpret_cast<vk_command_pool *>(vk_cmd->m_cmd_pool)->m_cmd_pool, 1,
                              &vk_cmd->m_command);
-        ant::ant_free(vk_cmd, ant::allocator::default_memory_allocator);
+        ant::memory::afree(vk_cmd, ant::memory::default_memory_allocator);
         command = gal_null;
     }
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
@@ -1957,7 +1957,7 @@ gal_error_code vk_cmd_update_subresources(gal_command_list command, gal_texture 
     if (!gal_tf_is_single_plane(fmt)) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
     }
-    ant::stack_allocator stack_memory(MAX_TEXTURE_SUBRESOURCE_COUNT * sizeof(VkBufferCopy));
+    ant::memory::stack_allocator stack_memory(MAX_TEXTURE_SUBRESOURCE_COUNT * sizeof(VkBufferCopy));
     ant::vector<VkBufferImageCopy> regions(subresource_count, &stack_memory);
 
     for (u32 i = 0; i < subresource_count; i++) {
@@ -2078,7 +2078,7 @@ gal_error_code vk_cmd_copy_texture_to_buffer() {
 // pipeline
 //gal_error_code vk_create_shader(gal_context context, gal_shader_desc *desc, gal_shader *_shader) {
 //    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-//    *_shader = reinterpret_cast<gal_shader>(ant::ant_alloc<vk_shader>());
+//    *_shader = reinterpret_cast<gal_shader>(ant::memory::alloc<vk_shader>());
 //    vk_shader *vk_s = reinterpret_cast<vk_shader *>(*_shader);
 //    VkShaderModuleCreateInfo create_info{};
 //    create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -2096,7 +2096,7 @@ gal_error_code vk_cmd_copy_texture_to_buffer() {
 //        vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
 //        vk_shader *vk_s = reinterpret_cast<vk_shader *>(_shader);
 //        vkDestroyShaderModule(vk_ctx->device, vk_s->shader, nullptr);
-//        ant::ant_free(vk_s);
+//        ant::memory::afree(vk_s);
 //        _shader = gal_null;
 //    }
 //    return gal_error_code::GAL_ERRORCODE_SUCCESS;

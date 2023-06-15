@@ -7,7 +7,7 @@
 
 #include "framework/01core/utils/utils.h"
 
-namespace ant {
+namespace ant::memory {
 
 // Building Night City: The Technology Of CyberPunk 2077
 // https://indiegamedev.net/2022/03/27/custom-c20-memory-allocators-for-stl-containers/
@@ -123,4 +123,4 @@ class frame_allocator : public std::pmr::memory_resource {
     bool do_is_equal(const std::pmr::memory_resource &other) const noexcept override;
 };
 
-} // namespace ant
+} // namespace ant::memory

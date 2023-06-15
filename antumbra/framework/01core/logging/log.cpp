@@ -15,7 +15,7 @@
 namespace ant {
 
 Log::Log() noexcept {
-    m_logger = spdlog::stdout_color_mt("antumbra logger");
+    m_logger = spdlog::stdout_color_mt("antlog");
     spdlog::set_default_logger(m_logger);
 #ifndef NDEBUG
     spdlog::set_level(spdlog::level::debug);

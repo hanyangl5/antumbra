@@ -1,7 +1,5 @@
 project(ant_third_party)
 
-add_library(${PROJECT_NAME} third_party_dummy.cpp TracyClient.cpp)
-
 add_subdirectory(glfw) # CMakeLists of glfw added some useless projects/folders in root directory
 add_subdirectory(json)
 option(MI_BUILD_TESTS "Build test executables" OFF)
@@ -28,9 +26,15 @@ add_subdirectory(sol2)
 option(TRACY_ENABLE "" ON)
 option(TRACY_ONDEMAND "" ON)
 add_subdirectory(tracy)
+# copy TracyClient.cpp
+message("copy TracyClient.cpp")
+file(COPY tracy/public/TracyClient.cpp DESTINATION ${CMAKE_CURRENT_SOURCE_DIR})
 #add_subdirectory(JoltPhysics/Build)
 option(TINYGLTF_BUILD_LOADER_EXAMPLE "" OFF)
 add_subdirectory(tinygltf)
+
+add_library(${PROJECT_NAME} third_party_dummy.cpp TracyClient.cpp)
+
 
 # dxc
 

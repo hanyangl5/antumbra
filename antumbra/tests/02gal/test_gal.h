@@ -7,7 +7,7 @@
 using namespace ant;
 
 gal::gal_context initialize(ant::gal::gal_api api) {
-    ant::initialize_memory_system();
+    ant::memory::initialize_memory_system();
     gal::gal_context context{};
     gal::gal_error_code result = ant::gal::init_gal(api, &context);
     REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
@@ -38,5 +38,5 @@ void destroy(gal::gal_context &context) {
     REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
     result = ant::gal::destroy_gal(context);
     REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
-    ant::destroy_memory_system();
+    ant::memory::destroy_memory_system();
 };

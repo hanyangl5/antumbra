@@ -44,7 +44,7 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
 }";
 
 TEST_CASE("compile single shader ") {
-    initialize_memory_system();
+    ant::memory::initialize_memory_system();
     using namespace ant::gal;
     shader_compiler sc;
     shader_source_blob source;
@@ -62,11 +62,11 @@ TEST_CASE("compile single shader ") {
     compiled_shader *ret2 = sc.compile(&source, &desc);
     REQUIRE(ret2 != nullptr);
     ret2->release();
-    destroy_memory_system();
+    ant::memory::destroy_memory_system();
 }
 
 TEST_CASE("shader reflection test") {
-    initialize_memory_system();
+    ant::memory::initialize_memory_system();
     using namespace ant::gal;
     shader_compiler sc;
     shader_source_blob source;
@@ -84,7 +84,7 @@ TEST_CASE("shader reflection test") {
     compiled_shader *ret2 = sc.compile(&source, &desc);
     REQUIRE(ret2 != nullptr);
     ret2->release();
-    destroy_memory_system();
+    ant::memory::destroy_memory_system();
 }
 
 TEST_CASE("shader group from source test") {

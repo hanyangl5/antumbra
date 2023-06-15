@@ -2,19 +2,19 @@
 #include "framework/01core/utils/utils.h"
 #include <catch2/catch_test_macros.hpp>
 
+using namespace ant::memory;
 using namespace ant;
-
 TEST_CASE("malloc") {
     initialize_memory_system();
     struct A {
         char e[4];
     };
     //ant::ant_enable_memory_tracking();
-    void *pa = ant::ant_alloc<A>(allocator::default_memory_allocator);
-    ant::ant_free(pa, allocator::default_memory_allocator);
+    void *pa = ant::memory::alloc<A>(default_memory_allocator);
+    ant::memory::afree(pa, default_memory_allocator);
 
-    void *pb = ant_malloc(sizeof(A), allocator::default_memory_allocator);
-    ant::ant_free(pb, allocator::default_memory_allocator);
+    void *pb = ant::memory::amalloc(sizeof(A), default_memory_allocator);
+    ant::memory::afree(pb, default_memory_allocator);
     //ant::ant_disable_memory_tracking();
     destroy_memory_system();
 }
