@@ -3,15 +3,16 @@
 namespace ant::memory {
 
 void initialize_memory_system() {
-
-    default_memory_allocator = new default_allocator; // TODO(hyl5): use smart pointer?
+    default_memory_allocator = new default_allocator(1024); // TODO(hyl5): use smart pointer?
     if (b_enable_memory_tracking) {
         LOG_DEBUG("initialize memory system");
     }
 }
 
 void destroy_memory_system() {
-    delete default_memory_allocator;
+    if (default_memory_allocator) {
+        delete default_memory_allocator;
+    }
     if (b_enable_memory_tracking) {
         LOG_DEBUG("destroy memory system");
     }

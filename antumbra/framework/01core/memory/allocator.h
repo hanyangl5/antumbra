@@ -16,9 +16,9 @@ namespace ant::memory {
 // tlsf for 512b to 512kb
 // bigsize for >512kb
 
-class default_allocator : public std::pmr::memory_resource {
+class default_allocator final : public std::pmr::memory_resource {
   public:
-    default_allocator() noexcept = default;
+    default_allocator(u64 budget) noexcept : m_budget(budget), m_remain(0){};
     ~default_allocator() noexcept = default;
 
   protected:
@@ -27,11 +27,33 @@ class default_allocator : public std::pmr::memory_resource {
     void do_deallocate(void *ptr, u64 bytes, u64 alignment = alignof(std::max_align_t)) override;
 
     bool do_is_equal(const std::pmr::memory_resource &other) const noexcept override;
+
+  private:
+    u64 m_budget = 0;
+    u64 m_remain = 0;
 };
 
-class slab_allocator : public std::pmr::memory_resource {
+class default_allocator2 final : public std::pmr::memory_resource {
   public:
-    slab_allocator() noexcept = default;
+    default_allocator2(u64 budget, const char *name = "anonymous allocator") noexcept : m_budget(budget), m_remain(0), m_name(name){};
+    ~default_allocator2() noexcept = default;
+
+  protected:
+    void *do_allocate(u64 bytes, u64 alignment = alignof(std::max_align_t)) override;
+
+    void do_deallocate(void *ptr, u64 bytes, u64 alignment = alignof(std::max_align_t)) override;
+
+    bool do_is_equal(const std::pmr::memory_resource &other) const noexcept override;
+
+  private:
+    u64 m_budget;
+    u64 m_remain;
+    const char *m_name;
+};
+
+class slab_allocator final : public std::pmr::memory_resource {
+  public:
+    slab_allocator(u64 budget) noexcept : m_budget(budget), m_remain(0){};
     ~slab_allocator() noexcept = default;
 
   protected:
@@ -40,11 +62,15 @@ class slab_allocator : public std::pmr::memory_resource {
     void do_deallocate(void *ptr, u64 bytes, u64 alignment = alignof(std::max_align_t)) override;
 
     bool do_is_equal(const std::pmr::memory_resource &other) const noexcept override;
+
+  private:
+    u64 m_budget = 0;
+    u64 m_remain = 0;
 };
 
-class tlsf_allocator : public std::pmr::memory_resource {
+class tlsf_allocator final : public std::pmr::memory_resource {
   public:
-    tlsf_allocator() noexcept = default;
+    tlsf_allocator(u64 budget) noexcept : m_budget(budget), m_remain(0){};
     ~tlsf_allocator() noexcept = default;
 
   protected:
@@ -53,11 +79,15 @@ class tlsf_allocator : public std::pmr::memory_resource {
     void do_deallocate(void *ptr, u64 bytes, u64 alignment = alignof(std::max_align_t)) override;
 
     bool do_is_equal(const std::pmr::memory_resource &other) const noexcept override;
+
+  private:
+    u64 m_budget = 0;
+    u64 m_remain = 0;
 };
 
-class fixedsize_allocator : public std::pmr::memory_resource {
+class fixedsize_allocator final : public std::pmr::memory_resource {
   public:
-    fixedsize_allocator() noexcept = default;
+    fixedsize_allocator(u64 budget) noexcept : m_budget(budget), m_remain(0){};
     ~fixedsize_allocator() noexcept = default;
 
   protected:
@@ -66,11 +96,15 @@ class fixedsize_allocator : public std::pmr::memory_resource {
     void do_deallocate(void *ptr, u64 bytes, u64 alignment = alignof(std::max_align_t)) override;
 
     bool do_is_equal(const std::pmr::memory_resource &other) const noexcept override;
+
+  private:
+    u64 m_budget = 0;
+    u64 m_remain = 0;
 };
 
-class linear_allocator : public std::pmr::memory_resource {
+class linear_allocator final : public std::pmr::memory_resource {
   public:
-    linear_allocator() noexcept = default;
+    linear_allocator(u64 budget) noexcept : m_budget(budget), m_remain(0){};
     ~linear_allocator() noexcept = default;
 
   protected:
@@ -79,11 +113,15 @@ class linear_allocator : public std::pmr::memory_resource {
     void do_deallocate(void *ptr, u64 bytes, u64 alignment = alignof(std::max_align_t)) override;
 
     bool do_is_equal(const std::pmr::memory_resource &other) const noexcept override;
+
+  private:
+    u64 m_budget = 0;
+    u64 m_remain = 0;
 };
 
-class buddy_allocator : public std::pmr::memory_resource {
+class buddy_allocator final : public std::pmr::memory_resource {
   public:
-    buddy_allocator() noexcept = default;
+    buddy_allocator(u64 budget) noexcept : m_budget(budget), m_remain(0){};
     ~buddy_allocator() noexcept = default;
 
   protected:
@@ -92,12 +130,16 @@ class buddy_allocator : public std::pmr::memory_resource {
     void do_deallocate(void *ptr, u64 bytes, u64 alignment = alignof(std::max_align_t)) override;
 
     bool do_is_equal(const std::pmr::memory_resource &other) const noexcept override;
+
+  private:
+    u64 m_budget = 0;
+    u64 m_remain = 0;
 };
 
-class stack_allocator : public std::pmr::memory_resource {
+class stack_allocator final : public std::pmr::memory_resource {
   public:
-    stack_allocator(u64 size) noexcept : m_resource(std::pmr::monotonic_buffer_resource(size)){};
-    ~stack_allocator() noexcept { m_resource.release(); };
+    stack_allocator(u64 budget) noexcept : m_budget(budget), m_remain(0){};
+    ~stack_allocator() noexcept;
 
   protected:
     void *do_allocate(u64 bytes, u64 alignment = alignof(std::max_align_t)) override;
@@ -106,13 +148,14 @@ class stack_allocator : public std::pmr::memory_resource {
 
     bool do_is_equal(const std::pmr::memory_resource &other) const noexcept override;
 
-  protected:
-    std::pmr::monotonic_buffer_resource m_resource;
+  private:
+    u64 m_budget = 0;
+    u64 m_remain = 0;
 };
 
 class frame_allocator : public std::pmr::memory_resource {
   public:
-    frame_allocator() noexcept;
+    frame_allocator(u64 budget) noexcept : m_budget(budget), m_remain(0){};
     ~frame_allocator() noexcept;
 
   protected:
@@ -121,6 +164,32 @@ class frame_allocator : public std::pmr::memory_resource {
     void do_deallocate(void *ptr, u64 bytes, u64 alignment = alignof(std::max_align_t)) override;
 
     bool do_is_equal(const std::pmr::memory_resource &other) const noexcept override;
+
+  private:
+    u64 m_budget = 0;
+    u64 m_remain = 0;
 };
+
+class stack_memory_resource : public std::pmr::memory_resource {
+  public:
+    stack_memory_resource(u64 size) noexcept
+        : m_budget(size), m_remain(0), m_resource(std::pmr::monotonic_buffer_resource(size)){};
+    ~stack_memory_resource() noexcept { m_resource.release(); };
+
+  protected:
+    void *do_allocate(u64 bytes, u64 alignment = alignof(std::max_align_t)) override;
+
+    void do_deallocate(void *ptr, u64 bytes, u64 alignment = alignof(std::max_align_t)) override;
+
+    bool do_is_equal(const std::pmr::memory_resource &other) const noexcept override;
+
+  protected:
+    u64 m_budget = 0;
+    u64 m_remain = 0;
+    std::pmr::monotonic_buffer_resource m_resource;
+};
+
+//Block Allocator
+//
 
 } // namespace ant::memory

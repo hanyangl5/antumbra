@@ -13,4 +13,9 @@ target_link_libraries(${PROJECT_NAME} PUBLIC ant_third_party)
 
 configure_compile_options("${PROJECT_NAME}")
 
+# # Generate header.hpp from your template file header.hpp.in
+# configure_file(${CMAKE_CURRENT_LIST_DIR}/../config/config.hpp.in
+#     ${CMAKE_CURRENT_LIST_DIR}/../config/config.hpp COPYONLY
+# )
+
 # set_property(TARGET ${PROJECT_NAME} PROPERTY FOLDER "antumbra/Runtime")

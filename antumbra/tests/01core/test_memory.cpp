@@ -9,13 +9,13 @@ TEST_CASE("malloc") {
     struct A {
         char e[4];
     };
-    //ant::ant_enable_memory_tracking();
     void *pa = ant::memory::alloc<A>(default_memory_allocator);
+    REQUIRE(pa != nullptr);
     ant::memory::afree(pa, default_memory_allocator);
 
     void *pb = ant::memory::amalloc(sizeof(A), default_memory_allocator);
+    REQUIRE(pb != nullptr);
     ant::memory::afree(pb, default_memory_allocator);
-    //ant::ant_disable_memory_tracking();
     destroy_memory_system();
 }
 

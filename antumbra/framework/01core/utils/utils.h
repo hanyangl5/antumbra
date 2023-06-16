@@ -85,6 +85,7 @@ struct blob {
     }
     inline void *data() const { return m_data; }
     inline u64 size() const { return m_size; }
+    inline void release();
     inline void reset() {
         m_data = nullptr;
         m_size = 0;
@@ -94,4 +95,11 @@ struct blob {
     u64 m_size = 0;
 };
 
+
+// bytes
+constexpr u64 operator"" _b(u64 value) { return static_cast<u64>(value); }
+// kilo bytes
+constexpr u64 operator"" _kb(u64 value) { return static_cast<u64>(value * 1024); }
+// mega bytse
+constexpr u64 operator"" _mb(u64 value) { return static_cast<u64>(value * 1024 * 1024); }
 } // namespace ant
