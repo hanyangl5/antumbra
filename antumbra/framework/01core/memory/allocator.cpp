@@ -7,10 +7,10 @@
 namespace ant::memory {
 
 bool b_enable_memory_tracking = true;
-
-default_allocator *default_memory_allocator = nullptr;
-slab_allocator *slab_memory_allocator = nullptr;
-tlsf_allocator *tlsf_memory_allocator = nullptr;
+//
+//default_allocator *default_memory_allocator = nullptr;
+//slab_allocator *slab_memory_allocator = nullptr;
+//tlsf_allocator *tlsf_memory_allocator = nullptr;
 
 void *stack_memory_resource::do_allocate(u64 bytes, u64 alignment) {
     void *memory = m_resource.allocate(bytes, alignment);
@@ -61,10 +61,10 @@ bool default_allocator::do_is_equal(const std::pmr::memory_resource &other) cons
 void *default_allocator2::do_allocate(u64 bytes, u64 alignment) {
     if (bytes <= 512) {
         // less than 512b
-        return slab_memory_allocator->allocate(bytes, alignment);
+        return m_slab_memory_allocator->allocate(bytes, alignment);
     } else if (bytes <= 512_kb) {
         // 512b to 512kb
-        return tlsf_memory_allocator->allocate(bytes, alignment);
+        return m_tlsf_memory_allocator->allocate(bytes, alignment);
     } else {
         void *memory = aligned_alloc(alignment, bytes);
         if (!memory) {

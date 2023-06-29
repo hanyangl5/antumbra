@@ -83,14 +83,13 @@ constexpr u32 utils_to_vk_queue_family_index(gal_queue_type queue_type, vk_conte
 }
 
 gal_error_code vk_init_gal(gal_context *context) {
-    *context = reinterpret_cast<gal_context>(ant::memory::alloc<vk_context>(memory::default_memory_allocator));
-    if (!*context) {
+    vk_context *vk_ctx = ant::memory::alloc<vk_context>(memory::default_memory_allocator);
+    if (vk_ctx == gal_null) {
         return gal_error_code::GAL_ERRORCODE_ERROR;
     }
+    vk_ctx->gal_memory_pool = ant::memory::create_memory_pool("gal memory pool", 256_mb);
+    *context = reinterpret_cast<gal_context>(vk_ctx);
     load_gal_vk_functions();
-    if (*context == gal_null) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
-    }
     return gal_error_code::GAL_ERRORCODE_SUCCESS;
 }
 

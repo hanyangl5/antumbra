@@ -6,23 +6,24 @@ using namespace ant::memory;
 using namespace ant;
 TEST_CASE("malloc") {
     initialize_memory_system();
+
+    auto pool = create_memory_pool("test malloc", 10_mb);
+
     struct A {
         char e[4];
     };
-    void *pa = ant::memory::alloc<A>(default_memory_allocator);
+    void *pa = ant::memory::alloc<A>(pool);
     REQUIRE(pa != nullptr);
-    ant::memory::afree(pa, default_memory_allocator);
+    ant::memory::afree(pa, pool);
 
-    void *pb = ant::memory::amalloc(sizeof(A), default_memory_allocator);
+    void *pb = ant::memory::amalloc(sizeof(A), pool);
     REQUIRE(pb != nullptr);
-    ant::memory::afree(pb, default_memory_allocator);
+    ant::memory::afree(pb, pool);
     destroy_memory_system();
 }
 
 TEST_CASE("memory") {
-    initialize_memory_system();
-    stack_allocator stack_memory(1024u);
-    destroy_memory_system();
+    stack_memory_resource stack_memory(1024_b);
 }
 
 TEST_CASE("container") {
