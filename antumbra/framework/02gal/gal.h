@@ -5,7 +5,7 @@
 #include "format.h"
 // enum included at last
 #include "enum.h"
-
+#include "debug/debug_layer.h"
 namespace ant::gal {
 
 // intailize gal_context, load function pointer

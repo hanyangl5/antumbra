@@ -27,9 +27,9 @@ TEST_CASE("test gal buffer") {
         desc.flags = gal::gal_buffer_flag::OWN_MEMORY;
         gal::gal_buffer buffer{};
         gal::gal_error_code result = gal::create_buffer(context, &desc, &buffer);
-        REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
+        REQUIRE(result == gal::gal_error_code::SUC);
         result = gal::destroy_buffer(context, buffer);
-        REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
+        REQUIRE(result == gal::gal_error_code::SUC);
         destroy(context);
     };
     buffer_creation(gal::gal_api::VULKAN);
@@ -54,9 +54,9 @@ TEST_CASE("test gal texture") {
         texture_desc.sample_count = gal_texture_sample_count::SAMPLE_COUNT_1;
         gal::gal_texture texture{};
         gal::gal_error_code result = gal::create_texture(context, &texture_desc, &texture);
-        REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
+        REQUIRE(result == gal::gal_error_code::SUC);
         result = gal::destroy_texture(context, texture);
-        REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
+        REQUIRE(result == gal::gal_error_code::SUC);
         destroy(context);
     };
     texture_creation(gal::gal_api::VULKAN);
@@ -81,9 +81,9 @@ TEST_CASE("test gal sampler") {
         sampler_desc.mip_lod_bias = 0.0f;
         gal::gal_sampler sampler{};
         gal::gal_error_code result = gal::create_sampler(context, &sampler_desc, &sampler);
-        REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
+        REQUIRE(result == gal::gal_error_code::SUC);
         result = gal::destroy_sampler(context, sampler);
-        REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
+        REQUIRE(result == gal::gal_error_code::SUC);
         destroy(context);
     };
     sampler_creation(gal::gal_api::VULKAN);
@@ -107,9 +107,9 @@ TEST_CASE("test gal render target") {
         desc.clear_value.value = gal_clear_value::rgb{0.0f, 0.0f, 0.0f, 1.0f};
         gal::gal_render_target rt;
         gal::gal_error_code result = gal::create_render_target(context, &desc, &rt);
-        REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
+        REQUIRE(result == gal::gal_error_code::SUC);
         result = gal::destroy_render_target(context, rt);
-        REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
+        REQUIRE(result == gal::gal_error_code::SUC);
         destroy(context);
     };
     render_target_creation(gal::gal_api::VULKAN);
@@ -137,9 +137,9 @@ TEST_CASE("test gal swapchain") {
         desc.clear_value.value = gal_clear_value::rgb{0.0f, 0.0f, 0.0f, 1.0f};
         desc.hwnd_window = ant::get_hwnd_window(window);
         gal::gal_error_code result = gal::create_swap_chain(context, &desc, &sc);
-        REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
+        REQUIRE(result == gal::gal_error_code::SUC);
         result = gal::destroy_swap_chain(context, sc);
-        REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
+        REQUIRE(result == gal::gal_error_code::SUC);
         destroy(context);
 
         ant::destroy_window(window);
@@ -156,20 +156,20 @@ TEST_CASE("test gal command pool") {
         desc.b_transient = false;
         desc.queue_type = gal_queue_type::graphcis;
         gal_error_code result = gal::create_command_pool(context, &desc, &cmd_pool);
-        REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
+        REQUIRE(result == gal::gal_error_code::SUC);
 
         gal_command_list cmd{};
         gal_command_list_desc cmd_desc{};
         cmd_desc.command_pool = cmd_pool;
         cmd_desc.b_secondary = false;
         result = gal::allocate_command_list(context, &cmd_desc, &cmd);
-        REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
+        REQUIRE(result == gal::gal_error_code::SUC);
         gal::cmd_begin(cmd);
         gal::cmd_end(cmd);
         result = gal::reset_command_pool(context, cmd_pool);
-        REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
+        REQUIRE(result == gal::gal_error_code::SUC);
         result = gal::destroy_command_pool(context, cmd_pool);
-        REQUIRE(result == gal::gal_error_code::GAL_ERRORCODE_SUCCESS);
+        REQUIRE(result == gal::gal_error_code::SUC);
         destroy(context);
     };
     command_test(gal_api::VULKAN);
@@ -236,7 +236,7 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
     sp_desc.shader_group = &sg;
 
     gal_error_code result = gal::create_shader_program(context, &sp_desc, &sp);
-    REQUIRE(result == gal_error_code::GAL_ERRORCODE_SUCCESS);
+    REQUIRE(result == gal_error_code::SUC);
 
 
     // create pso
@@ -249,7 +249,7 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
 
     gal::gal_pipeline comp_pipe{};
     result = gal::create_compute_pipeline(context, &pipe_desc, &comp_pipe);
-    REQUIRE(result == gal_error_code::GAL_ERRORCODE_SUCCESS);
+    REQUIRE(result == gal_error_code::SUC);
     sg.release();
 }
 

@@ -28,6 +28,7 @@
 
 #include "../gal.h"
 #include "gal_vulkan_enum.h"
+#include <atomic>
 
 namespace ant::gal {
 
@@ -92,7 +93,7 @@ constexpr VkBufferUsageFlags util_to_vk_buffer_usage(gal_descriptor_type types) 
     if ((types & gal_descriptor_type::INDIRECT_ARGUMENT) != gal_descriptor_type::UNDEFINED) {
         flags |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
     }
-
+    
     // TODO(hyl5): rt;
     return flags;
 }
