@@ -4,21 +4,29 @@
 
 namespace ant::memory {
 
-linear_allocator::linear_allocator(u64 pool_size) noexcept { init(pool_size); };
+linear_allocator::linear_allocator(u64 pool_size, u64 alignment) noexcept {  
+    u64 size = (pool_size + alignment - 1) / alignment * alignment;   
+    m_size = size;
+    m_ptr = mi_aligned_alloc(alignment, size);
+};
 
 linear_allocator::~linear_allocator() noexcept {
     free(m_ptr);
     m_ptr = nullptr;
 };
 
-void linear_allocator::init(u64 pool_size) {
-    m_size = pool_size;
-    m_ptr = malloc(pool_size);
-}
-
 void linear_allocator::reset() {
     m_offset = 0;
     m_used = 0;
+}
+
+void linear_allocator::resize(u64 size, u64 alignment) {
+    u64 size = (size + alignment - 1) / alignment * alignment;   
+	void* new_ptr = mi_aligned_alloc(alignment, size);
+    memcpy(new_ptr, m_ptr, m_size);
+    free(m_ptr);
+    m_ptr = new_ptr;
+    m_size = size;
 }
 
 void *linear_allocator::do_allocate(u64 bytes, u64 alignment) {
