@@ -15,9 +15,7 @@ linear_allocator::~linear_allocator() noexcept {
     m_ptr = nullptr;
 };
 
-void linear_allocator::reset() {
-    m_offset = 0;
-}
+void linear_allocator::reset() { m_offset = 0; }
 
 void linear_allocator::resize(u64 size, u64 alignment) {
     u64 new_size = align_up(size, alignment);
