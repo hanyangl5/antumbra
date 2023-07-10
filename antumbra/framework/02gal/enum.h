@@ -442,7 +442,6 @@ struct gal_clear_value {
 DECLARE_GAL_HANDLE(gal_context) {
   public:
     gal_desc m_gal_desc;
-    ant::memory::memory_pool *gal_memory_pool;
 };
 
 struct gal_buffer_desc {

@@ -118,7 +118,8 @@ void compiled_shader::create_shader_reflection_from_spirv() {
     // push constants
     count += static_cast<u32>(resources.push_constant_buffers.size()); // push constants
     // count += (u32)resources.acceleration_structures.size(); // raytracing structures
-    auto stack_memory = ant::memory::stack_allocator(128);
+
+    ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 128);
     ant::hash_map<u32, u32> used_sets(&stack_memory);
     // stage inputs
     for (auto &input : resources.stage_inputs) {
@@ -252,7 +253,7 @@ void compiled_shader_group::create_pipeline_reflection() {
         return;
     }
 
-    m_pipeline_reflection = ant::memory::alloc<pipeline_reflection>(ant::memory::default_memory_allocator);
+    m_pipeline_reflection = ant::memory::alloc<pipeline_reflection>();
 
     if (m_b_same_root_signature) {
         // we only need to set from one shader beacuse all shader in one shader group share the same root signature

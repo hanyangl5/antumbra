@@ -189,7 +189,7 @@ compiled_shader *shader_compiler::compile(shader_source_blob *blob, shader_compi
         LOG_ERROR("failed to create blob");
         return nullptr;
     }
-    ant::memory::stack_allocator stack_memory(512);
+    ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 512);
     ant::vector<LPCWSTR> args(&stack_memory);
 
     // entry point
@@ -303,7 +303,7 @@ compiled_shader *shader_compiler::compile(shader_source_blob *blob, shader_compi
         return nullptr;
     }
 
-    compiled_shader *ret = ant::memory::alloc<compiled_shader>(memory::default_memory_allocator);
+    compiled_shader *ret = ant::memory::alloc<compiled_shader>();
     if (!ret) {
         LOG_ERROR("failed to create compiled shader");
         return nullptr;
@@ -328,7 +328,7 @@ compiled_shader *shader_compiler::compile(shader_source_blob *blob, shader_compi
     ret->m_type = desc->target_api;
 
     if (b_spv) {
-        ret->m_reflection = ant::memory::alloc<shader_reflection>(ant::memory::default_memory_allocator);
+        ret->m_reflection = ant::memory::alloc<shader_reflection>();
         ret->create_shader_reflection();
     }
 
@@ -352,7 +352,8 @@ void compiled_shader::release() {
         reinterpret_cast<IDxcBlob *>(m_p_hash)->Release();
         m_hash.reset();
     }
-    afree(m_reflection, memory::default_memory_allocator);
+    
+    memory::afree(m_reflection);
 }
 
 void compiled_shader_group::set_from_source(shader_source_blob *source, shader_gourp_source_desc *descs) {

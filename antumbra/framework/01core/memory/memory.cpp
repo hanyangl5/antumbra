@@ -18,7 +18,7 @@ namespace ant::memory {
 //    }
 //}
 
-void *amalloc(u64 size, std::pmr::memory_resource *allocator) { return allocator->allocate(size); }
+void *amalloc(u64 size) { return malloc(size); } //return allocator->allocate(size); }
 
 //void *ant_calloc(u64 num, u64 size, std::pmr::memory_resource *allocator) {
 //    if (b_enable_memory_tracking) {
@@ -28,8 +28,8 @@ void *amalloc(u64 size, std::pmr::memory_resource *allocator) { return allocator
 //    return mi_calloc(num, size);
 //}
 
-memory_system::memory_system() noexcept {
-    default_memory_allocator = new default_allocator(1024); // TODO(hyl5): use smart pointer?
-}
+//memory_system::memory_system() noexcept {
+//    default_memory_allocator = new default_allocator(1024); // TODO(hyl5): use smart pointer?
+//}
 
 } // namespace ant::memory
