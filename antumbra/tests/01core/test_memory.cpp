@@ -40,3 +40,7 @@ TEST_CASE("container") {
     REQUIRE(arr.size() == 5);
     // destroy_memory_system();
 }
+
+TEST_CASE("allocator") {
+    
+}
