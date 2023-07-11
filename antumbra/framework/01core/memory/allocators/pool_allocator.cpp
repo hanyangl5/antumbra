@@ -21,10 +21,16 @@ pool_allocator::pool_allocator(u64 pool_size, u64 chunk_size, u64 alignment) noe
         node->next = m_head;
         m_head = node;
     }
+    if (b_enable_memory_tracking) {
+        LOG_DEBUG("[memory]: pool allocator initilized at {}, size {}", m_ptr, m_size);
+    }
 };
 
 pool_allocator::~pool_allocator() noexcept {
     free(m_ptr);
+    if (b_enable_memory_tracking) {
+        LOG_DEBUG("[memory]: pool allocator destroyed at {}, size {}", m_ptr, m_size);
+    }
     m_ptr = nullptr;
 };
 
@@ -52,10 +58,18 @@ void *pool_allocator::do_allocate([[maybe_unused]] u64 bytes, [[maybe_unused]] u
     // return current ptr
     if (m_head == nullptr) {
         // error
+        if (b_enable_memory_tracking) {
+            LOG_ERROR("[memory]:  pool allocator overflow");
+        }
         return nullptr;
     }
     void *dst = m_head;
     m_head = m_head->next;
+
+    if (b_enable_memory_tracking) {
+        LOG_DEBUG("[memory]: alloc {} bytes to {}", m_chunk_size, dst);
+    }
+
     return dst;
 }
 void pool_allocator::do_deallocate(void *ptr, [[maybe_unused]] u64 bytes, [[maybe_unused]] u64 alignment) {
@@ -66,7 +80,9 @@ void pool_allocator::do_deallocate(void *ptr, [[maybe_unused]] u64 bytes, [[mayb
     }
 
     if (!(m_ptr <= ptr && ptr < (char *)m_ptr + m_size)) {
-        assert(0 && "Memory is out of bounds of the buffer in this pool");
+        if (b_enable_memory_tracking) {
+            LOG_ERROR("[memory]: Memory is out of bounds of the buffer in this pool");
+        }
         return;
     }
     pool_allocator_node *node;
@@ -75,6 +91,10 @@ void pool_allocator::do_deallocate(void *ptr, [[maybe_unused]] u64 bytes, [[mayb
     node = (pool_allocator_node *)ptr;
     node->next = m_head;
     m_head = node;
+
+    if (b_enable_memory_tracking) {
+        LOG_DEBUG("[memory]: dealloc {} bytes from {} ", m_chunk_size, ptr);
+    }
 }
 bool pool_allocator::do_is_equal(const std::pmr::memory_resource &other) const noexcept { return this == &other; }
 

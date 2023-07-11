@@ -4,6 +4,11 @@
 
 namespace ant::memory {
 
+// The stack_allocator class provides a memory allocation strategy that is based on a stack.
+// It allocates memory in a last-in, first-out (LIFO) order. This means that the last block of memory
+// allocated is the first one to be deallocated, making it an efficient memory allocation strategy for
+// certain types of data and algorithms.
+
 class stack_allocator final : public allocator_base {
   public:
     stack_allocator(u64 pool_size, u64 alignment = alignof(std::max_align_t)) noexcept;

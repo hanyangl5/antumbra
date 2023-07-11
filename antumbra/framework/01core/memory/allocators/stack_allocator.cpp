@@ -46,10 +46,11 @@ stack_allocator::stack_allocator(u64 pool_size, u64 alignment) noexcept {
 
 stack_allocator::~stack_allocator() noexcept {
     free(m_ptr);
-    m_ptr = nullptr;
     if (b_enable_memory_tracking) {
         LOG_DEBUG("[memory]: stack allocator destroyed at {}, size {}", m_ptr, m_size);
     }
+    m_ptr = nullptr;
+
 };
 
 void stack_allocator::reset() { m_offset = 0; }
@@ -77,7 +78,7 @@ void *stack_allocator::do_allocate(u64 bytes, u64 alignment) {
 
     if (m_offset + padding + bytes > m_size) {
         if (b_enable_memory_tracking) {
-            LOG_DEBUG("[memory]: allocator overflow, expect: {}, max: {}", m_offset + padding + bytes, m_size);
+            LOG_ERROR("[memory]: allocator overflow, expect: {}, max: {}", m_offset + padding + bytes, m_size);
         }
         return nullptr;
     }
@@ -116,7 +117,7 @@ void stack_allocator::do_deallocate(void *ptr, [[maybe_unused]] u64 bytes, [[may
         // invalid ptr, out of bounds
         if (!(start <= curr_addr && curr_addr < end)) {
             if (b_enable_memory_tracking) {
-                LOG_DEBUG("[memory]: invalid  memory address passed to stack allocator (free) {}", ptr);
+                LOG_ERROR("[memory]: invalid  memory address passed to stack allocator (free) {}", ptr);
             }
             return;
         }
@@ -124,7 +125,7 @@ void stack_allocator::do_deallocate(void *ptr, [[maybe_unused]] u64 bytes, [[may
         // not last allocation
         if (curr_addr >= start + (uintptr_t)m_offset) {
             if (b_enable_memory_tracking) {
-                LOG_DEBUG("[memory]: invalid  memory address passed to stack allocator (free) {}", ptr);
+                LOG_ERROR("[memory]: invalid  memory address passed to stack allocator (free) {}", ptr);
             }
             // Allow double frees
             return;
@@ -135,7 +136,7 @@ void stack_allocator::do_deallocate(void *ptr, [[maybe_unused]] u64 bytes, [[may
 
         if (prev_offset != m_prev_offset) {
             if (b_enable_memory_tracking) {
-                LOG_DEBUG("[memory]: invalid  memory address passed to stack allocator (free) {}", ptr);
+                LOG_ERROR("[memory]: invalid  memory address passed to stack allocator (free) {}", ptr);
             }
             return;
         }
@@ -145,7 +146,6 @@ void stack_allocator::do_deallocate(void *ptr, [[maybe_unused]] u64 bytes, [[may
         if (b_enable_memory_tracking) {
             LOG_DEBUG("[memory]: stack allocator deallocate at {}", ptr);
         }
-        ptr = nullptr;
     }
 }
 bool stack_allocator::do_is_equal(const std::pmr::memory_resource &other) const noexcept { return this == &other; }

@@ -12,11 +12,6 @@ namespace ant::memory {
 extern bool b_enable_memory_tracking;
 
 using memory_pool = std::pmr::memory_resource;
-//
-//class default_pool final : public memory_pool{public :
-//    default_pool(,memory_pool *upstream);
-//
-//};
 
 // Building Night City: The Technology Of CyberPunk 2077
 // https://indiegamedev.net/2022/03/27/custom-c20-memory-allocators-for-stl-containers/

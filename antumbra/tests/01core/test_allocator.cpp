@@ -42,5 +42,29 @@ TEST_CASE("allocator_stack") {
     for (int i = (int)allocation.size() - 1; i >=0; i--) {
         pool.deallocate(ptr[i], allocation[i]); // success
     }
-    
+    int x;
+    pool.deallocate(&x, 64); // fail
+}
+
+
+TEST_CASE("allocator_pool") {
+    memory::pool_allocator pool(8192, 64);
+    constexpr u64 chunk_count = 8192/ 64;
+    void *ptr[chunk_count];
+
+    for (u64 i = 0; i < chunk_count; i++) {
+        ptr[i] = pool.allocate(64); // success
+        REQUIRE(ptr[i] != nullptr);
+    }
+
+    void *null = pool.allocate(64); // fail
+    REQUIRE(null == nullptr);
+
+    for (u64 i = 0; i < chunk_count; i++) {
+        pool.deallocate(ptr[i], 64); // fail
+    }
+
+    int x;
+    pool.deallocate(&x, 64); // fail
+
 }

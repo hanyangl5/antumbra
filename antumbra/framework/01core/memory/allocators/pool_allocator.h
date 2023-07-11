@@ -4,6 +4,9 @@
 
 namespace ant::memory {
 
+// The pool_allocator is a memory management object that allocates memory in chunks from a predefined memory pool.
+// It is designed to be efficient in situations where the same size of memory block is frequently allocated and deallocated.
+
 class pool_allocator final : public allocator_base {
   public:
     pool_allocator(u64 pool_size, u64 chunk_size, u64 alignment = alignof(std::max_align_t)) noexcept;
@@ -14,15 +17,16 @@ class pool_allocator final : public allocator_base {
     void reset();
     void resize(u64 size, u64 alignment);
     void free_all();
+
   private:
     struct pool_allocator_node {
         pool_allocator_node *next;
     };
 
-
-    pool_allocator_node * m_head;
+    pool_allocator_node *m_head;
     u64 m_chunk_size;
     u64 m_chunk_count;
+
     void *m_ptr = nullptr;
     u64 m_offset = 0;
 };
