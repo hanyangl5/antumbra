@@ -8,16 +8,20 @@ linear_allocator::linear_allocator(u64 pool_size, u64 alignment) noexcept {
     u64 size = align_up(pool_size, alignment);
     m_size = size;
     m_ptr = mi_aligned_alloc(alignment, size);
+    if (b_enable_memory_tracking) {
+        LOG_DEBUG("[memory]: linear allocator initilized at {}, size {}", m_ptr, m_size);
+    }
 };
 
 linear_allocator::~linear_allocator() noexcept {
     free(m_ptr);
     m_ptr = nullptr;
+    if (b_enable_memory_tracking) {
+        LOG_DEBUG("[memory]: linear allocator destroyed at {}, size {}", m_ptr, m_size);
+    }
 };
 
-void linear_allocator::reset() {
-    m_offset = 0;
-}
+void linear_allocator::reset() { m_offset = 0; }
 
 void linear_allocator::resize(u64 size, u64 alignment) {
     u64 new_size = align_up(size, alignment);
@@ -40,7 +44,7 @@ void *linear_allocator::do_allocate(u64 bytes, u64 alignment) {
         return nullptr;
     }
     if (b_enable_memory_tracking) {
-        LOG_DEBUG("memory::stack_allocator: alloc {} bytes to {} with alignment {}", bytes, dst, alignment);
+        LOG_DEBUG("[memory]: alloc {} bytes to {} with alignment {}", bytes, dst, alignment);
     }
     m_offset += offset;
     return dst;

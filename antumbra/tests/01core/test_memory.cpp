@@ -2,6 +2,9 @@
 #include "framework/01core/utils/utils.h"
 #include <catch2/catch_test_macros.hpp>
 
+#include "framework/01core/memory/allocators/linear_allocator.h"
+#include "framework/01core/memory/allocators/pool_allocator.h"
+#include "framework/01core/memory/allocators/stack_allocator.h"
 using namespace ant::memory;
 using namespace ant;
 TEST_CASE("malloc") {
@@ -39,8 +42,4 @@ TEST_CASE("container") {
     ant::fixed_array<i32, 5> arr{1, 2, 3, 4, 5};
     REQUIRE(arr.size() == 5);
     // destroy_memory_system();
-}
-
-TEST_CASE("allocator") {
-    
 }

@@ -39,11 +39,17 @@ stack_allocator::stack_allocator(u64 pool_size, u64 alignment) noexcept {
     u64 size = align_up(pool_size, alignment);
     m_size = size;
     m_ptr = mi_aligned_alloc(alignment, size);
+    if (b_enable_memory_tracking) {
+        LOG_DEBUG("[memory]: stack allocator initilized at {}, size {}", m_ptr, m_size);
+    }
 };
 
 stack_allocator::~stack_allocator() noexcept {
     free(m_ptr);
     m_ptr = nullptr;
+    if (b_enable_memory_tracking) {
+        LOG_DEBUG("[memory]: stack allocator destroyed at {}, size {}", m_ptr, m_size);
+    }
 };
 
 void stack_allocator::reset() { m_offset = 0; }
@@ -76,9 +82,6 @@ void *stack_allocator::do_allocate(u64 bytes, u64 alignment) {
         return nullptr;
     }
 
-    m_prev_offset = m_offset;
-    m_offset += padding;
-
     // header end
     const u64 next_addr = current_addr + padding;
     // header start
@@ -87,17 +90,20 @@ void *stack_allocator::do_allocate(u64 bytes, u64 alignment) {
     //stack_allocator_header *header_ptr = (stack_allocator_header *)header_addr;
     //header_ptr = &allocation_header;
     ((stack_allocator_header *)header_addr)->pad = padding;
+
     ((stack_allocator_header *)header_addr)->prev_offset = m_prev_offset;
+    m_prev_offset = m_offset;
+    m_offset += padding;
     m_offset += bytes;
 
     if (b_enable_memory_tracking) {
-        LOG_DEBUG("memory::stack_allocator: alloc {} bytes to {} with alignment {}", bytes, (void *)header_addr,
+        LOG_DEBUG("memory::stack_allocator: alloc {} bytes to {} with alignment {}", bytes, (void *)next_addr,
                   alignment);
     }
     return (void *)next_addr;
 }
 
-void stack_allocator::do_deallocate(void *ptr, u64 bytes, u64 alignment) {
+void stack_allocator::do_deallocate(void *ptr, [[maybe_unused]] u64 bytes, [[maybe_unused]] u64 alignment) {
     if (ptr != NULL) {
         uintptr_t start, end, curr_addr;
         stack_allocator_header *header;
@@ -107,14 +113,19 @@ void stack_allocator::do_deallocate(void *ptr, u64 bytes, u64 alignment) {
         end = start + (uintptr_t)m_size;
         curr_addr = (uintptr_t)ptr;
 
-        // invalid ptr
+        // invalid ptr, out of bounds
         if (!(start <= curr_addr && curr_addr < end)) {
-            assert(0 && "Out of bounds memory address passed to stack allocator (free)");
+            if (b_enable_memory_tracking) {
+                LOG_DEBUG("[memory]: invalid  memory address passed to stack allocator (free) {}", ptr);
+            }
             return;
         }
 
         // not last allocation
         if (curr_addr >= start + (uintptr_t)m_offset) {
+            if (b_enable_memory_tracking) {
+                LOG_DEBUG("[memory]: invalid  memory address passed to stack allocator (free) {}", ptr);
+            }
             // Allow double frees
             return;
         }
@@ -122,13 +133,19 @@ void stack_allocator::do_deallocate(void *ptr, u64 bytes, u64 alignment) {
         header = (stack_allocator_header *)(curr_addr - sizeof(stack_allocator_header));
         prev_offset = (size_t)(curr_addr - (uintptr_t)header->pad - start);
 
-        if (prev_offset != header->prev_offset) {
-
-            assert(0 && "invalid order of stack allocator free");
+        if (prev_offset != m_prev_offset) {
+            if (b_enable_memory_tracking) {
+                LOG_DEBUG("[memory]: invalid  memory address passed to stack allocator (free) {}", ptr);
+            }
+            return;
         }
 
         m_offset = prev_offset;
-        prev_offset = header->prev_offset;
+        m_prev_offset = header->prev_offset;
+        if (b_enable_memory_tracking) {
+            LOG_DEBUG("[memory]: stack allocator deallocate at {}", ptr);
+        }
+        ptr = nullptr;
     }
 }
 bool stack_allocator::do_is_equal(const std::pmr::memory_resource &other) const noexcept { return this == &other; }

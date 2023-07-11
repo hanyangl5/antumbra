@@ -1,23 +1,45 @@
-#include "linear_allocator.h"
+#include "pool_allocator.h"
 
 #include "framework/01core/logging/log.h"
 
 namespace ant::memory {
 
-linear_allocator::linear_allocator(u64 pool_size, u64 alignment) noexcept {
+pool_allocator::pool_allocator(u64 pool_size, u64 chunk_size, u64 alignment) noexcept {
+
     u64 size = align_up(pool_size, alignment);
     m_size = size;
     m_ptr = mi_aligned_alloc(alignment, size);
+
+    m_chunk_size = align_up(chunk_size, alignment);
+    m_chunk_count = m_size / m_chunk_size;
+    m_head = nullptr;
+    // Set all chunks to be free
+    for (u64 i = 0; i < m_chunk_count; i++) {
+        void *ptr = (char *)m_ptr + i * m_chunk_size;
+        pool_allocator_node *node = (pool_allocator_node *)ptr;
+        // Push free node onto thte free list
+        node->next = m_head;
+        m_head = node;
+    }
 };
 
-linear_allocator::~linear_allocator() noexcept {
+pool_allocator::~pool_allocator() noexcept {
     free(m_ptr);
     m_ptr = nullptr;
 };
 
-void linear_allocator::reset() { m_offset = 0; }
+void pool_allocator::free_all() {
+    // Set all chunks to be free
+    for (u64 i = 0; i < m_chunk_count; i++) {
+        void *ptr = (char *)m_ptr + i * m_chunk_size;
+        pool_allocator_node *node = (pool_allocator_node *)ptr;
+        // Push free node onto thte free list
+        node->next = m_head;
+        m_head = node;
+    }
+}
 
-void linear_allocator::resize(u64 size, u64 alignment) {
+void pool_allocator::resize(u64 size, u64 alignment) {
     u64 new_size = align_up(size, alignment);
     void *new_ptr = mi_aligned_alloc(alignment, new_size);
     memcpy(new_ptr, m_ptr, m_size);
@@ -26,25 +48,34 @@ void linear_allocator::resize(u64 size, u64 alignment) {
     m_size = new_size;
 }
 
-void *linear_allocator::do_allocate(u64 bytes, u64 alignment) {
+void *pool_allocator::do_allocate([[maybe_unused]] u64 bytes, [[maybe_unused]] u64 alignment) {
     // return current ptr
-    void *dst = (char *)m_ptr + m_offset;
-    // offset bytes with alignment
-    u64 offset = align_up(bytes, alignment);
-    if (m_offset + offset > m_size) {
-        if (b_enable_memory_tracking) {
-            LOG_DEBUG("[memory]: allocator overflow, expect: {}, max: {}", m_offset + offset, m_size);
-        }
+    if (m_head == nullptr) {
+        // error
         return nullptr;
     }
-    if (b_enable_memory_tracking) {
-        LOG_DEBUG("memory::stack_allocator: alloc {} bytes to {} with alignment {}", bytes, dst, alignment);
-    }
-    m_offset += offset;
+    void *dst = m_head;
+    m_head = m_head->next;
     return dst;
 }
-void linear_allocator::do_deallocate([[maybe_unused]] void *ptr, [[maybe_unused]] u64 bytes,
-                                     [[maybe_unused]] u64 alignment) {}
-bool linear_allocator::do_is_equal(const std::pmr::memory_resource &other) const noexcept { return this == &other; }
+void pool_allocator::do_deallocate(void *ptr, [[maybe_unused]] u64 bytes, [[maybe_unused]] u64 alignment) {
+
+    if (ptr == nullptr) {
+        // Ignore NULL pointers
+        return;
+    }
+
+    if (!(m_ptr <= ptr && ptr < (char *)m_ptr + m_size)) {
+        assert(0 && "Memory is out of bounds of the buffer in this pool");
+        return;
+    }
+    pool_allocator_node *node;
+
+    // Push free node
+    node = (pool_allocator_node *)ptr;
+    node->next = m_head;
+    m_head = node;
+}
+bool pool_allocator::do_is_equal(const std::pmr::memory_resource &other) const noexcept { return this == &other; }
 
 } // namespace ant::memory
