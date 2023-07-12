@@ -8,18 +8,18 @@
 using namespace ant::memory;
 using namespace ant;
 
-ant::fixed_array<u64, 10> allocation= {8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096};
+ant::fixed_array<u64, 10> allocation = {8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096};
 
 TEST_CASE("allocator_linear") {
     memory::linear_allocator pool(8192, 8);
     void *ptr[10];
     for (u64 i = 0; i < allocation.size(); i++) {
-        ptr[i] = pool.allocate(allocation[i]);// success 
-        
+        ptr[i] = pool.allocate(allocation[i]); // success
+
         REQUIRE(ptr[i] != nullptr);
     }
-    // linear allocator doesn't support free 
-    
+    // linear allocator doesn't support free
+
     void *null = pool.allocate(0xffffffff); // fail
     REQUIRE(null == nullptr);
 }
@@ -36,20 +36,19 @@ TEST_CASE("allocator_stack") {
     void *null = pool.allocate(0xffffffff); // fail
     REQUIRE(null == nullptr);
 
-    for (u64 i = 0; i < allocation.size()-1; i++) {
+    for (u64 i = 0; i < allocation.size() - 1; i++) {
         pool.deallocate(ptr[i], allocation[i]); // fail
     }
-    for (int i = (int)allocation.size() - 1; i >=0; i--) {
+    for (int i = (int)allocation.size() - 1; i >= 0; i--) {
         pool.deallocate(ptr[i], allocation[i]); // success
     }
     int x;
     pool.deallocate(&x, 64); // fail
 }
 
-
 TEST_CASE("allocator_pool") {
     memory::pool_allocator pool(8192, 64);
-    constexpr u64 chunk_count = 8192/ 64;
+    constexpr u64 chunk_count = 8192 / 64;
     void *ptr[chunk_count];
 
     for (u64 i = 0; i < chunk_count; i++) {
@@ -66,5 +65,4 @@ TEST_CASE("allocator_pool") {
 
     int x;
     pool.deallocate(&x, 64); // fail
-
 }
