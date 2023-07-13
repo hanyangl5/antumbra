@@ -55,7 +55,7 @@
 #include "framework/02gal/shader/shader_compiler.h"
 #include "gal_vulkan_enum.h"
 #include "gal_vulkan_utils.h"
-#define ANT_VK_API_VERSION VK_API_VERSION_1_2
+#define ANT_VK_API_VERSION VK_API_VERSION_1_3
 
 namespace ant::gal {
 

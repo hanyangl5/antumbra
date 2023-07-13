@@ -26,13 +26,6 @@ extern bool b_enable_memory_tracking;
 
 using memory_pool = std::pmr::memory_resource;
 
-// Building Night City: The Technology Of CyberPunk 2077
-// https://indiegamedev.net/2022/03/27/custom-c20-memory-allocators-for-stl-containers/
-
-// slab for <= 512b
-// tlsf for 512b to 512kb
-// bigsize for >512kb
-
 class allocator_base : public memory_pool {
   public:
     allocator_base() noexcept {};
@@ -45,7 +38,7 @@ class allocator_base : public memory_pool {
     //virtual void init() = 0;
     // virtual void reset() = 0;
 
-    u64 m_size;
+    u64 m_size = 0;
 };
 
 } // namespace ant::memory

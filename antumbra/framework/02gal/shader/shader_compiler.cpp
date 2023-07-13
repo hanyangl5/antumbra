@@ -246,7 +246,7 @@ compiled_shader *shader_compiler::compile(shader_source_blob *blob, shader_compi
         args.push_back(L"-spirv");
         args.push_back(L"-fspv-target-env=vulkan1.3");
         args.push_back(L"-fspv-reflect");
-        args.push_back(L"-fvk-use-dx-layout");
+        //args.push_back(L"-fvk-use-dx-layout");// FIXME(hylu): add this will cause a validation error
         args.push_back(L"-fvk-use-dx-position-w");
     }
 
@@ -447,12 +447,17 @@ void compiled_shader_group::set(compiled_shader_gourp_desc *desc) {
 }
 
 void compiled_shader_group::release() {
-    m_vert->release();
-    m_frag->release();
-    m_domain->release();
-    m_hull->release();
-    m_geom->release();
-    m_comp->release();
+    auto release = [](compiled_shader *shader) {
+        if (shader) {
+            shader->release();
+        }
+    };
+    release(m_vert);
+    release(m_frag);
+    release(m_domain);
+    release(m_hull);
+    release(m_geom);
+    release(m_comp);
 }
 
 compiled_shader *compiled_shader_group::vert() { return m_vert != nullptr ? m_vert : nullptr; }
