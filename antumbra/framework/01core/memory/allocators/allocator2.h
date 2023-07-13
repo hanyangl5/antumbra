@@ -31,9 +31,8 @@ class allocator_base : public memory_pool {
     virtual bool do_is_equal(const std::pmr::memory_resource &other) const noexcept = 0;
     //virtual void init() = 0;
     // virtual void reset() = 0;
-    
+
     u64 m_size;
-    //u64 m_used;
 };
 
 } // namespace ant::memory

@@ -1,6 +1,7 @@
 #include "pool_allocator.h"
 
 #include "framework/01core/logging/log.h"
+#include "framework/01core/math/math.h"
 
 namespace ant::memory {
 
@@ -34,6 +35,21 @@ pool_allocator::~pool_allocator() noexcept {
     m_ptr = nullptr;
 };
 
+void pool_allocator::reset() {
+    m_head = nullptr;
+    // Set all chunks to be free
+    for (u64 i = 0; i < m_chunk_count; i++) {
+        void *ptr = (char *)m_ptr + i * m_chunk_size;
+        pool_allocator_node *node = (pool_allocator_node *)ptr;
+        // Push free node onto thte free list
+        node->next = m_head;
+        m_head = node;
+    }
+    if (b_enable_memory_tracking) {
+        LOG_DEBUG("[memory]: pool allocator initilized at {}, size {}", m_ptr, m_size);
+    }
+}
+
 void pool_allocator::free_all() {
     // Set all chunks to be free
     for (u64 i = 0; i < m_chunk_count; i++) {
@@ -45,14 +61,7 @@ void pool_allocator::free_all() {
     }
 }
 
-void pool_allocator::resize(u64 size, u64 alignment) {
-    u64 new_size = align_up(size, alignment);
-    void *new_ptr = mi_aligned_alloc(alignment, new_size);
-    memcpy(new_ptr, m_ptr, m_size);
-    free(m_ptr);
-    m_ptr = new_ptr;
-    m_size = new_size;
-}
+void pool_allocator::resize([[maybe_unused]] u64 pool_size, [[maybe_unused]] u64 alignment) {}
 
 void *pool_allocator::do_allocate([[maybe_unused]] u64 bytes, [[maybe_unused]] u64 alignment) {
     // return current ptr

@@ -5,7 +5,7 @@ namespace ant::memory {
 void *amalloc(u64 size, memory_pool *pool) {
     void *ptr;
     if (pool == nullptr) {
-        ptr = malloc(size);
+        ptr = mi_malloc(size);
     } else {
         ptr = pool->allocate(size);
     }

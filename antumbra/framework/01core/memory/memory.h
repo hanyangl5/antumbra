@@ -4,6 +4,9 @@
 #include <memory_resource>
 #include <type_traits>
 // third party libraries
+#include <mimalloc-override.h> // redefines malloc etc.
+#include <mimalloc.h>
+
 
 // project headers
 #include "framework/01core/logging/log.h"
@@ -21,7 +24,7 @@ void *amalloc(u64 size, memory_pool *pool = nullptr);
 template <typename T = void, typename... Args> T *alloc(Args &&...args, memory_pool *pool = nullptr) {
     void *memory;
     if (pool == nullptr) {
-        memory = malloc(sizeof(T));
+        memory = mi_malloc(sizeof(T));
     } else {
         memory = pool->allocate(sizeof(T));
     }

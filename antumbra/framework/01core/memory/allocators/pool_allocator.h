@@ -15,7 +15,7 @@ class pool_allocator final : public allocator_base {
     void do_deallocate(void *ptr, u64 bytes, u64 alignment = alignof(std::max_align_t)) override;
     bool do_is_equal(const std::pmr::memory_resource &other) const noexcept override;
     void reset();
-    void resize(u64 size, u64 alignment);
+    void resize(u64 pool_size, u64 alignment);
     void free_all();
 
   private:
