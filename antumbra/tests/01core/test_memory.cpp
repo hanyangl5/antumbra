@@ -5,6 +5,7 @@
 #include "framework/01core/memory/allocators/linear_allocator.h"
 #include "framework/01core/memory/allocators/pool_allocator.h"
 #include "framework/01core/memory/allocators/stack_allocator.h"
+#include "framework/01core/memory/smart_ptr.h"
 using namespace ant::memory;
 using namespace ant;
 TEST_CASE("malloc") {
@@ -21,10 +22,7 @@ TEST_CASE("malloc") {
     ant::memory::afree(pb);
 }
 
-TEST_CASE("memory") { ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 1024); 
-
-
-}
+TEST_CASE("memory") { ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 1024); }
 
 TEST_CASE("container") {
     ant::str str = "test string";
@@ -39,4 +37,22 @@ TEST_CASE("container") {
     }
     ant::fixed_array<i32, 5> arr{1, 2, 3, 4, 5};
     REQUIRE(arr.size() == 5);
+}
+
+TEST_CASE("uniqueptr") {
+    class A {
+      public:
+        A() { LOG_DEBUG("actor"); }
+        ~A() { LOG_DEBUG("actor"); }
+        int a;
+    };
+    {
+        unique_ptr<A> pi = make_unique<A>();
+        pi->a = 1;
+        auto pb = std::move(pi);
+        unique_ptr<A> pc = make_unique<A>();
+        pc->a = 4;
+        pb.swap(pc);
+        LOG_DEBUG("{} {}", pb->a, pc->a);
+    }
 }

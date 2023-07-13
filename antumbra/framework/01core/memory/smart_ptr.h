@@ -1,76 +1,92 @@
+#pragma once
 
-//template <class T> class uniqptr { // non-copyable T* to an object
-//  public:
-//    using namespace std;
-//
-//    constexpr uniqptr(T *rhs, memory_pool *allocator) noexcept : m_resource(rhs), m_allocator(allocator) = default;
-//    constexpr uniqptr() noexcept = default;
-//    uniqptr &operator=(nullptr_t) noexcept {
-//        reset();
-//        return *this;
-//    }
-//    uniqptr(uniqptr &&_Right) noexcept : {
-//        m_allocator = _Right.m_allocator;
-//        m_resource = _Right.release(); }
-//
-//    uniqptr(uniqptr<T2, _Dx2> &&_Right) noexcept
-//        : _Mypair(_One_then_variadic_args_t{}, _STD forward<_Dx2>(_Right.get_deleter()), _Right.release()) {}
-//
-//    uniqptr &operator=(uniqptr<T2> &&_Right) noexcept {
-//        reset(_Right.release());
-//        _Mypair._Get_first() = _STD forward<_Dx2>(_Right._Mypair._Get_first());
-//        return *this;
-//    }
-//
-//    uniqptr &operator=(uniqptr &&_Right) noexcept {
-//        if (this != std::addressof(_Right)) {
-//            reset(_Right.release());
-//
-//            _Mypair._Get_first() = _STD forward<_Dx>(_Right._Mypair._Get_first());
-//        }
-//        return *this;
-//    }
-//
-//    void swap(uniqptr &_Right) noexcept {
-//        std::exchange(m_resource, _Right.m_resource);
-//        std::exchange(m_allocator, _Right.m_allocator);
-//        _Swap_adl(_Mypair._Myval2, _Right._Mypair._Myval2);
-//        _Swap_adl(_Mypair._Get_first(), _Right._Mypair._Get_first());
-//    }
-//
-//    ~uniqptr() noexcept {
-//        if (_Mypair._Myval2) {
-//            _Mypair._Get_first()(_Mypair._Myval2);
-//        }
-//    }
-//
-//    T *operator->() const noexcept { return m_resource; }
-//
-//    T *get() const noexcept { return m_resource; }
-//
-//    T *release() noexcept { return std::exchange(m_resource, nullptr); }
-//
-//    void reset(T *_Ptr = nullptr) noexcept {
-//        T *_Old = std::exchange(_Mypair._Myval2, _Ptr);
-//        if (_Old) {
-//            _Mypair._Get_first()(_Old);
-//        }
-//    }
-//
-//    uniqptr(const uniqptr &) = delete;
-//    uniqptr &operator=(const uniqptr &) = delete;
-//
-//  private:
-//    T *m_resource = nullptr;
-//    memory_pool *m_allocator = nullptr;
-//};
-//
-//template <class T, class... Tpes, std::enable_if_t<!std::is_array_v<T>, int> = 0>
-//uniqptr<T> make_uniq(Tpes &&..._Args, memory_pool *allocator) { // make a unique_ptr
-//    return uniqptr<T>(alloc(std::forward<Tpes>(_Args)..., allocator));
-//}
-//
-//// smart pointer with ref counting
-//template<typename T> class ref_ptr {
-//
-//};
+#include <type_traits>
+
+namespace ant::memory {
+
+template <typename T> class unique_ptr;
+
+template <class _Ty, class... _Types, std::enable_if_t<!std::is_array_v<_Ty>, int> = 0>
+constexpr unique_ptr<_Ty> make_unique(_Types &&..._Args) { // make a unique_ptr
+    return unique_ptr<_Ty>(new _Ty(std::forward<_Types>(_Args)...));
+}
+
+template <class _Ty, std::enable_if_t<std::is_array_v<_Ty> && std::extent_v<_Ty> == 0, int> = 0>
+constexpr unique_ptr<_Ty> make_unique(const size_t _Size) { // make a unique_ptr
+    using _Elem = std::remove_extent_t<_Ty>;
+    return unique_ptr<_Ty>(new _Elem[_Size]());
+}
+
+template <class _Ty, class... _Types, std::enable_if_t<std::extent_v<_Ty> != 0, int> = 0>
+void make_unique(_Types &&...) = delete;
+
+// a simple unique ptr implementation
+// https://codereview.stackexchange.com/questions/163854/my-implementation-for-stdunique-ptr
+template <typename T> class unique_ptr {
+    T *data;
+
+  public:
+    unique_ptr() : data(nullptr) {}
+    // Explicit constructor
+    explicit unique_ptr(T *data) : data(data) {}
+    ~unique_ptr() { delete data; }
+
+    // Constructor/Assignment that binds to nullptr
+    // This makes usage with nullptr cleaner
+    unique_ptr(std::nullptr_t) : data(nullptr) {}
+    unique_ptr &operator=(std::nullptr_t) {
+        reset();
+        return *this;
+    }
+
+    // Constructor/Assignment that allows move semantics
+    unique_ptr(unique_ptr &&moving) noexcept : data(nullptr) {
+        moving.swap(*this);
+        // In the comments it was pointed out that this
+        // does not match the implementation of std::unique_ptr
+        // I am going to leave mine the same. But
+        // the the standard provides some extra guarantees
+        // and probably a more intuitive usage.
+    }
+    unique_ptr &operator=(unique_ptr &&moving) noexcept {
+        moving.swap(*this);
+        return *this;
+        // See move constructor.
+    }
+
+    // Constructor/Assignment for use with types derived from T
+    template <typename U> unique_ptr(unique_ptr<U> &&moving) {
+        unique_ptr<T> tmp(moving.release());
+        tmp.swap(*this);
+    }
+    template <typename U> unique_ptr &operator=(unique_ptr<U> &&moving) {
+        unique_ptr<T> tmp(moving.release());
+        tmp.swap(*this);
+        return *this;
+    }
+
+    // Remove compiler generated copy semantics.
+    unique_ptr(unique_ptr const &) = delete;
+    unique_ptr &operator=(unique_ptr const &) = delete;
+
+    // Const correct access owned object
+    T *operator->() const { return data; }
+    T &operator*() const { return *data; }
+
+    // Access to smart pointer state
+    T *get() const { return data; }
+    explicit operator bool() const { return data; }
+
+     void swap(unique_ptr &_Right) noexcept {
+        std::swap(data, _Right.data);
+    }
+
+    // Modify object state
+    T *release() noexcept {
+        T *result = nullptr;
+        std::swap(result, data);
+        return result;
+    }
+};
+
+} // namespace ant::memory
