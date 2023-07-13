@@ -67,8 +67,8 @@ inline constexpr u32 MAX_TEXTURE_SUBRESOURCE_COUNT = 256;
 #endif
 
 enum class gal_error_code : u32 {
-    GAL_ERRORCODE_SUCCESS,
-    GAL_ERRORCODE_ERROR,
+    SUC,
+    ERR,
     GAL_ERRORCODE_INVALID_PLATFORM,
     GAL_ERRORCODE_INVALID_DEVICE,
     GAL_ERRORCODE_INVALID_PARAMETER
@@ -215,6 +215,7 @@ enum class gal_shader_stage {
     HULL = gal_shader_stage::TESC,
     DOMN = gal_shader_stage::TESE,
 };
+enum shader_stage_index { VERT = 0, TESC = 1, TESE = 2, GEOM = 3, FRAG = 4, COMP = 5, RT = 6 };
 
 MAKE_ENUM_FLAG(u32, gal_shader_stage)
 

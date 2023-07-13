@@ -1,9 +1,22 @@
 #pragma once
 
 #include <memory_resource>
-
+#if 0
 #include <mimalloc-override.h> // redefines malloc etc.
 #include <mimalloc.h>
+//#define aligned_alloc(alignment, size) mi_aligned_alloc(alignment, size)
+#define aligned_free(ptr) free(ptr)
+
+#else
+#include <cstdlib>
+
+#ifdef _MSC_VER
+#define aligned_alloc(alignment, size) _aligned_malloc(size, alignment)
+#define aligned_free(ptr) _aligned_free(ptr)
+#else
+// Code for other compilers
+#endif
+#endif
 
 #include "framework/01core/utils/utils.h"
 

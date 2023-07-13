@@ -5,9 +5,24 @@ namespace ant::memory {
 void *amalloc(u64 size, memory_pool *pool) {
     void *ptr;
     if (pool == nullptr) {
-        ptr = mi_malloc(size);
+        ptr = malloc(size);
     } else {
-        ptr = pool->allocate(size);
+        ptr = pool->allocate(size, 0);
+    }
+    if (ptr == nullptr) {
+        if (b_enable_memory_tracking) {
+            LOG_ERROR("[memory]: memory allocation failed");
+        }
+        return nullptr;
+    }
+    return ptr;
+}
+void *aaligned_alloc(u64 alignment, u64 size, memory_pool *pool) { 
+        void *ptr;
+    if (pool == nullptr) {
+        ptr = aligned_alloc(alignment, size);
+    } else {
+        ptr = pool->allocate(size, alignment);
     }
     if (ptr == nullptr) {
         if (b_enable_memory_tracking) {

@@ -321,7 +321,7 @@ c_allocator::c_allocator() noexcept {}
 
 c_allocator::~c_allocator() noexcept {}
 
-void *c_allocator::do_allocate(u64 bytes, u64 alignment) { return mi_aligned_alloc(alignment, bytes); }
+void *c_allocator::do_allocate(u64 bytes, u64 alignment) { return aligned_alloc(alignment, bytes); }
 
-void c_allocator::do_deallocate(void *ptr, u64 bytes, u64 alignment) { mi_free_aligned(ptr, alignment); }
+void c_allocator::do_deallocate(void *ptr, u64 bytes, u64 alignment) { free(ptr); }
 bool c_allocator::do_is_equal(const std::pmr::memory_resource &other) const noexcept { return this == &other; }

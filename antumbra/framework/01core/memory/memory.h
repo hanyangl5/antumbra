@@ -4,9 +4,6 @@
 #include <memory_resource>
 #include <type_traits>
 // third party libraries
-#include <mimalloc-override.h> // redefines malloc etc.
-#include <mimalloc.h>
-
 
 // project headers
 #include "framework/01core/logging/log.h"
@@ -21,10 +18,11 @@ inline void ant_enable_memory_tracking() { b_enable_memory_tracking = true; }
 inline void ant_disable_memory_tracking() { b_enable_memory_tracking = false; }
 
 void *amalloc(u64 size, memory_pool *pool = nullptr);
+void *aaligned_alloc(u64 alignment, u64 size, memory_pool *pool = nullptr);
 template <typename T = void, typename... Args> T *alloc(Args &&...args, memory_pool *pool = nullptr) {
     void *memory;
     if (pool == nullptr) {
-        memory = mi_malloc(sizeof(T));
+        memory = malloc(sizeof(T));
     } else {
         memory = pool->allocate(sizeof(T));
     }

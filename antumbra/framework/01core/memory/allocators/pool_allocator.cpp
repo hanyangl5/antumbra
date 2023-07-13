@@ -9,7 +9,7 @@ pool_allocator::pool_allocator(u64 pool_size, u64 chunk_size, u64 alignment) noe
 
     u64 size = align_up(pool_size, alignment);
     m_size = size;
-    m_ptr = mi_aligned_alloc(alignment, size);
+    m_ptr = aligned_alloc(alignment, size);
 
     m_chunk_size = align_up(chunk_size, alignment);
     m_chunk_count = m_size / m_chunk_size;
@@ -28,7 +28,7 @@ pool_allocator::pool_allocator(u64 pool_size, u64 chunk_size, u64 alignment) noe
 };
 
 pool_allocator::~pool_allocator() noexcept {
-    free(m_ptr);
+    aligned_free(m_ptr);
     if (b_enable_memory_tracking) {
         LOG_DEBUG("[memory]: pool allocator destroyed at {}, size {}", m_ptr, m_size);
     }
