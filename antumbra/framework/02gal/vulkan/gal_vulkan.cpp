@@ -83,32 +83,30 @@ constexpr u32 utils_to_vk_queue_family_index(gal_queue_type queue_type, vk_conte
 }
 
 gal_error_code vk_init_gal(gal_context *context) {
-    *context = reinterpret_cast<gal_context>(ant::memory::alloc<vk_context>(memory::default_memory_allocator));
-    if (!*context) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+    vk_context *vk_ctx = ant::memory::alloc<vk_context>();
+    if (vk_ctx == gal_null) {
+        return gal_error_code::ERR;
     }
+    *context = reinterpret_cast<gal_context>(vk_ctx);
     load_gal_vk_functions();
-    if (*context == gal_null) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
-    }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_destroy_gal(gal_context context) {
     if (context != gal_null) {
         vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-        ant::memory::afree(vk_ctx, memory::default_memory_allocator);
+        ant::memory::afree(vk_ctx);
         context = gal_null;
         offload_gal_vk_functions();
     }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_create_instance(gal_desc *gal_desc, gal_context *context) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(*context);
     vk_ctx->m_gal_desc = *gal_desc;
 
-    ant::memory::stack_allocator stack_memory(2048);
+    ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 2048);
     ant::vector<const char *> required_instance_layers(&stack_memory);
     ant::vector<const char *> required_instance_extensions(&stack_memory);
 
@@ -150,7 +148,7 @@ gal_error_code vk_create_instance(gal_desc *gal_desc, gal_context *context) {
     }
 
     if (required_layer_count != 0) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
     for (u32 i = 0; i < available_extension_count; i++) {
         for (u32 j = 0; j < static_cast<u32>(required_instance_extensions.size()); j++) {
@@ -160,7 +158,7 @@ gal_error_code vk_create_instance(gal_desc *gal_desc, gal_context *context) {
         }
     }
     if (required_extension_count != 0) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
 
     VkApplicationInfo app_info{};
@@ -182,22 +180,22 @@ gal_error_code vk_create_instance(gal_desc *gal_desc, gal_context *context) {
 
     VkResult res = vkCreateInstance(&instance_create_info, nullptr, &(vk_ctx->instance));
     if (res == VK_SUCCESS && vk_ctx->instance != VK_NULL_HANDLE) {
-        return gal_error_code::GAL_ERRORCODE_SUCCESS;
+        return gal_error_code::SUC;
     } else {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
 }
 gal_error_code vk_destroy_instance(gal_context *context) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(*context);
 
     vkDestroyInstance(vk_ctx->instance, nullptr);
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_create_device(gal_desc *gal_desc, gal_context *context) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(*context);
 
-    //ant::memory::stack_allocator stack_memory(1024u);
-    ant::memory::stack_allocator stack_memory(1024u);
+    // ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 1024);
+    ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 1024);
     ant::vector<const char *> required_device_extensions(&stack_memory);
     ant::vector<const char *> required_device_layers(&stack_memory);
     if (gal_desc->b_swap_chain) {
@@ -213,7 +211,7 @@ gal_error_code vk_create_device(gal_desc *gal_desc, gal_context *context) {
     ant::vector<VkPhysicalDevice> physical_devices(physical_device_count, &stack_memory);
     if (physical_device_count == 0) {
         LOG_ERROR("no available device");
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
     vkEnumeratePhysicalDevices(vk_ctx->instance, &physical_device_count, physical_devices.data());
 
@@ -339,19 +337,19 @@ gal_error_code vk_create_device(gal_desc *gal_desc, gal_context *context) {
             queue_family_indices = {graphics_queue_family_index.value(), compute_queue_family_index.value(),
                                     transfer_queue_family_index.value()};
 
-            return gal_error_code::GAL_ERRORCODE_SUCCESS;
+            return gal_error_code::SUC;
         }
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     };
 
     ant::fixed_array<u32, 3> queue_family_indices;
 
     gal_error_code result = pick_gpu(queue_family_indices);
-    if (result != gal_error_code::GAL_ERRORCODE_SUCCESS) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+    if (result != gal_error_code::SUC) {
+        return gal_error_code::ERR;
     }
     if (vk_ctx->active_gpu == VK_NULL_HANDLE) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
     // TODO(hyl5): provide chain method to add features
     VkPhysicalDeviceShaderDrawParametersFeatures shader_draw_parameters_features{};
@@ -421,18 +419,18 @@ gal_error_code vk_create_device(gal_desc *gal_desc, gal_context *context) {
     }
 
     if (res != VK_SUCCESS || vk_ctx->device == VK_NULL_HANDLE) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
 
     // TODO(hyl5): query supported memory type of gpu, platform differences
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_destroy_device(gal_context *context) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(*context);
 
     vkDestroyDevice(vk_ctx->device, nullptr);
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_create_memory_allocator(gal_context *context) {
@@ -451,23 +449,23 @@ gal_error_code vk_create_memory_allocator(gal_context *context) {
     VkResult result = vmaCreateAllocator(&vma_create_info, &vk_ctx->vma_allocator);
 
     if (result == VK_SUCCESS && vk_ctx->vma_allocator != VK_NULL_HANDLE) {
-        return gal_error_code::GAL_ERRORCODE_SUCCESS;
+        return gal_error_code::SUC;
     } else {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
 }
 gal_error_code vk_destroy_memory_allocator(gal_context *context) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(*context);
 
     vmaDestroyAllocator(vk_ctx->vma_allocator);
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_create_buffer(gal_context context, gal_buffer_desc *desc, gal_buffer *buffer) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_buffer *vk_buf = ant::memory::alloc<ant::gal::vk_buffer>(ant::memory::default_memory_allocator);
+    vk_buffer *vk_buf = ant::memory::alloc<ant::gal::vk_buffer>();
     if (!vk_buf) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
     *buffer = reinterpret_cast<gal_buffer>(vk_buf);
     vk_buf->m_gal_buffer_desc = *desc;
@@ -500,12 +498,12 @@ gal_error_code vk_create_buffer(gal_context context, gal_buffer_desc *desc, gal_
                                       &vk_buf->m_allocation, nullptr);
 
     if (result != VK_SUCCESS || vk_buf->m_buffer == VK_NULL_HANDLE || vk_buf->m_allocation == VK_NULL_HANDLE) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
 
     // todo create buffer view for texelbuffer
 
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_destroy_buffer(gal_context context, gal_buffer buffer) {
@@ -514,18 +512,18 @@ gal_error_code vk_destroy_buffer(gal_context context, gal_buffer buffer) {
     if (buffer != gal_null) {
         vk_buffer *vk_buf = reinterpret_cast<vk_buffer *>(buffer);
         vmaDestroyBuffer(vk_ctx->vma_allocator, vk_buf->m_buffer, vk_buf->m_allocation);
-        ant::memory::afree(vk_buf, ant::memory::default_memory_allocator);
+        ant::memory::afree(vk_buf);
         buffer = gal_null;
     }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_create_texture(gal_context context, gal_texture_desc *desc, gal_texture *texture) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_texture *vk_tex = ant::memory::alloc<ant::gal::vk_texture>(ant::memory::default_memory_allocator);
+    vk_texture *vk_tex = ant::memory::alloc<ant::gal::vk_texture>();
     *texture = reinterpret_cast<gal_texture>(vk_tex);
     if (!*texture) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
     vk_tex->m_desc = *desc;
 
@@ -567,7 +565,7 @@ gal_error_code vk_create_texture(gal_context context, gal_texture_desc *desc, ga
     VkFormatFeatureFlags format_features = util_vk_image_usage_to_format_features(image_create_info.usage);
 
     if (!(format_props.optimalTilingFeatures & format_features)) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
     VmaAllocationCreateInfo allocation_create_info{};
     allocation_create_info.usage = VMA_MEMORY_USAGE_AUTO;
@@ -587,10 +585,10 @@ gal_error_code vk_create_texture(gal_context context, gal_texture_desc *desc, ga
         VkResult result = vmaCreateImage(vk_ctx->vma_allocator, &image_create_info, &allocation_create_info,
                                          &vk_tex->m_image, &vk_tex->m_allocation, nullptr);
         if (result != VK_SUCCESS || vk_tex->m_image == VK_NULL_HANDLE || vk_tex->m_allocation == VK_NULL_HANDLE) {
-            return gal_error_code::GAL_ERRORCODE_ERROR;
+            return gal_error_code::ERR;
         }
     }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_destroy_texture(gal_context context, gal_texture texture) {
@@ -602,18 +600,18 @@ gal_error_code vk_destroy_texture(gal_context context, gal_texture texture) {
             vmaDestroyImage(vk_ctx->vma_allocator, vk_tex->m_image, vk_tex->m_allocation);
             //vkDestroyImageView(vk_ctx->device, vk_tex->image_view, nullptr);
         }
-        ant::memory::afree(vk_tex, ant::memory::default_memory_allocator);
+        ant::memory::afree(vk_tex);
         texture = gal_null;
     }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_create_sampler(gal_context context, gal_sampler_desc *sampler_desc, gal_sampler *sampler) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_sampler *vk_spl = ant::memory::alloc<ant::gal::vk_sampler>(ant::memory::default_memory_allocator);
+    vk_sampler *vk_spl = ant::memory::alloc<ant::gal::vk_sampler>();
     *sampler = reinterpret_cast<gal_sampler>(vk_spl);
     if (!*sampler) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
     vk_spl->m_gal_sampler_desc = *sampler_desc;
 
@@ -637,9 +635,9 @@ gal_error_code vk_create_sampler(gal_context context, gal_sampler_desc *sampler_
     VkResult result = vkCreateSampler(vk_ctx->device, &sampler_create_info, nullptr, &vk_spl->m_sampler);
     if (result != VK_SUCCESS || vk_spl->m_sampler == VK_NULL_HANDLE) {
 
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_destroy_sampler(gal_context context, gal_sampler sampler) {
@@ -647,26 +645,26 @@ gal_error_code vk_destroy_sampler(gal_context context, gal_sampler sampler) {
     if (sampler != gal_null) {
         vk_sampler *vk_spl = reinterpret_cast<vk_sampler *>(sampler);
         vkDestroySampler(vk_ctx->device, vk_spl->m_sampler, nullptr);
-        ant::memory::afree(vk_spl, ant::memory::default_memory_allocator);
+        ant::memory::afree(vk_spl);
         sampler = gal_null;
     }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_create_render_target(gal_context context, gal_render_target_desc *desc,
                                        gal_render_target *render_target) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_render_target *vk_rt = ant::memory::alloc<vk_render_target>(ant::memory::default_memory_allocator);
+    vk_render_target *vk_rt = ant::memory::alloc<vk_render_target>();
     *render_target = reinterpret_cast<gal_render_target>(vk_rt);
     if (!*render_target) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
     vk_rt->m_desc = *desc;
 
     bool const isDepth = gal_tf_is_depth_only(desc->format) || gal_tf_is_depth_and_stencil(desc->format);
 
     if (((isDepth) && (desc->descriptor_types & gal_descriptor_type::RW_TEXTURE) != gal_descriptor_type::UNDEFINED)) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
 
     desc->mip_level = _max(1u, desc->mip_level);
@@ -723,8 +721,8 @@ gal_error_code vk_create_render_target(gal_context context, gal_render_target_de
     }
     // gal_create_texture
     gal_error_code gal_result = vk_create_texture(context, &textureDesc, &vk_rt->m_texture);
-    if (gal_result != gal_error_code::GAL_ERRORCODE_SUCCESS) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+    if (gal_result != gal_error_code::SUC) {
+        return gal_error_code::ERR;
     }
 
     VkImageViewType view_type = utils_to_vk_image_view_type(desc->dimension);
@@ -747,7 +745,7 @@ gal_error_code vk_create_render_target(gal_context context, gal_render_target_de
 
     VkResult result = (vkCreateImageView(vk_ctx->device, &rtvDesc, nullptr, &vk_rt->pVkDescriptor));
     if (result != VK_SUCCESS || vk_rt->pVkDescriptor == VK_NULL_HANDLE) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
 
     vk_rt->pVkSliceDescriptors = static_cast<VkImageView *>(malloc(desc->mip_level * sizeof(VkImageView)));
@@ -765,7 +763,7 @@ gal_error_code vk_create_render_target(gal_context context, gal_render_target_de
         //} else {
         result = (vkCreateImageView(vk_ctx->device, &rtvDesc, nullptr, &vk_rt->pVkSliceDescriptors[i]));
         if (result != VK_SUCCESS || vk_rt->pVkSliceDescriptors[i] == VK_NULL_HANDLE) {
-            return gal_error_code::GAL_ERRORCODE_ERROR;
+            return gal_error_code::ERR;
         }
         //}
     }
@@ -775,7 +773,7 @@ gal_error_code vk_create_render_target(gal_context context, gal_render_target_de
     // Render targets wont be created during runtime so this overhead will be minimal
     //util_initial_transition(pRenderer, pRenderTarget->pTexture, desc->mStartState);
 
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_destroy_render_target(gal_context context, gal_render_target render_target) {
@@ -788,19 +786,19 @@ gal_error_code vk_destroy_render_target(gal_context context, gal_render_target r
         for (u32 i = 0; i < vk_rt->m_desc.mip_level; ++i) {
             vkDestroyImageView(vk_ctx->device, vk_rt->pVkSliceDescriptors[i], nullptr);
         }
-        ant::memory::afree(vk_rt, ant::memory::default_memory_allocator);
+        ant::memory::afree(vk_rt);
         render_target = gal_null;
     }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 // surface
 gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *desc, gal_swap_chain *swap_chain) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_swap_chain *vk_sc = ant::memory::alloc<vk_swap_chain>(ant::memory::default_memory_allocator);
+    vk_swap_chain *vk_sc = ant::memory::alloc<vk_swap_chain>();
     *swap_chain = reinterpret_cast<gal_swap_chain>(vk_sc);
     if (!*swap_chain) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
     vk_sc->m_desc = *desc;
     VkResult result;
@@ -813,7 +811,7 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
     add_info.hwnd = desc->hwnd_window;
     result = vkCreateWin32SurfaceKHR(vk_ctx->instance, &add_info, nullptr, &vk_sc->m_surface);
     if (result != VK_SUCCESS || vk_sc->m_surface == VK_NULL_HANDLE) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
     DECLARE_ZERO(VkXlibSurfaceCreateInfoKHR, add_info);
@@ -852,7 +850,7 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
 #error PLATFORM NOT SUPPORTED
 #endif
 
-    ant::memory::stack_allocator stack_memory(256);
+    ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 256);
 
     // Image count
     if (0 == desc->image_count) {
@@ -862,7 +860,7 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
     VkSurfaceCapabilitiesKHR caps;
     result = (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vk_ctx->active_gpu, vk_sc->m_surface, &caps));
     if (result != VK_SUCCESS) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
     // fix invalid image count
     if ((caps.maxImageCount > 0) && (desc->image_count > caps.maxImageCount)) {
@@ -886,14 +884,14 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
     // Get surface formats count
     result = vkGetPhysicalDeviceSurfaceFormatsKHR(vk_ctx->active_gpu, vk_sc->m_surface, &surfaceFormatCount, nullptr);
     if (result != VK_SUCCESS) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
     // Allocate and get surface formats
     formats.resize(surfaceFormatCount);
     result = (vkGetPhysicalDeviceSurfaceFormatsKHR(vk_ctx->active_gpu, vk_sc->m_surface, &surfaceFormatCount,
                                                    formats.data()));
     if (result != VK_SUCCESS) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
     if ((1 == surfaceFormatCount) && (VK_FORMAT_UNDEFINED == formats[0].format)) {
         surface_format.format = VK_FORMAT_B8G8R8A8_UNORM;
@@ -931,7 +929,7 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
     result = (vkGetPhysicalDeviceSurfacePresentModesKHR(vk_ctx->active_gpu, vk_sc->m_surface, &swapChainImageCount,
                                                         nullptr));
     if (result != VK_SUCCESS) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
     // Allocate and get present modes
     modes.resize(swapChainImageCount);
@@ -939,7 +937,7 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
     result = (vkGetPhysicalDeviceSurfacePresentModesKHR(vk_ctx->active_gpu, vk_sc->m_surface, &swapChainImageCount,
                                                         modes.data()));
     if (result != VK_SUCCESS) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
     const u32 preferredModeCount = 4;
     VkPresentModeKHR preferredModeList[preferredModeCount] = {
@@ -988,7 +986,7 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
         }
     }
     if (composite_alpha == VK_COMPOSITE_ALPHA_FLAG_BITS_MAX_ENUM_KHR) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
 
     VkSwapchainCreateInfoKHR swapChainCreateInfo{};
@@ -1011,7 +1009,7 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
     swapChainCreateInfo.oldSwapchain = 0;
     result = (vkCreateSwapchainKHR(vk_ctx->device, &swapChainCreateInfo, nullptr, &vk_sc->m_swap_chain));
     if (result != VK_SUCCESS || vk_sc->m_swap_chain == VK_NULL_HANDLE) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
     desc->format = vkformat_to_galtextureformat(surface_format.format);
 
@@ -1019,14 +1017,14 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
     u32 imageCount = 0;
     result = (vkGetSwapchainImagesKHR(vk_ctx->device, vk_sc->m_swap_chain, &imageCount, nullptr));
     if (result != VK_SUCCESS) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
     assert(imageCount >= desc->image_count);
 
     result =
         (vkGetSwapchainImagesKHR(vk_ctx->device, vk_sc->m_swap_chain, &imageCount, vk_sc->swap_chain_images.data()));
     if (result != VK_SUCCESS) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
 
     gal_render_target_desc descColor = {};
@@ -1050,7 +1048,7 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
     /************************************************************************/
     /************************************************************************/
 
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_destroy_swap_chain(gal_context context, gal_swap_chain swap_chain) {
     if (swap_chain != gal_null) {
@@ -1068,140 +1066,68 @@ gal_error_code vk_destroy_swap_chain(gal_context context, gal_swap_chain swap_ch
         vkDestroySurfaceKHR(vk_ctx->instance, vk_sc->m_surface, nullptr);
 
         // resources are freed automatically
-        ant::memory::afree(vk_sc, ant::memory::default_memory_allocator);
+        ant::memory::afree(vk_sc);
         swap_chain = gal_null;
     }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_create_shader_program(gal_context context, gal_shader_program_desc *desc,
                                         gal_shader_program *shader_program) {
 
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_shader_program *vk_sp = ant::memory::alloc<ant::gal::vk_shader_program>(ant::memory::default_memory_allocator);
+    vk_shader_program *vk_sp = ant::memory::alloc<ant::gal::vk_shader_program>();
     vk_sp->m_desc = *desc;
     *shader_program = reinterpret_cast<gal_shader_program>(vk_sp);
     if (!shader_program) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
 
     u32 stage_count = 0;
-    // count stage count
-    for (u32 i = 0; i < gal_shader_stage_count; ++i) {
-        gal_shader_stage stage_mask = (gal_shader_stage)(1 << i);
-        if (stage_mask == (desc->shader_group->stages() & stage_mask)) {
-            switch (stage_mask) {
-            case gal_shader_stage::VERT:
-                stage_count++;
-                break; //-V814
-            case gal_shader_stage::TESC:
-                stage_count++;
-                break; //-V814
-            case gal_shader_stage::TESE:
-                stage_count++;
-                break; //-V814
-            case gal_shader_stage::GEOM:
-                stage_count++;
-                break; //-V814
-            case gal_shader_stage::FRAG:
-                stage_count++;
-                break; //-V814
-            case gal_shader_stage::RAYTRACING:
-            case gal_shader_stage::COMP:
-                stage_count++;
-                break; //-V814
-            default:
-                break;
-            }
-        }
-    }
-    vk_sp->m_desc = *desc;
-    vk_sp->m_stage_count = stage_count;
-
     VkResult result;
-    for (u32 i = 0; i < gal_shader_stage_count; ++i) {
-        gal_shader_stage stage_mask = (gal_shader_stage)(1 << i);
-        if (stage_mask == (desc->shader_group->stages() & stage_mask)) {
-            VkShaderModuleCreateInfo create_info{};
-            create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-            create_info.pNext = nullptr;
-            create_info.flags = 0;
-            //const BinaryShaderStageDesc *pStageDesc = nullptr;
-            switch (stage_mask) {
-            case gal_shader_stage::VERT: {
-                create_info.codeSize = desc->shader_group->vert()->byte_code()->size();
-                create_info.pCode = static_cast<const u32 *>(desc->shader_group->vert()->byte_code()->data());
-                result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
-                if (result != VK_SUCCESS) {
-                    return gal_error_code::GAL_ERRORCODE_ERROR;
-                }
-                vk_sp->m_entrys[i] = desc->shader_group->vert()->entry();
-            } break;
-            case gal_shader_stage::TESC: {
-                create_info.codeSize = desc->shader_group->hull()->byte_code()->size();
-                create_info.pCode = static_cast<u32 *>(desc->shader_group->hull()->byte_code()->data());
-                result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
-                if (result != VK_SUCCESS) {
-                    return gal_error_code::GAL_ERRORCODE_ERROR;
-                }
-                vk_sp->m_entrys[i] = desc->shader_group->hull()->entry();
-            } break;
-            case gal_shader_stage::TESE: {
-                create_info.codeSize = desc->shader_group->domain()->byte_code()->size();
-                create_info.pCode = static_cast<u32 *>(desc->shader_group->domain()->byte_code()->data());
-                result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
-                if (result != VK_SUCCESS) {
-                    return gal_error_code::GAL_ERRORCODE_ERROR;
-                }
-                vk_sp->m_entrys[i] = desc->shader_group->domain()->entry();
-            } break;
-            case gal_shader_stage::GEOM: {
-                create_info.codeSize = desc->shader_group->geom()->byte_code()->size();
-                create_info.pCode = static_cast<u32 *>(desc->shader_group->geom()->byte_code()->data());
-                result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
-                if (result != VK_SUCCESS) {
-                    return gal_error_code::GAL_ERRORCODE_ERROR;
-                }
-                vk_sp->m_entrys[i] = desc->shader_group->geom()->entry();
-            } break;
-            case gal_shader_stage::FRAG: {
-                create_info.codeSize = desc->shader_group->frag()->byte_code()->size();
-                create_info.pCode = static_cast<u32 *>(desc->shader_group->frag()->byte_code()->data());
-                result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
-                if (result != VK_SUCCESS) {
-                    return gal_error_code::GAL_ERRORCODE_ERROR;
-                }
-                vk_sp->m_entrys[i] = desc->shader_group->frag()->entry();
-            } break;
-            case gal_shader_stage::COMP: {
-                create_info.codeSize = desc->shader_group->comp()->byte_code()->size();
-                create_info.pCode = static_cast<u32 *>(desc->shader_group->comp()->byte_code()->data());
-                result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_sp->m_shader_modules[i]);
-                if (result != VK_SUCCESS) {
-                    return gal_error_code::GAL_ERRORCODE_ERROR;
-                }
-                vk_sp->m_entrys[i] = desc->shader_group->comp()->entry();
-            } break;
-            default:
-                assert(false && "Shader Stage not supported!");
-                break;
-            }
+    auto create_shader_module = [&](compiled_shader *shader, shader_stage_index idx) {
+        if (shader == nullptr) {
+            return gal_error_code::SUC;
         }
-    }
+        VkShaderModuleCreateInfo create_info{};
+        create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        create_info.pNext = nullptr;
+        create_info.flags = 0;
+        create_info.codeSize = shader->byte_code()->size();
+        create_info.pCode = static_cast<const u32 *>(shader->byte_code()->data());
+        result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr,
+                                      &vk_sp->m_shader_modules[static_cast<u32>(idx)]);
+        if (result != VK_SUCCESS) {
+            return gal_error_code::ERR;
+        }
+        vk_sp->m_entrys[static_cast<u32>(idx)] = shader->entry();
+
+        stage_count++;
+        return gal_error_code::SUC;
+    };
+
+    create_shader_module(desc->shader_group->vert(), shader_stage_index::VERT);
+    create_shader_module(desc->shader_group->hull(), shader_stage_index::TESC);
+    create_shader_module(desc->shader_group->domain(), shader_stage_index::TESE);
+    create_shader_module(desc->shader_group->geom(), shader_stage_index::GEOM);
+    create_shader_module(desc->shader_group->frag(), shader_stage_index::FRAG);
+    create_shader_module(desc->shader_group->comp(), shader_stage_index::COMP);
+
+    vk_sp->m_stage_count = stage_count;
 
     //createPipelineReflection(stageReflections, stage_count, desc->pReflection);
 
     //addShaderDependencies(pShaderProgram, desc);
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_create_pipeline_cache(gal_context context, gal_pipeline_cache_desc *desc,
                                         gal_pipeline_cache *pipeline_cache) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_pipeline_cache *vk_pc = ant::memory::alloc<ant::gal::vk_pipeline_cache>(ant::memory::default_memory_allocator);
+    vk_pipeline_cache *vk_pc = ant::memory::alloc<ant::gal::vk_pipeline_cache>();
     *pipeline_cache = reinterpret_cast<gal_pipeline_cache>(vk_pc);
     if (*pipeline_cache) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
 
     if (ant::io::is_file(desc->filename)) {
@@ -1213,20 +1139,20 @@ gal_error_code vk_create_pipeline_cache(gal_context context, gal_pipeline_cache_
         VkResult result = vkCreatePipelineCache(vk_ctx->device, &ci, nullptr, &vk_pc->pipeline_cache);
         if (result != VK_SUCCESS || vk_pc->pipeline_cache == VK_NULL_HANDLE) {
 
-            return gal_error_code::GAL_ERRORCODE_ERROR;
+            return gal_error_code::ERR;
         }
     }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_destroy_pipeline_cache(gal_context context, gal_pipeline_cache _pipeline_cache) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     if (_pipeline_cache != gal_null) {
         vk_pipeline_cache *vk_pc = reinterpret_cast<vk_pipeline_cache *>(_pipeline_cache);
         vkDestroyPipelineCache(vk_ctx->device, vk_pc->pipeline_cache, nullptr);
-        ant::memory::afree(vk_pc, ant::memory::default_memory_allocator);
+        ant::memory::afree(vk_pc);
         _pipeline_cache = gal_null;
     }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_get_pipeline_cache_data(gal_context context, gal_pipeline_cache _pipeline_cache, u64 *_size,
                                           void *_data) {
@@ -1234,18 +1160,18 @@ gal_error_code vk_get_pipeline_cache_data(gal_context context, gal_pipeline_cach
     vk_pipeline_cache *vk_pc = reinterpret_cast<vk_pipeline_cache *>(_pipeline_cache);
     VkResult result = vkGetPipelineCacheData(vk_ctx->device, vk_pc->pipeline_cache, _size, _data);
     if (result != VK_SUCCESS || _size == nullptr || _data == nullptr) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_create_compute_pipeline(gal_context context, gal_pipeline_desc *desc, gal_pipeline *pipeline) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_pipeline *vk_pipe = ant::memory::alloc<ant::gal::vk_pipeline>(ant::memory::default_memory_allocator);
+    vk_pipeline *vk_pipe = ant::memory::alloc<ant::gal::vk_pipeline>();
     *pipeline = reinterpret_cast<gal_pipeline>(vk_pipe);
 
     if (!*pipeline) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
     vk_pipe->m_desc = *desc;
     vk_pipe->m_type = gal_pipeline_type::COMPUTE;
@@ -1259,8 +1185,8 @@ gal_error_code vk_create_compute_pipeline(gal_context context, gal_pipeline_desc
     shader_stage_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     shader_stage_create_info.flags = 0;
     shader_stage_create_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-    shader_stage_create_info.module = vk_sp->m_shader_modules[static_cast<u32>(gal_shader_stage::COMP)];
-    shader_stage_create_info.pName = vk_sp->m_entrys[static_cast<u32>(gal_shader_stage::COMP)];
+    shader_stage_create_info.module = vk_sp->m_shader_modules[static_cast<u32>(shader_stage_index::COMP)];
+    shader_stage_create_info.pName = vk_sp->m_entrys[static_cast<u32>(shader_stage_index::COMP)];
     shader_stage_create_info.pSpecializationInfo = nullptr;
 
     VkComputePipelineCreateInfo pipeline_create_info{};
@@ -1276,14 +1202,14 @@ gal_error_code vk_create_compute_pipeline(gal_context context, gal_pipeline_desc
     VkResult result =
         vkCreateComputePipelines(vk_ctx->device, pipeline_cache, 1, &pipeline_create_info, nullptr, &vk_pipe->pipeline);
     if (result != VK_SUCCESS || vk_pipe->pipeline == VK_NULL_HANDLE) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_create_graphics_pipeline(gal_context context, gal_pipeline_desc *desc, gal_pipeline *pipeline) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_pipeline *vk_pipe = ant::memory::alloc<ant::gal::vk_pipeline>(ant::memory::default_memory_allocator);
+    vk_pipeline *vk_pipe = ant::memory::alloc<ant::gal::vk_pipeline>();
     *pipeline = reinterpret_cast<gal_pipeline>(vk_pipe);
 
     vk_pipe->m_desc = *desc;
@@ -1325,7 +1251,7 @@ gal_error_code vk_create_graphics_pipeline(gal_context context, gal_pipeline_des
                 stages[stage_count].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
             } break;
             default:
-                return gal_error_code::GAL_ERRORCODE_ERROR;
+                return gal_error_code::ERR;
                 // assert(false && "Shader Stage not supported!");
                 break;
             }
@@ -1335,7 +1261,7 @@ gal_error_code vk_create_graphics_pipeline(gal_context context, gal_pipeline_des
 
     // Make sure there's a shader
     if (stage_count == 0) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
     u32 input_binding_count = 0;
     VkVertexInputBindingDescription input_bindings[MAX_VERTEX_BINDINGS] = {{0}};
@@ -1404,7 +1330,7 @@ gal_error_code vk_create_graphics_pipeline(gal_context context, gal_pipeline_des
         topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         break;
     default:
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
         //assert(false && "Primitive Topo not supported!");
         break;
     }
@@ -1501,9 +1427,9 @@ gal_error_code vk_create_graphics_pipeline(gal_context context, gal_pipeline_des
         (vkCreateGraphicsPipelines(vk_ctx->device, pipeline_cache, 1, &add_info, nullptr, &vk_pipe->pipeline));
 
     if (result != VK_SUCCESS || vk_pipe->pipeline == gal_null) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 //gal_error_code vk_create_raytracing_pipeline(gal_context context, gal_raytracing_pipeline_desc *desc,
 //                                           gal_pipeline *pipeline) {
@@ -1517,33 +1443,33 @@ gal_error_code vk_create_graphics_pipeline(gal_context context, gal_pipeline_des
 
 gal_error_code vk_destroy_pipeline() {
     //vkDestroyPipeline();
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 struct vk_descriptorpool {
     VkDescriptorPool pool;
 };
 //gal_error_code vk_create_descriptorpool(gal_context context, gal_descriptorpool_desc* desc, gal_descriptorpool* descriptorpool) {
-//    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+//    return gal_error_code::SUC;
 //}
 gal_error_code vk_destroy_descriptorpool() {
     //vkDestroyDescriptorPool();
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_consume_descriptorset() {
     //vkAllocateDescriptorSets();
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_free_descriptorset() {
     //vkFreeDescriptorSets()
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_desc *desc,
                                        gal_rootsignature *root_signature) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_rootsignature *vk_rs = ant::memory::alloc<ant::gal::vk_rootsignature>(ant::memory::default_memory_allocator);
+    vk_rootsignature *vk_rs = ant::memory::alloc<ant::gal::vk_rootsignature>();
     if (!vk_rs) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
     *root_signature = reinterpret_cast<gal_rootsignature>(vk_rs);
 
@@ -1551,10 +1477,10 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
     u32 set_count = static_cast<u32>(refl->sets.size());
     // TODO(hyl5): seperate descriptor set layouts for caching
 
-    ant::memory::stack_allocator stack_memory(1024);
+    ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 1024);
     if (set_count > MAX_DESCRIPTOR_SET_COUNT) {
         LOG_ERROR("maximum of descriptor set count is: {}, current is: {}", MAX_DESCRIPTOR_SET_COUNT, set_count);
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
 
     ant::fixed_array<VkDescriptorSetLayoutCreateInfo, MAX_DESCRIPTOR_SET_COUNT> set_layouts_ci;
@@ -1604,7 +1530,7 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
         ci.pBindings = bindings.data() + ((i == 0) ? 0 : binding_offsets[i - 1]);
         result = vkCreateDescriptorSetLayout(vk_ctx->device, &ci, nullptr, &vk_rs->set_layouts[i]);
         if (result != VK_SUCCESS) {
-            return gal_error_code::GAL_ERRORCODE_ERROR;
+            return gal_error_code::ERR;
         }
     }
     VkPipelineLayoutCreateInfo plci{};
@@ -1618,46 +1544,46 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
 
     result = vkCreatePipelineLayout(vk_ctx->device, &plci, nullptr, &vk_rs->pipeline_layout);
     if (result != VK_SUCCESS) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_destroy_rootsignature() {
     //vkDestroyPipelineLayout();
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 // sync
 gal_error_code vk_create_fence() {
     //vkCreateFence();
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_wait_fence() {
     //vkWaitForFences();
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_destroy_fence() {
     //vkDestroyFence();
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_wait_gpu() {
     //vkDeviceWaitIdle();
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_create_semaphore() {
     //vkCreateSemaphore();
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_destroy_semaphore() {
     //vkDestroySemaphore();
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 // cmds
 gal_error_code vk_create_command_pool(gal_context context, gal_command_pool_desc *desc,
                                       gal_command_pool *command_pool) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_command_pool *vk_cmd_pool = ant::memory::alloc<ant::gal::vk_command_pool>(ant::memory::default_memory_allocator);
+    vk_command_pool *vk_cmd_pool = ant::memory::alloc<ant::gal::vk_command_pool>();
     if (!vk_cmd_pool) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
     *command_pool = reinterpret_cast<gal_command_pool>(vk_cmd_pool);
 
@@ -1673,35 +1599,35 @@ gal_error_code vk_create_command_pool(gal_context context, gal_command_pool_desc
 
     VkResult result = vkCreateCommandPool(vk_ctx->device, &ci, nullptr, &vk_cmd_pool->m_cmd_pool);
     if (result != VK_SUCCESS || vk_cmd_pool->m_cmd_pool == VK_NULL_HANDLE) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_reset_command_pool(gal_context context, gal_command_pool command_pool) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_command_pool *vk_cmd_pool = reinterpret_cast<vk_command_pool *>(command_pool);
     VkResult result = vkResetCommandPool(vk_ctx->device, vk_cmd_pool->m_cmd_pool, 0);
     if (result != VK_SUCCESS) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_destroy_command_pool(gal_context context, gal_command_pool command_pool) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     if (command_pool != gal_null) {
         vk_command_pool *vk_cmd_pool = reinterpret_cast<vk_command_pool *>(command_pool);
         vkDestroyCommandPool(vk_ctx->device, vk_cmd_pool->m_cmd_pool, nullptr);
-        ant::memory::afree(vk_cmd_pool, ant::memory::default_memory_allocator);
+        ant::memory::afree(vk_cmd_pool);
         command_pool = gal_null;
     }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_allocate_command_list(gal_context context, gal_command_list_desc *desc, gal_command_list *command) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_command_list *vk_cmd = ant::memory::alloc<ant::gal::vk_command_list>(ant::memory::default_memory_allocator);
+    vk_command_list *vk_cmd = ant::memory::alloc<ant::gal::vk_command_list>();
     if (!vk_cmd) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
     *command = reinterpret_cast<gal_command_list>(vk_cmd);
 
@@ -1713,9 +1639,9 @@ gal_error_code vk_allocate_command_list(gal_context context, gal_command_list_de
     alloc_info.commandBufferCount = 1;
     VkResult result = vkAllocateCommandBuffers(vk_ctx->device, &alloc_info, &vk_cmd->m_command);
     if (result != VK_SUCCESS || vk_cmd->m_command == gal_null) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_free_command_list(gal_context context, gal_command_list command) {
@@ -1725,10 +1651,10 @@ gal_error_code vk_free_command_list(gal_context context, gal_command_list comman
         vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
         vkFreeCommandBuffers(vk_ctx->device, reinterpret_cast<vk_command_pool *>(vk_cmd->m_cmd_pool)->m_cmd_pool, 1,
                              &vk_cmd->m_command);
-        ant::memory::afree(vk_cmd, ant::memory::default_memory_allocator);
+        ant::memory::afree(vk_cmd);
         command = gal_null;
     }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 // TODO(hylu) : gal_error_code vk_create_command_list;
@@ -1743,9 +1669,9 @@ gal_error_code vk_cmd_begin(gal_command_list command) {
 
     VkResult result = vkBeginCommandBuffer(vk_cmd->m_command, &begin_info);
     if (result != VK_SUCCESS) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_cmd_end(gal_command_list command) {
@@ -1757,11 +1683,11 @@ gal_error_code vk_cmd_end(gal_command_list command) {
     }
     VkResult result = vkEndCommandBuffer(vk_cmd->m_command);
     if (result != VK_SUCCESS) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
-gal_error_code vk_cmd_set_render_target() { return gal_error_code::GAL_ERRORCODE_SUCCESS; }
+gal_error_code vk_cmd_set_render_target() { return gal_error_code::SUC; }
 gal_error_code vk_cmd_set_viewport(gal_command_list command, float x, float y, float width, float height,
                                    float minDepth, float maxDepth) {
     vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
@@ -1774,7 +1700,7 @@ gal_error_code vk_cmd_set_viewport(gal_command_list command, float x, float y, f
     viewport.minDepth = minDepth;
     viewport.maxDepth = maxDepth;
     vkCmdSetViewport(vk_cmd->m_command, 0, 1, &viewport);
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_cmdSetScissor(gal_command_list command, u32 x, u32 y, u32 width, u32 height) {
@@ -1786,14 +1712,14 @@ gal_error_code vk_cmdSetScissor(gal_command_list command, u32 x, u32 y, u32 widt
     rect.extent.width = width;
     rect.extent.height = height;
     vkCmdSetScissor(vk_cmd->m_command, 0, 1, &rect);
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_cmdSetStencilReferenceValue(gal_command_list command, u32 val) {
     vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
 
     vkCmdSetStencilReference(vk_cmd->m_command, VK_STENCIL_FRONT_AND_BACK, val);
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_cmd_resource_barrier() {
@@ -1801,7 +1727,7 @@ gal_error_code vk_cmd_resource_barrier() {
 
     //vkCmdPipelineBarrier();
     //vkCmdPipelineBarrier2();
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_cmd_bind_index_buffer(gal_command_list command, gal_buffer index_buffer, gal_index_type index_type,
@@ -1810,7 +1736,7 @@ gal_error_code vk_cmd_bind_index_buffer(gal_command_list command, gal_buffer ind
     VkIndexType vk_index_type = utils_to_vk_index_type(index_type);
     vkCmdBindIndexBuffer(vk_cmd->m_command, reinterpret_cast<vk_buffer *>(index_buffer)->m_buffer, offset,
                          vk_index_type);
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_cmd_bind_vertex_buffer(gal_command_list command, u32 vertex_buffer_count, gal_buffer *vertex_buffers,
                                          [[maybe_unused]] u32 *stides, u64 *offsets) {
@@ -1819,7 +1745,7 @@ gal_error_code vk_cmd_bind_vertex_buffer(gal_command_list command, u32 vertex_bu
     if (vertex_buffer_count > MAX_VERTEX_BUFFER_BINDING) {
         LOG_ERROR("cannot bind more than {} vertex buffers, current is: {}", MAX_VERTEX_BUFFER_BINDING,
                   vertex_buffer_count);
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
 
     ant::fixed_array<VkBuffer, MAX_VERTEX_BUFFER_BINDING> buffers;
@@ -1827,50 +1753,50 @@ gal_error_code vk_cmd_bind_vertex_buffer(gal_command_list command, u32 vertex_bu
     for (u32 i = 0; i < vertex_buffer_count; i++) {
         if (vertex_buffers[i] == nullptr) {
             LOG_ERROR("invalid vertex buffers");
-            return gal_error_code::GAL_ERRORCODE_ERROR;
+            return gal_error_code::ERR;
         }
         buffers[i] = reinterpret_cast<vk_buffer *>(vertex_buffers[i])->m_buffer;
         vb_offsets[i] = (offsets ? offsets[i] : 0);
     }
 
     vkCmdBindVertexBuffers(vk_cmd->m_command, 0, vertex_buffer_count, buffers.data(), vb_offsets.data());
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_cmd_bind_descriptorset() {
     //vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
 
     //vkCmdBindDescriptorSets();
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_cmd_bind_pipeline(gal_command_list command, gal_pipeline pipeline) {
     vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
     vkCmdBindPipeline(vk_cmd->m_command, utils_to_vk_pipeline_bind_point(pipeline->m_type),
                       reinterpret_cast<vk_pipeline *>(pipeline)->pipeline);
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_cmd_begin_renderpass(gal_command_list command, gal_renderpass_begin_desc *desc) {
     vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
     if (desc) {
 
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
     // using dynamic rendering
     //vkCmdBeginRendering();
     VkRenderingInfo ri{};
     vkCmdBeginRendering(vk_cmd->m_command, &ri);
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_cmd_end_renderpass(gal_command_list command) {
     vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
 
     vkCmdEndRendering(vk_cmd->m_command);
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_cmd_dispatch(gal_command_list command, u32 group_count_x, u32 group_count_y, u32 group_count_z) {
     vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
 
     vkCmdDispatch(vk_cmd->m_command, group_count_x, group_count_y, group_count_z);
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_cmd_draw_instanced(gal_command_list command, u32 vertex_count, u32 first_vertex, u32 instance_count,
@@ -1878,50 +1804,50 @@ gal_error_code vk_cmd_draw_instanced(gal_command_list command, u32 vertex_count,
     vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
 
     vkCmdDraw(vk_cmd->m_command, vertex_count, instance_count, first_vertex, first_instance);
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_cmd_draw_indexed_instanced(gal_command_list command, u32 index_count, u32 first_index,
                                              u32 instance_count, u32 first_instance, u32 first_vertex) {
     vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
 
     vkCmdDrawIndexed(vk_cmd->m_command, index_count, instance_count, first_index, first_vertex, first_instance);
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 //gal_error_code vk_cmd_dispatch_indirect() {
 //    //vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
 //    //vkCmdDispatchIndirect();
-//    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+//    return gal_error_code::SUC;
 //}
 //gal_error_code vk_cmd_draw_indirect_instanced() {
 //    //vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
 //    //vkCmdDrawIndirect();
-//    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+//    return gal_error_code::SUC;
 //}
 //gal_error_code vk_cmd_draw_indirect_indexed_instanced() {
 //    //vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
 //    //vkCmdDrawIndexedIndirect();
-//    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+//    return gal_error_code::SUC;
 //}
 //
 //gal_error_code vk_cmd_draw_indirect_mesh_task() {
 //    //vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
 //    // vkCmdDrawMeshTasksEXT
-//    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+//    return gal_error_code::SUC;
 //}
 
 gal_error_code vk_cmd_draw_mesh_task() {
     //vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
 
     // vkCmdDrawMeshTasksEXT
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_cmd_copy_texture() {
     //vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
 
     //vkCmdCopyImage();
     //vkCmdCopyImage2();
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_cmd_copy_buffer(gal_command_list command, gal_buffer src, gal_buffer dst, u64 src_offset,
                                   u64 dst_offset, u64 size) {
@@ -1932,38 +1858,38 @@ gal_error_code vk_cmd_copy_buffer(gal_command_list command, gal_buffer src, gal_
     bc.dstOffset = dst_offset;
     vkCmdCopyBuffer(vk_cmd->m_command, reinterpret_cast<vk_buffer *>(src)->m_buffer,
                     reinterpret_cast<vk_buffer *>(dst)->m_buffer, 1, &bc);
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_cmd_fill_buffer() {
     //vkCmdFillBuffer();
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_cmd_fill_texture() {
     //vkCmdClearColorImage();
     //vkCmdClearDepthStencilImage();
     //vkCmdClearAttachments();
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
-gal_error_code vk_cmd_upload_buffer() { return gal_error_code::GAL_ERRORCODE_SUCCESS; }
-gal_error_code vk_cmd_upload_texture() { return gal_error_code::GAL_ERRORCODE_SUCCESS; }
+gal_error_code vk_cmd_upload_buffer() { return gal_error_code::SUC; }
+gal_error_code vk_cmd_upload_texture() { return gal_error_code::SUC; }
 gal_error_code vk_cmd_update_subresources(gal_command_list command, gal_texture dst, gal_buffer src,
                                           u32 subresource_count, gal_texture_subresource_desc *descs) {
     vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
     if (subresource_count > MAX_TEXTURE_SUBRESOURCE_COUNT) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
     const gal_texture_format fmt = dst->m_desc.format;
 
     if (!gal_tf_is_single_plane(fmt)) {
-        return gal_error_code::GAL_ERRORCODE_ERROR;
+        return gal_error_code::ERR;
     }
-    ant::memory::stack_allocator stack_memory(MAX_TEXTURE_SUBRESOURCE_COUNT * sizeof(VkBufferCopy));
+    ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, MAX_TEXTURE_SUBRESOURCE_COUNT * sizeof(VkBufferCopy));
     ant::vector<VkBufferImageCopy> regions(subresource_count, &stack_memory);
 
     for (u32 i = 0; i < subresource_count; i++) {
         if (!(descs + i)) {
             LOG_ERROR("invalid subsource desc");
-            return gal_error_code::GAL_ERRORCODE_ERROR;
+            return gal_error_code::ERR;
         }
         gal_texture_subresource_desc &desc = descs[i];
         u32 width = _max<u32>(1, dst->m_desc.width >> desc.mip_level);
@@ -1986,18 +1912,18 @@ gal_error_code vk_cmd_update_subresources(gal_command_list command, gal_texture 
     vkCmdCopyBufferToImage(vk_cmd->m_command, reinterpret_cast<vk_buffer *>(src)->m_buffer,
                            reinterpret_cast<vk_texture *>(dst)->m_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                            subresource_count, regions.data());
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 gal_error_code vk_cmd_copy_texture_to_buffer() {
     //vkCmdCopyImageToBuffer();
     //vkCmdCopyImageToBuffer2();
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 //
 //gal_error_code vk_map_buffer(gal_context context, gal_buffer buffer, ReadRange *pRange) {
 //
 //    if ((buffer->m_gal_buffer_desc.memory_flags & gal_memory_flag::GPU_DEDICATED) == gal_memory_flag::UNDEFINED) {
-//        return gal_error_code::GAL_ERRORCODE_ERROR;
+//        return gal_error_code::ERR;
 //    };
 //    VkResult result = (
 //        vmaMapMemory(pRenderer->mVulkan.pVmaAllocator, pBuffer->mVulkan.pVkAllocation, &pBuffer->pCpuMappedAddress));
@@ -2070,7 +1996,7 @@ gal_error_code vk_cmd_copy_texture_to_buffer() {
 //
 //        result = (vkCreateImageView(vk_ctx->device, &srvDesc, nullptr, &vk_tex->image_view));
 //        if (result != VK_SUCCESS || vk_tex->image == VK_NULL_HANDLE || vk_tex->allocation == VK_NULL_HANDLE) {
-//            return gal_error_code::GAL_ERRORCODE_ERROR;
+//            return gal_error_code::ERR;
 //        }
 //    }
 //}
@@ -2087,9 +2013,9 @@ gal_error_code vk_cmd_copy_texture_to_buffer() {
 //    VkResult result = vkCreateShaderModule(vk_ctx->device, &create_info, nullptr, &vk_s->shader);
 //
 //    if (result != VK_SUCCESS || vk_s->shader == VK_NULL_HANDLE) {
-//        return gal_error_code::GAL_ERRORCODE_ERROR;
+//        return gal_error_code::ERR;
 //    }
-//    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+//    return gal_error_code::SUC;
 //}
 //gal_error_code vk_destroy_shader(gal_context context, gal_shader _shader) {
 //    if (_shader != gal_null) {
@@ -2099,7 +2025,7 @@ gal_error_code vk_cmd_copy_texture_to_buffer() {
 //        ant::memory::afree(vk_s);
 //        _shader = gal_null;
 //    }
-//    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+//    return gal_error_code::SUC;
 //}
 
 } // namespace ant::gal

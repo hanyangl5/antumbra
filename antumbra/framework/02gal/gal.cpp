@@ -28,7 +28,7 @@ extern gal_error_code d3d12_init_gal(gal_context *context);
         break;
     }
 
-    return gal_error_code::GAL_ERRORCODE_SUCCESS;
+    return gal_error_code::SUC;
 }
 
 #define GAL_FUNCTION_DEFINATION

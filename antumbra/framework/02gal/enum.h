@@ -30,9 +30,9 @@
 #ifdef WIN32
 #include <Windows.h>
 #endif
-#include "framework/01core/utils/utils.h"
-#include "framework/01core/memory/container.h"
 #include "format.h"
+#include "framework/01core/memory/memory.h"
+#include "framework/01core/utils/utils.h"
 
 namespace ant::gal {
 struct compiled_shader_group;
@@ -50,25 +50,25 @@ inline constexpr u32 MAX_DEBUG_NAME_LENGTH = 128;
 inline constexpr u32 MAX_MIP_LEVELS = 0xFFFFFFFF;
 inline constexpr u32 MAX_SWAPCHAIN_IMAGES = 3;
 inline constexpr u32 MAX_GPU_VENDOR_STRING_LENGTH = 64; //max size for GPUVendorPreset strings
-inline constexpr u32 MAX_SHADER_STAGE_COUNT = 5; //max size for GPUVendorPreset strings
+inline constexpr u32 MAX_SHADER_STAGE_COUNT = 5;        //max size for GPUVendorPreset strings
 inline constexpr u32 MAX_TEXTURE_SUBRESOURCE_COUNT = 256;
 
 #ifndef MAKE_ENUM_FLAG
 #define MAKE_ENUM_FLAG(TYPE, ENUM_TYPE)                                                                                \
-    inline constexpr ENUM_TYPE operator|(ENUM_TYPE a, ENUM_TYPE b) { return ENUM_TYPE(((TYPE)a) | ((TYPE)b)); }  \
+    inline constexpr ENUM_TYPE operator|(ENUM_TYPE a, ENUM_TYPE b) { return ENUM_TYPE(((TYPE)a) | ((TYPE)b)); }        \
     inline ENUM_TYPE &operator|=(ENUM_TYPE &a, ENUM_TYPE b) { return (ENUM_TYPE &)(((TYPE &)a) |= ((TYPE)b)); }        \
-    inline constexpr ENUM_TYPE operator&(ENUM_TYPE a, ENUM_TYPE b) { return ENUM_TYPE(((TYPE)a) & ((TYPE)b)); }  \
+    inline constexpr ENUM_TYPE operator&(ENUM_TYPE a, ENUM_TYPE b) { return ENUM_TYPE(((TYPE)a) & ((TYPE)b)); }        \
     inline ENUM_TYPE &operator&=(ENUM_TYPE &a, ENUM_TYPE b) { return (ENUM_TYPE &)(((TYPE &)a) &= ((TYPE)b)); }        \
-    inline constexpr ENUM_TYPE operator~(ENUM_TYPE a) { return ENUM_TYPE(~((TYPE)a)); }                          \
-    inline constexpr ENUM_TYPE operator^(ENUM_TYPE a, ENUM_TYPE b) { return ENUM_TYPE(((TYPE)a) ^ ((TYPE)b)); }  \
+    inline constexpr ENUM_TYPE operator~(ENUM_TYPE a) { return ENUM_TYPE(~((TYPE)a)); }                                \
+    inline constexpr ENUM_TYPE operator^(ENUM_TYPE a, ENUM_TYPE b) { return ENUM_TYPE(((TYPE)a) ^ ((TYPE)b)); }        \
     inline ENUM_TYPE &operator^=(ENUM_TYPE &a, ENUM_TYPE b) { return (ENUM_TYPE &)(((TYPE &)a) ^= ((TYPE)b)); }
 #else
 #define MAKE_ENUM_FLAG(TYPE, ENUM_TYPE)
 #endif
 
 enum class gal_error_code : u32 {
-    GAL_ERRORCODE_SUCCESS,
-    GAL_ERRORCODE_ERROR,
+    SUC,
+    ERR,
     GAL_ERRORCODE_INVALID_PLATFORM,
     GAL_ERRORCODE_INVALID_DEVICE,
     GAL_ERRORCODE_INVALID_PARAMETER
@@ -96,14 +96,7 @@ struct gal_desc {
     bool b_surface : 1;
 };
 
-enum class gal_blend_mode {
-    UNDEFINED,
-    ADD,
-    SUBTRACT,
-    REVERSE_SUBTRACT,
-    MIN,
-    MAX
-};
+enum class gal_blend_mode { UNDEFINED, ADD, SUBTRACT, REVERSE_SUBTRACT, MIN, MAX };
 
 enum class gal_stencil_op {
     UNDEFINED,
@@ -132,7 +125,7 @@ enum class gal_cull_mode { UNDEFINED = 0, NONE, BACK, FRONT, BOTH };
 
 enum class gal_front_face { UNDEFINED = 0, CCW, CW };
 
-enum class gal_polygon_fill_mode { UNDEFINED, SOLID, WIREFRAME};
+enum class gal_polygon_fill_mode { UNDEFINED, SOLID, WIREFRAME };
 
 enum class gal_pipeline_type {
     UNDEFINED = 0,
@@ -172,17 +165,7 @@ enum class gal_sampler_filter_mode {
     LINEAR,
     // cubic, anisotropic?
 };
-enum class gal_compare_mode {
-    UNDEFINED,
-    NEVER,
-    LESS,
-    LESS_EQUAL,
-    EQUAL,
-    NOT_EQUAL,
-    GREATER,
-    GREATER_EQUAL,
-    ALWAYS
-};
+enum class gal_compare_mode { UNDEFINED, NEVER, LESS, LESS_EQUAL, EQUAL, NOT_EQUAL, GREATER, GREATER_EQUAL, ALWAYS };
 
 enum class gal_sampler_mip_mode { UNDEFINED, POINT, LINEAR };
 
@@ -232,6 +215,7 @@ enum class gal_shader_stage {
     HULL = gal_shader_stage::TESC,
     DOMN = gal_shader_stage::TESE,
 };
+enum shader_stage_index { VERT = 0, TESC = 1, TESE = 2, GEOM = 3, FRAG = 4, COMP = 5, RT = 6 };
 
 MAKE_ENUM_FLAG(u32, gal_shader_stage)
 
@@ -443,13 +427,13 @@ struct gal_read_range {
 };
 
 struct gal_clear_value {
-    struct rgb{
+    struct rgb {
         float r;
         float g;
         float b;
         float a;
     };
-    struct ds{
+    struct ds {
         float depth;
         uint32_t stencil;
     };
@@ -462,9 +446,9 @@ DECLARE_GAL_HANDLE(gal_context) {
 };
 
 struct gal_buffer_desc {
-    u64 size;                          // size
+    u64 size;                             // size
     gal_descriptor_type descriptor_types; // descriptor types of buffer
-    gal_resource_state initial_state; // initial state of buffer
+    gal_resource_state initial_state;     // initial state of buffer
     gal_memory_flag memory_flags;
     gal_buffer_flag flags;
 };
@@ -487,7 +471,7 @@ struct gal_texture_desc {
     gal_texture_format format;
     gal_texture_flag texture_flags;
     gal_descriptor_type descriptor_types; // descriptor types of buffer
-    gal_resource_state initial_state; // initial state of buffer
+    gal_resource_state initial_state;     // initial state of buffer
     void *native_handle;
 };
 
@@ -508,7 +492,7 @@ struct gal_render_target_desc {
     u32 texture_sample_quality;
     gal_clear_value clear_value;
     gal_descriptor_type descriptor_types; // descriptor types of buffer
-    gal_resource_state initial_state; // initial state of buffer
+    gal_resource_state initial_state;     // initial state of buffer
     void *native_handle;
 };
 
@@ -553,7 +537,7 @@ struct gal_swap_chain_desc {
     bool b_vsync;
 };
 
-DECLARE_GAL_HANDLE(gal_swap_chain) {  
+DECLARE_GAL_HANDLE(gal_swap_chain) {
     gal_swap_chain_desc m_desc;
     ant::fixed_array<gal_render_target, MAX_SWAPCHAIN_IMAGES> m_render_targets;
 };
@@ -587,7 +571,7 @@ DECLARE_GAL_HANDLE(gal_rootsignature){};
 DECLARE_GAL_HANDLE(gal_pipeline_cache){};
 
 struct gal_compute_pipeline_desc {
-    gal_shader_program* shader;
+    gal_shader_program *shader;
     gal_rootsignature root_signature;
 };
 struct gal_raytracing_pipeline_desc {};
@@ -614,7 +598,6 @@ struct gal_pipeline_desc {
         desc;
     gal_pipeline_cache pipeline_cache;
 };
-
 
 DECLARE_GAL_HANDLE(gal_pipeline) {
     gal_pipeline_desc m_desc;
@@ -663,8 +646,6 @@ struct gal_command_pool_desc {
     gal_queue_type queue_type;
     bool b_transient;
 };
-
-
 
 DECLARE_GAL_HANDLE(gal_command_pool) { gal_queue_type queue_type; };
 

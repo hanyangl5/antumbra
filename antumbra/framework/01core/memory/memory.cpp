@@ -2,24 +2,36 @@
 
 namespace ant::memory {
 
-void initialize_memory_system() {
-    default_memory_allocator = new default_allocator(1024); // TODO(hyl5): use smart pointer?
-    if (b_enable_memory_tracking) {
-        LOG_DEBUG("initialize memory system");
+void *amalloc(u64 size, memory_pool *pool) {
+    void *ptr;
+    if (pool == nullptr) {
+        ptr = malloc(size);
+    } else {
+        ptr = pool->allocate(size, 0);
     }
+    if (ptr == nullptr) {
+        if (b_enable_memory_tracking) {
+            LOG_ERROR("[memory]: memory allocation failed");
+        }
+        return nullptr;
+    }
+    return ptr;
 }
-
-void destroy_memory_system() {
-    if (default_memory_allocator) {
-        delete default_memory_allocator;
+void *aaligned_alloc(u64 alignment, u64 size, memory_pool *pool) { 
+        void *ptr;
+    if (pool == nullptr) {
+        ptr = aligned_alloc(alignment, size);
+    } else {
+        ptr = pool->allocate(size, alignment);
     }
-    if (b_enable_memory_tracking) {
-        LOG_DEBUG("destroy memory system");
+    if (ptr == nullptr) {
+        if (b_enable_memory_tracking) {
+            LOG_ERROR("[memory]: memory allocation failed");
+        }
+        return nullptr;
     }
+    return ptr;
 }
-
-void *amalloc(u64 size, std::pmr::memory_resource *allocator) { return allocator->allocate(size); }
-
 //void *ant_calloc(u64 num, u64 size, std::pmr::memory_resource *allocator) {
 //    if (b_enable_memory_tracking) {
 //        LOG_DEBUG("alloc {} bytes", size * num);

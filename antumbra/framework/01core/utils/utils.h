@@ -90,11 +90,11 @@ struct blob {
         m_data = nullptr;
         m_size = 0;
     }
+
   private:
     void *m_data = nullptr;
     u64 m_size = 0;
 };
-
 
 // bytes
 constexpr u64 operator"" _b(u64 value) { return static_cast<u64>(value); }
@@ -102,4 +102,6 @@ constexpr u64 operator"" _b(u64 value) { return static_cast<u64>(value); }
 constexpr u64 operator"" _kb(u64 value) { return static_cast<u64>(value * 1024); }
 // mega bytse
 constexpr u64 operator"" _mb(u64 value) { return static_cast<u64>(value * 1024 * 1024); }
+
+template <typename T> T align_up(T a, T size) { return ((a + size - 1) & (~(size - 1))); }
 } // namespace ant

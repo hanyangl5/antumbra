@@ -105,7 +105,7 @@
 # "relaxed_constexpr."
 # OUTPUT_SUFFIX
 # .xml)
-
+set(CMAKE_CXX_STANDARD 17)
 project(tests)
 
 file(GLOB_RECURSE HEADER_FILES "*.h")
@@ -118,7 +118,6 @@ add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 copy_dxil(${PROJECT_NAME} ${CMAKE_CURRENT_BINARY_DIR})
 
-configure_compile_options(tests)
 
 # include directories
 target_include_directories(${PROJECT_NAME} PRIVATE

@@ -32,3 +32,5 @@ if(DOXYGEN_FOUND)
         COMMENT "Generate html pages"
     )
 endif(DOXYGEN_FOUND)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
