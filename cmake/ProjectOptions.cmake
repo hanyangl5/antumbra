@@ -29,6 +29,32 @@ function(configure_compile_options proj_name)
     # GCC/Clang  -fno-exceptions
 endfunction()
 
+function(configure_compile_options_no_werror proj_name)
+    set(CMAKE_CXX_STANDARD 17)
+    target_compile_options(${PROJECT_NAME} PRIVATE -DNOMINMAX)
+    if(WIN32)
+        if(MSVC)
+            message("using MSVC under windows")
+
+            target_compile_options(${proj_name} PRIVATE /std:c++17)
+            target_compile_options(${proj_name} PRIVATE /MP /permissive /w14640 /W4 /external:anglebrackets /external:W0 /GR-)
+
+        else()
+            message("using GCC/Clang under windows")
+            target_compile_options(${proj_name} PRIVATE -std=c++17)
+            target_compile_options(${proj_name} PRIVATE -Wall -Wextra -Wshadow -Wnon-virtual-dtor -pedantic Weverything -fno-rtti)
+        endif()
+    elseif(LINUX)
+        message("using GCC/Clang under LINUX")
+        target_compile_options(${proj_name} PRIVATE -std=c++17)
+        target_compile_options(${proj_name} PRIVATE -Wall -Wextra -Wshadow -Wnon-virtual-dtor -pedantic Weverything -fno-rtti)
+    endif()
+
+    # disable exceptions
+    # MSVC string(REGEX REPLACE "/EH[a-z]+" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}) # disable exception
+    # GCC/Clang  -fno-exceptions
+endfunction()
+
 macro(configure_antumbra)
     if(WIN32)
         if(MSVC)

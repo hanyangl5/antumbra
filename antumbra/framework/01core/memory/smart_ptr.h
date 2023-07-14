@@ -2,6 +2,8 @@
 
 #include "memory.h"
 #include <type_traits>
+#include <utility>
+
 namespace ant::memory {
 
 template <typename T> class unique_ptr;
@@ -27,63 +29,52 @@ template <typename T> class unique_ptr {
     memory_pool *allocator = nullptr;
 
   public:
-    unique_ptr() : {}
+    unique_ptr() noexcept : {}
     // Explicit constructor
-    explicit unique_ptr(T *data, memory_pool *pool) : data(data), allocator(pool) {}
-    ~unique_ptr() { afree(data, allocator); }
+    explicit unique_ptr(T *data, memory_pool *pool) noexcept : data(data), allocator(pool) {}
+    ~unique_ptr() noexcept { afree(data, allocator); }
 
-    // Constructor/Assignment that binds to nullptr
-    // This makes usage with nullptr cleaner
-    unique_ptr(std::nullptr_t) : data(nullptr) {}
-    unique_ptr &operator=(std::nullptr_t) {
+    unique_ptr(std::nullptr_t) noexcept {}
+    unique_ptr &operator=(std::nullptr_t) noexcept {
         reset();
         return *this;
     }
 
-    // Constructor/Assignment that allows move semantics
-    unique_ptr(unique_ptr &&moving) noexcept : data(nullptr) {
-        moving.swap(*this);
-        // In the comments it was pointed out that this
-        // does not match the implementation of std::unique_ptr
-        // I am going to leave mine the same. But
-        // the the standard provides some extra guarantees
-        // and probably a more intuitive usage.
-    }
-    unique_ptr &operator=(unique_ptr &&moving) noexcept {
-        moving.swap(*this);
+    unique_ptr(unique_ptr &&rhs) noexcept { rhs.swap(*this); }
+    unique_ptr &operator=(unique_ptr &&rhs) noexcept {
+        rhs.swap(*this);
         return *this;
-        // See move constructor.
     }
 
-    // Constructor/Assignment for use with types derived from T
-    template <typename U> unique_ptr(unique_ptr<U> &&moving) {
-        unique_ptr<T> tmp(moving.release());
+    template <typename U> unique_ptr(unique_ptr<U> &&rhs) {
+        unique_ptr<T> tmp(rhs.release(), rhs.allocator);
         tmp.swap(*this);
     }
-    template <typename U> unique_ptr &operator=(unique_ptr<U> &&moving) {
-        unique_ptr<T> tmp(moving.release());
+    template <typename U> unique_ptr &operator=(unique_ptr<U> &&rhs) {
+        unique_ptr<T> tmp(rhs.release(), rhs.allocator);
         tmp.swap(*this);
         return *this;
     }
 
-    // Remove compiler generated copy semantics.
     unique_ptr(unique_ptr const &) = delete;
     unique_ptr &operator=(unique_ptr const &) = delete;
 
-    // Const correct access owned object
-    T *operator->() const { return data; }
-    T &operator*() const { return *data; }
+    T *operator->() const noexcept { return data; }
+    T &operator*() const noexcept { return *data; }
 
-    // Access to smart pointer state
-    T *get() const { return data; }
-    explicit operator bool() const { return data; }
+    T *get() const noexcept { return data; }
+    explicit operator bool() const noexcept { return data; }
 
-    void swap(unique_ptr &_Right) noexcept { std::swap(data, _Right.data); }
+    void swap(unique_ptr &rhs) noexcept {
+        std::swap(data, rhs.data);
+        std::swap(allocator, rhs.allocator);
+    }
 
     // Modify object state
     T *release() noexcept {
         T *result = nullptr;
         std::swap(result, data);
+
         return result;
     }
 };
