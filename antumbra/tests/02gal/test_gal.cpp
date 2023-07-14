@@ -395,4 +395,82 @@ void CS_MAIN(uint3 globalID : SV_DispatchThreadID, uint3 localID : SV_GroupThrea
     sg.release();
 }
 
-TEST_CASE("test graphics pipeline creation") {}
+TEST_CASE("test dispatch") {}
+
+
+TEST_CASE("test compute vk") {
+    ant::str test_cs = " [numthreads(8, 8, 1)] void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) {}";
+
+    using namespace ant::gal;
+    // compile shader from source
+    gal::gal_context context = initialize(gal_api::VULKAN);
+    shader_compiler sc;
+    shader_source_blob source;
+    source.set(test_cs.data(), test_cs.size());
+
+    shader_compile_desc desc;
+    desc.entry = "CS_MAIN";
+    desc.optimization_level = shader_optimization_level::NONE;
+    desc.target_api = shader_blob_type::SPIRV;
+    desc.target_profile = shader_target_profile::CS_6_0;
+
+    gal::gal_shader_program sp{};
+    gal::compiled_shader_group sg{};
+    gal::shader_gourp_source_desc sg_desc{};
+
+    sg_desc.desc_comp = &desc;
+    sg.set_from_source(&source, &sg_desc);
+
+    // root signature
+    gal::gal_rootsignature rs{};
+    gal::gal_rootsignature_desc rs_desc{};
+    rs_desc.shader = &sg;
+    gal::create_rootsignature(context, &rs_desc, &rs);
+
+    // create shader program
+    gal::gal_shader_program_desc sp_desc{};
+    sp_desc.shader_group = &sg;
+
+    gal_error_code result = gal::create_shader_program(context, &sp_desc, &sp);
+    REQUIRE(result == gal_error_code::SUC);
+
+    // create pso
+    gal_compute_pipeline_desc comp_pipe_desc{};
+    comp_pipe_desc.root_signature = &rs;
+    comp_pipe_desc.shader = &sp;
+
+    gal_pipeline_desc pipe_desc{};
+    pipe_desc.desc = comp_pipe_desc;
+
+    gal::gal_pipeline comp_pipe{};
+    result = gal::create_compute_pipeline(context, &pipe_desc, &comp_pipe);
+    REQUIRE(result == gal_error_code::SUC);
+
+    ant::gal::gal_command_pool cmd_pool{};
+    gal::gal_command_pool_desc cmd_pool_desc{};
+    cmd_pool_desc.b_transient = false;
+    cmd_pool_desc.queue_type = gal_queue_type::graphcis;
+    result = gal::create_command_pool(context, &cmd_pool_desc, &cmd_pool);
+    REQUIRE(result == gal::gal_error_code::SUC);
+
+    gal_command_list cmd{};
+    gal_command_list_desc cmd_desc{};
+    cmd_desc.command_pool = cmd_pool;
+    cmd_desc.b_secondary = false;
+    result = gal::allocate_command_list(context, &cmd_desc, &cmd);
+    REQUIRE(result == gal::gal_error_code::SUC);
+    gal::cmd_begin(cmd);
+    gal::cmd_bind_pipeline(cmd, comp_pipe);
+    gal::cmd_dispatch(cmd, 1, 1, 1);
+    gal::cmd_end(cmd);
+    result = gal::reset_command_pool(context, cmd_pool);
+    REQUIRE(result == gal::gal_error_code::SUC);
+    result = gal::destroy_command_pool(context, cmd_pool);
+    REQUIRE(result == gal::gal_error_code::SUC);
+
+    result = gal::destroy_pipeline(context, comp_pipe);
+    REQUIRE(result == gal_error_code::SUC);
+    result = gal::destroy_rootsignature(context, rs);
+    REQUIRE(result == gal_error_code::SUC);
+    sg.release();
+}
