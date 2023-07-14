@@ -245,7 +245,7 @@ compiled_shader *shader_compiler::compile(shader_source_blob *blob, shader_compi
     if (b_spv) {
         args.push_back(L"-spirv");
         args.push_back(L"-fspv-target-env=vulkan1.3");
-        args.push_back(L"-fspv-reflect");
+        //args.push_back(L"-fspv-reflect");
         //args.push_back(L"-fvk-use-dx-layout");// FIXME(hylu): add this will cause a validation error
         args.push_back(L"-fvk-use-dx-position-w");
     }

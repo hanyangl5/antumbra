@@ -241,15 +241,15 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
 
     // create pso
     gal_compute_pipeline_desc comp_pipe_desc{};
-    comp_pipe_desc.root_signature;
+    comp_pipe_desc.root_signature = &rs;
     comp_pipe_desc.shader = &sp;
 
     gal_pipeline_desc pipe_desc{};
     pipe_desc.desc = comp_pipe_desc;
 
     gal::gal_pipeline comp_pipe{};
-    //result = gal::create_compute_pipeline(context, &pipe_desc, &comp_pipe);
-    //REQUIRE(result == gal_error_code::SUC);
+    result = gal::create_compute_pipeline(context, &pipe_desc, &comp_pipe);
+    REQUIRE(result == gal_error_code::SUC);
     sg.release();
 }
 

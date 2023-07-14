@@ -572,7 +572,7 @@ DECLARE_GAL_HANDLE(gal_pipeline_cache){};
 
 struct gal_compute_pipeline_desc {
     gal_shader_program *shader;
-    gal_rootsignature root_signature;
+    gal_rootsignature* root_signature;
 };
 struct gal_raytracing_pipeline_desc {};
 
