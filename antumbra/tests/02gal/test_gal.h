@@ -4,6 +4,7 @@
 #include "framework/02gal/gal.h"
 #include "framework/02gal/shader/shader_compiler.h"
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/benchmark/catch_benchmark.hpp>
 using namespace ant;
 
 gal::gal_context initialize(ant::gal::gal_api api) {

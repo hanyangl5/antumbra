@@ -1124,18 +1124,25 @@ gal_error_code vk_create_shader_program(gal_context context, gal_shader_program_
 gal_error_code vk_create_pipeline_cache(gal_context context, gal_pipeline_cache_desc *desc,
                                         gal_pipeline_cache *pipeline_cache) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_pipeline_cache *vk_pc = ant::memory::alloc<ant::gal::vk_pipeline_cache>();
+    vk_pipeline_cache *vk_pc = ant::memory::alloc<ant::gal::vk_pipeline_cache>(nullptr);
     *pipeline_cache = reinterpret_cast<gal_pipeline_cache>(vk_pc);
-    if (*pipeline_cache) {
+    if (!*pipeline_cache) {
         return gal_error_code::ERR;
     }
-
-    if (ant::io::is_file(desc->filename)) {
-        ant::vector<u8> file_bin = ant::io::read_binary_file(desc->filename);
+    if (desc->data.data() == nullptr) {
         VkPipelineCacheCreateInfo ci{};
         ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-        ci.initialDataSize = file_bin.size();
-        ci.pInitialData = file_bin.data();
+        ci.initialDataSize = 0;
+        ci.pInitialData = nullptr;
+        VkResult result = vkCreatePipelineCache(vk_ctx->device, &ci, nullptr, &vk_pc->pipeline_cache);
+        if (result != VK_SUCCESS || vk_pc->pipeline_cache == VK_NULL_HANDLE) {
+            return gal_error_code::ERR;
+        }
+    } else {
+        VkPipelineCacheCreateInfo ci{};
+        ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+        ci.initialDataSize = desc->data.size();
+        ci.pInitialData = desc->data.data();
         VkResult result = vkCreatePipelineCache(vk_ctx->device, &ci, nullptr, &vk_pc->pipeline_cache);
         if (result != VK_SUCCESS || vk_pc->pipeline_cache == VK_NULL_HANDLE) {
 
@@ -1159,7 +1166,7 @@ gal_error_code vk_get_pipeline_cache_data(gal_context context, gal_pipeline_cach
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_pipeline_cache *vk_pc = reinterpret_cast<vk_pipeline_cache *>(_pipeline_cache);
     VkResult result = vkGetPipelineCacheData(vk_ctx->device, vk_pc->pipeline_cache, _size, _data);
-    if (result != VK_SUCCESS || _size == nullptr || _data == nullptr) {
+    if (result != VK_SUCCESS) {
         return gal_error_code::ERR;
     }
     return gal_error_code::SUC;
@@ -1196,9 +1203,8 @@ gal_error_code vk_create_compute_pipeline(gal_context context, gal_pipeline_desc
     pipeline_create_info.layout = vk_rs->pipeline_layout;
     pipeline_create_info.stage = shader_stage_create_info;
 
-    VkPipelineCache pipeline_cache = (desc->pipeline_cache == gal_null)
-                                         ? VK_NULL_HANDLE
-                                         : reinterpret_cast<vk_pipeline_cache *>(desc->pipeline_cache)->pipeline_cache;
+    VkPipelineCache pipeline_cache =
+        desc->pipeline_cache ? reinterpret_cast<vk_pipeline_cache *>(desc->pipeline_cache)->pipeline_cache : nullptr;
 
     VkResult result =
         vkCreateComputePipelines(vk_ctx->device, pipeline_cache, 1, &pipeline_create_info, nullptr, &vk_pipe->pipeline);
@@ -1442,8 +1448,14 @@ gal_error_code vk_create_graphics_pipeline(gal_context context, gal_pipeline_des
 //    pipeline_create_info.
 //}
 
-gal_error_code vk_destroy_pipeline() {
-    //vkDestroyPipeline();
+gal_error_code vk_destroy_pipeline(gal_context context, gal_pipeline pipeline) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
+    if (pipeline != gal_null) {
+        vk_pipeline *vk_pipe = reinterpret_cast<vk_pipeline *>(pipeline);
+        vkDestroyPipeline(vk_ctx->device, vk_pipe->pipeline, nullptr);
+        ant::memory::afree(vk_pipe);
+        pipeline = gal_null;
+    }
     return gal_error_code::SUC;
 }
 
@@ -1549,10 +1561,17 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
     }
     return gal_error_code::SUC;
 }
-gal_error_code vk_destroy_rootsignature() {
-    //vkDestroyPipelineLayout();
+gal_error_code vk_destroy_rootsignature(gal_context context, gal_rootsignature root_signature) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
+    if (root_signature != gal_null) {
+        vk_rootsignature *vk_rs = reinterpret_cast<vk_rootsignature *>(root_signature);
+        vkDestroyPipelineLayout(vk_ctx->device, vk_rs->pipeline_layout, nullptr);
+        ant::memory::afree(vk_rs);
+        root_signature = gal_null;
+    }
     return gal_error_code::SUC;
 }
+
 // sync
 gal_error_code vk_create_fence() {
     //vkCreateFence();

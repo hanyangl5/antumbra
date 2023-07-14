@@ -94,14 +94,14 @@ __GAL_HELPER_MACRO__(gal_error_code, create_compute_pipeline, gal_context contex
 //__GAL_HELPER_MACRO__(gal_error_code, create_raytracing_pipeline, gal_context context,
 //                     gal_raytracing_pipeline_desc *desc, gal_pipeline *pipeline);
 
-__GAL_HELPER_MACRO__(gal_error_code, destroy_pipeline);
+__GAL_HELPER_MACRO__(gal_error_code, destroy_pipeline, gal_context context, gal_pipeline pipeline);
 //__GAL_HELPER_MACRO__(gal_error_code, create_descriptorpool);
 __GAL_HELPER_MACRO__(gal_error_code, destroy_descriptorpool);
 // consume the descriptorset from pool
 __GAL_HELPER_MACRO__(gal_error_code, consume_descriptorset);
 __GAL_HELPER_MACRO__(gal_error_code, free_descriptorset);
 __GAL_HELPER_MACRO__(gal_error_code, create_rootsignature, gal_context context, gal_rootsignature_desc* desc, gal_rootsignature* root_signature);
-__GAL_HELPER_MACRO__(gal_error_code, destroy_rootsignature);
+__GAL_HELPER_MACRO__(gal_error_code, destroy_rootsignature, gal_context context, gal_rootsignature root_signature);
 // sync
 __GAL_HELPER_MACRO__(gal_error_code, create_fence);
 __GAL_HELPER_MACRO__(gal_error_code, wait_fence);

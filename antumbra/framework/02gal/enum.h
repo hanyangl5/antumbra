@@ -608,7 +608,9 @@ DECLARE_GAL_HANDLE(gal_command_list) { gal_queue_type m_queue_type; };
 DECLARE_GAL_HANDLE(gal_descriptorpool){};
 
 struct gal_pipeline_cache_desc {
-    ant::str filename;
+    //void *ptr;
+    //u64 size;
+    blob data;
 };
 
 //struct RaytracingPipelineDesc {

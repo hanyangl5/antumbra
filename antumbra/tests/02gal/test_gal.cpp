@@ -230,14 +230,12 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
     rs_desc.shader = &sg;
     gal::create_rootsignature(context, &rs_desc, &rs);
 
-
     // create shader program
     gal::gal_shader_program_desc sp_desc{};
     sp_desc.shader_group = &sg;
 
     gal_error_code result = gal::create_shader_program(context, &sp_desc, &sp);
     REQUIRE(result == gal_error_code::SUC);
-
 
     // create pso
     gal_compute_pipeline_desc comp_pipe_desc{};
@@ -249,6 +247,150 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
 
     gal::gal_pipeline comp_pipe{};
     result = gal::create_compute_pipeline(context, &pipe_desc, &comp_pipe);
+    REQUIRE(result == gal_error_code::SUC);
+
+    result = gal::destroy_pipeline(context, comp_pipe);
+    REQUIRE(result == gal_error_code::SUC);
+    result = gal::destroy_rootsignature(context, rs);
+    REQUIRE(result == gal_error_code::SUC);
+    sg.release();
+}
+
+TEST_CASE("test pso cache vk") {
+    ant::str teststr = "\n\
+        // shader from GPUOpen/Cauldron src\DX12\shaders\TAASharpenerCS.hlsl\n\
+        Texture2D<float4> TAABuffer;\n\
+RWTexture2D<float4> HDR;\n\
+RWTexture2D<float4> History;\n\
+float3 RGBToYCoCg(in float3 rgb)\n\
+{\n\
+    return float3(\n\
+        0.25f * rgb.r + 0.5f * rgb.g + 0.25f * rgb.b,\n\
+        0.5f * rgb.r - 0.5f * rgb.b,\n\
+        -0.25f * rgb.r + 0.5f * rgb.g - 0.25f * rgb.b);\n\
+}\n\
+float3 YCoCgToRGB(in float3 yCoCg)\n\
+{\n\
+    return float3(\n\
+        yCoCg.x + yCoCg.y - yCoCg.z,\n\
+        yCoCg.x + yCoCg.z,\n\
+        yCoCg.x - yCoCg.y - yCoCg.z);\n\
+}\n\
+float3 ApplySharpening(in float3 center, in float3 top, in float3 left, in float3 right, in float3 bottom)\n\
+{\n\
+    float3 result = RGBToYCoCg(center);\n\
+    float unsharpenMask = 4.0f * result.x;\n\
+    unsharpenMask -= RGBToYCoCg(top).x;\n\
+    unsharpenMask -= RGBToYCoCg(bottom).x;\n\
+    unsharpenMask -= RGBToYCoCg(left).x;\n\
+    unsharpenMask -= RGBToYCoCg(right).x;\n\
+    result.x = min(result.x + 0.25f * unsharpenMask, 1.1f * result.x);\n\
+    return YCoCgToRGB(result);\n\
+}\n\
+float3 ReinhardInverse(in float3 sdr)\n\
+{\n\
+    return sdr / max(1.0f - sdr, 1e-2f);\n\
+}\n\
+[numthreads(8, 8, 1)]\n\
+void CS_MAIN(uint3 globalID : SV_DispatchThreadID, uint3 localID : SV_GroupThreadID, uint localIndex : SV_GroupIndex, uint3 groupID : SV_GroupID)\n\
+{\n\
+    const float3 center = TAABuffer[globalID.xy].xyz;\n\
+    const float3 top    = TAABuffer[globalID.xy + uint2( 0,  1)].xyz;\n\
+    const float3 left   = TAABuffer[globalID.xy + uint2( 1,  0)].xyz;\n\
+    const float3 right  = TAABuffer[globalID.xy + uint2(-1,  0)].xyz;\n\
+    const float3 bottom = TAABuffer[globalID.xy + uint2( 0, -1)].xyz;\n\
+    const float3 color = ApplySharpening(center, top, left, right, bottom);\n\
+    HDR[globalID.xy] = float4(ReinhardInverse(color), 1.0f);\n\
+    History[globalID.xy] = float4(center, 1.0f);\n\
+}";
+
+    using namespace ant::gal;
+    // compile shader from source
+    gal::gal_context context = initialize(gal_api::VULKAN);
+    shader_compiler sc;
+    shader_source_blob source;
+    source.set(teststr.data(), teststr.size());
+
+    shader_compile_desc desc;
+    desc.entry = "CS_MAIN";
+    desc.optimization_level = shader_optimization_level::NONE;
+    desc.target_api = shader_blob_type::SPIRV;
+    desc.target_profile = shader_target_profile::CS_6_0;
+
+    gal::gal_shader_program sp{};
+    gal::compiled_shader_group sg{};
+    gal::shader_gourp_source_desc sg_desc{};
+
+    sg_desc.desc_comp = &desc;
+    sg.set_from_source(&source, &sg_desc);
+
+    // root signature
+    gal::gal_rootsignature rs{};
+    gal::gal_rootsignature_desc rs_desc{};
+    rs_desc.shader = &sg;
+    gal::create_rootsignature(context, &rs_desc, &rs);
+
+    // create shader program
+    gal::gal_shader_program_desc sp_desc{};
+    sp_desc.shader_group = &sg;
+
+    gal_error_code result = gal::create_shader_program(context, &sp_desc, &sp);
+    REQUIRE(result == gal_error_code::SUC);
+
+    // create pso
+    gal_compute_pipeline_desc comp_pipe_desc{};
+    comp_pipe_desc.root_signature = &rs;
+    comp_pipe_desc.shader = &sp;
+
+    gal::gal_pipeline_cache pso_cache{};
+
+    gal_pipeline_cache_desc pso_cache_desc{};
+    gal::create_pipeline_cache(context, &pso_cache_desc, &pso_cache);
+
+    gal_pipeline_desc pipe_desc{};
+    pipe_desc.desc = comp_pipe_desc;
+    pipe_desc.pipeline_cache = pso_cache;
+    gal::gal_pipeline comp_pipe{};
+    BENCHMARK("create pipeline without cache") {
+        result = gal::create_compute_pipeline(context, &pipe_desc, &comp_pipe);
+    };
+
+    REQUIRE(result == gal_error_code::SUC);
+    u64 size;
+    result = gal::get_pipeline_cache_data(context, pso_cache, &size, nullptr);
+    REQUIRE(result == gal_error_code::SUC);
+    ant::vector<char> cache_data(size);
+    result = gal::get_pipeline_cache_data(context, pso_cache, &size, cache_data.data());
+    REQUIRE(result == gal_error_code::SUC);
+    gal::gal_pipeline_cache pso_cache1{};
+    gal_pipeline_cache_desc pso_cache_desc1{};
+    pso_cache_desc1.data.set(cache_data.data(), cache_data.size());
+    result = gal::create_pipeline_cache(context, &pso_cache_desc, &pso_cache1);
+    REQUIRE(result == gal_error_code::SUC);
+
+    // create pso
+    gal_compute_pipeline_desc comp_pipe_desc1{};
+    comp_pipe_desc1.root_signature = &rs;
+    comp_pipe_desc1.shader = &sp;
+    gal_pipeline_desc pipe_desc1{};
+    pipe_desc1.desc = comp_pipe_desc1;
+    pipe_desc1.pipeline_cache = pso_cache1;
+    gal::gal_pipeline comp_pipe1{};
+    BENCHMARK("create pipeline with cache") {
+        result = gal::create_compute_pipeline(context, &pipe_desc1, &comp_pipe1);
+    };
+    REQUIRE(result == gal_error_code::SUC);
+
+    result = gal::destroy_pipeline_cache(context, pso_cache);
+    REQUIRE(result == gal_error_code::SUC);
+    result = gal::destroy_pipeline_cache(context, pso_cache1);
+
+    REQUIRE(result == gal_error_code::SUC);
+    result = gal::destroy_pipeline(context, comp_pipe1);
+    REQUIRE(result == gal_error_code::SUC);
+    result = gal::destroy_pipeline(context, comp_pipe);
+    REQUIRE(result == gal_error_code::SUC);
+    result = gal::destroy_rootsignature(context, rs);
     REQUIRE(result == gal_error_code::SUC);
     sg.release();
 }
