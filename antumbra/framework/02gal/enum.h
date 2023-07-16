@@ -453,9 +453,20 @@ struct gal_buffer_desc {
     gal_buffer_flag flags;
 };
 
+struct gal_queue_desc {
+    gal_queue_type type;
+};
+
+DECLARE_GAL_HANDLE(gal_queue) {
+    public :
+    gal_queue_type m_type;
+};
+
+
 DECLARE_GAL_HANDLE(gal_buffer) {
   public:
     gal_buffer_desc m_gal_buffer_desc;
+    void *cpu_mapped_address;
 };
 
 struct gal_texture_desc {
@@ -521,7 +532,12 @@ DECLARE_GAL_HANDLE(gal_sampler) {
     gal_sampler_desc m_gal_sampler_desc;
 };
 
-DECLARE_GAL_HANDLE(gal_fence){};
+struct gal_fence_desc {};
+
+DECLARE_GAL_HANDLE(gal_fence) {
+  public:
+    gal_fence_desc m_desc;
+};
 DECLARE_GAL_HANDLE(gal_semaphore){};
 
 struct gal_swap_chain_desc {
@@ -640,8 +656,6 @@ struct gal_rootsignature_desc {
     compiled_shader_group *shader;
 };
 
-struct gal_fence_desc {};
-
 struct gal_semaphore_desc {};
 
 struct gal_command_pool_desc {
@@ -707,6 +721,16 @@ struct gal_texture_subresource_desc {
     u32 array_layer;
 };
 
+struct gal_queue_submit_desc {
+    gal_command_list **cmds;
+    gal_fence *pSignalFence;
+    gal_semaphore **ppWaitSemaphores;
+    gal_semaphore **ppSignalSemaphores;
+    uint32_t cmd_count;
+    uint32_t mWaitSemaphoreCount;
+    uint32_t mSignalSemaphoreCount;
+    bool mSubmitDone;
+};
 //enum class gal_descriptor_resource_type {
 //    UNDEFINED,
 //    BUFFER,
@@ -739,5 +763,11 @@ struct gal_texture_subresource_desc {
 //  protected:
 //    gal_uav_descriptor_view_desc m_desc;
 //};
+
+struct read_range {
+    u64 offset;
+    u64 size;
+} ;
+
 
 } // namespace ant::gal

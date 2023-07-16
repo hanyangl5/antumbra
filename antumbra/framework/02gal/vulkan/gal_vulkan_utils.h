@@ -75,7 +75,6 @@ constexpr VkFilter utils_to_vk_filter(gal_sampler_filter_mode filter) {
 
 constexpr VkBufferUsageFlags util_to_vk_buffer_usage(gal_descriptor_type types) {
     VkBufferUsageFlags flags = 0;
-
     if ((types & gal_descriptor_type::CONSTANT_BUFFER) != gal_descriptor_type::UNDEFINED) {
         flags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     }
