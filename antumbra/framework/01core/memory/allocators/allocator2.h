@@ -15,6 +15,15 @@
 #define aligned_free(ptr) _aligned_free(ptr)
 #else
 // Code for other compilers
+inline void *aligned_alloc(size_t alignment, size_t size) {
+    void *ptr;
+    if (posix_memalign(&ptr, alignment, size) != 0) {
+        ptr = nullptr;
+    }
+    return ptr;
+}
+
+inline void aligned_free(void *ptr) { free(ptr); }
 #endif
 #endif
 

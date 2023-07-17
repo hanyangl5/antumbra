@@ -4,6 +4,7 @@
 #include <chrono>
 #include <ctime>
 #include <type_traits>
+#include <utility>
 
 // third party libraries
 
@@ -56,7 +57,7 @@ constexpr u32 make_version(u32 major, u32 minor, u32 patch) {
     return _major | _minor | _patch;
 }
 
-template <class T> void hash_combine(u64 &seed, const T &v) {
+template <typename T> void hash_combine(u64 &seed, const T &v) {
     std::hash<T> hasher{};
     u64 hash = hasher(v);
     hash += 0x9e3779b9 + (seed << 6) + (seed >> 2);
@@ -97,11 +98,11 @@ struct blob {
 };
 
 // bytes
-constexpr u64 operator"" _b(u64 value) { return static_cast<u64>(value); }
+constexpr u64 operator"" _b(unsigned long long value) { return static_cast<u64>(value); }
 // kilo bytes
-constexpr u64 operator"" _kb(u64 value) { return static_cast<u64>(value * 1024); }
+constexpr u64 operator"" _kb(unsigned long long value) { return static_cast<u64>(value * 1024); }
 // mega bytse
-constexpr u64 operator"" _mb(u64 value) { return static_cast<u64>(value * 1024 * 1024); }
+constexpr u64 operator"" _mb(unsigned long long value) { return static_cast<u64>(value * 1024 * 1024); }
 
 template <typename T> T align_up(T a, T size) { return ((a + size - 1) & (~(size - 1))); }
 } // namespace ant
