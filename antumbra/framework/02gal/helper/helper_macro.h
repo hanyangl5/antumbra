@@ -103,12 +103,12 @@ __GAL_HELPER_MACRO__(gal_error_code, free_descriptorset);
 __GAL_HELPER_MACRO__(gal_error_code, create_rootsignature, gal_context context, gal_rootsignature_desc* desc, gal_rootsignature* root_signature);
 __GAL_HELPER_MACRO__(gal_error_code, destroy_rootsignature, gal_context context, gal_rootsignature root_signature);
 // sync
-__GAL_HELPER_MACRO__(gal_error_code, create_fence);
-__GAL_HELPER_MACRO__(gal_error_code, wait_fence);
-__GAL_HELPER_MACRO__(gal_error_code, destroy_fence);
-__GAL_HELPER_MACRO__(gal_error_code, wait_gpu);
-__GAL_HELPER_MACRO__(gal_error_code, create_semaphore);
-__GAL_HELPER_MACRO__(gal_error_code, destroy_semaphore);
+__GAL_HELPER_MACRO__(gal_error_code, create_fence, gal_context context, gal_fence* fence);
+__GAL_HELPER_MACRO__(gal_error_code, wait_fences, gal_context context, gal_fence *fences, u32 count);
+__GAL_HELPER_MACRO__(gal_error_code, destroy_fence, gal_context context, gal_fence fence);
+//__GAL_HELPER_MACRO__(gal_error_code, wait_gpu);
+__GAL_HELPER_MACRO__(gal_error_code, create_semaphore, gal_context context, gal_semaphore *semaphore);
+__GAL_HELPER_MACRO__(gal_error_code, destroy_semaphore, gal_context context, gal_semaphore semaphore);
 // cmds
 __GAL_HELPER_MACRO__(gal_error_code, create_command_pool, gal_context context, gal_command_pool_desc *desc, gal_command_pool *command_pool);
 __GAL_HELPER_MACRO__(gal_error_code, reset_command_pool, gal_context context, gal_command_pool command_pool);
@@ -147,6 +147,8 @@ __GAL_HELPER_MACRO__(gal_error_code, cmd_upload_buffer);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_upload_texture);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_update_subresources, gal_command_list command, gal_texture dst, gal_buffer src, u32 subresource_count, gal_texture_subresource_desc *descs);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_copy_texture_to_buffer);
+
+__GAL_HELPER_MACRO__(gal_error_code, queue_submit, gal_queue queue, gal_queue_submit_desc *desc);
 
 #ifdef __GAL_HELPER_MACRO__
 #undef __GAL_HELPER_MACRO__

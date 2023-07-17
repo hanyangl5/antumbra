@@ -499,7 +499,7 @@ TEST_CASE("test buffer") {
         upload_buf_desc.descriptor_types = gal_descriptor_type::UNDEFINED;
         upload_buf_desc.memory_flags = gal_memory_flag::CPU_UPLOAD;
         upload_buf_desc.initial_state = gal_resource_state::COPY_SRC;
-        upload_buf_desc.flags = gal_buffer_flag::PERSISTENT_MAP;
+        //upload_buf_desc.flags = gal_buffer_flag::PERSISTENT_MAP;
         upload_buf_desc.size = arr.size();
         result = gal::create_buffer(context, &upload_buf_desc, &upload_buf);
         REQUIRE(result == gal::gal_error_code::SUC);
@@ -517,39 +517,59 @@ TEST_CASE("test buffer") {
         gpu_buf_desc.initial_state = gal_resource_state::COPY_DST;
         gpu_buf_desc.flags = gal_buffer_flag::OWN_MEMORY;
         gpu_buf_desc.size = arr.size();
-        gal::create_buffer(context, &gpu_buf_desc, &gpu_buf);
-
+        result = gal::create_buffer(context, &gpu_buf_desc, &gpu_buf);
+        REQUIRE(result == gal::gal_error_code::SUC);
         // download buf
         gal_buffer download_buf{};
         gal_buffer_desc download_buf_desc{};
         download_buf_desc.descriptor_types = gal_descriptor_type::UNDEFINED;
         download_buf_desc.memory_flags = gal_memory_flag::GPU_DOWNLOAD;
         download_buf_desc.initial_state = gal_resource_state::COPY_DST;
-        download_buf_desc.flags = gal_buffer_flag::PERSISTENT_MAP;
+        //download_buf_desc.flags = gal_buffer_flag::PERSISTENT_MAP;
         download_buf_desc.size = arr.size();
         result = gal::create_buffer(context, &download_buf_desc, &download_buf);
         REQUIRE(result == gal::gal_error_code::SUC);
         ant::fixed_array<u8, 64> dumped_arr;
 
-
-
         gal_command_list cmd{};
         gal_command_list_desc cmd_desc{};
         cmd_desc.command_pool = cmd_pool;
         cmd_desc.b_secondary = false;
+        cmd_desc.queue_type = gal_queue_type::graphcis;
         result = gal::allocate_command_list(context, &cmd_desc, &cmd);
         REQUIRE(result == gal::gal_error_code::SUC);
-        gal::cmd_begin(cmd);
-        gal::cmd_copy_buffer(cmd, upload_buf, gpu_buf, 0, 0, arr.size());
-        gal::cmd_end(cmd);
-        // submmit
-        gal_queue_submit_desc submit_desc{};
+
+        REQUIRE(gal_error_code::SUC == gal::cmd_begin(cmd));
+        REQUIRE(gal_error_code::SUC == gal::cmd_copy_buffer(cmd, upload_buf, gpu_buf, 0, 0, arr.size()));
+        // barrier
+        gal::BufferBarrier bb{};
+        bb.mQueueType = gal_queue_type::graphcis;
+        gal::cmd_resource_barrier();
+        // 
+        REQUIRE(gal_error_code::SUC == gal::cmd_copy_buffer(cmd, gpu_buf, download_buf, 0, 0, arr.size()));
+        REQUIRE(gal_error_code::SUC == gal::cmd_end(cmd));
 
         
+        gal_fence fence{};
+        result = gal::create_fence(context, &fence);
+        REQUIRE(result == gal::gal_error_code::SUC);
+        // submmit
+        gal_queue_submit_desc submit_desc{};
+        submit_desc.cmds = &cmd;
+        submit_desc.cmd_count = 1;
+        submit_desc.mSignalSemaphoreCount = 0;
+        submit_desc.mWaitSemaphoreCount = 0;
+        submit_desc.pSignalFence = fence;
+        result = gal::queue_submit(gfx_queue, &submit_desc);
+        REQUIRE(result == gal::gal_error_code::SUC);
+        result = gal::wait_fences(context, &fence, 1);
+        REQUIRE(result == gal::gal_error_code::SUC);
+
+        // download
         result = gal::mapbuffer(context, download_buf, &range);
         REQUIRE(result == gal::gal_error_code::SUC);
         std::memcpy(dumped_arr.data(), download_buf->cpu_mapped_address, arr.size());
-        result = gal::unmapbuffer(context, upload_buf);
+        result = gal::unmapbuffer(context, download_buf);
         REQUIRE(result == gal::gal_error_code::SUC);
 
         result = gal::reset_command_pool(context, cmd_pool);
@@ -561,6 +581,8 @@ TEST_CASE("test buffer") {
         result = gal::destroy_buffer(context, gpu_buf);
         REQUIRE(result == gal::gal_error_code::SUC);
         result = gal::destroy_buffer(context, download_buf);
+        REQUIRE(result == gal::gal_error_code::SUC);
+        result = gal::destroy_fence(context, fence);
         REQUIRE(result == gal::gal_error_code::SUC);
         destroy(context);
     };

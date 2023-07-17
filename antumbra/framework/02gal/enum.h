@@ -536,7 +536,6 @@ struct gal_fence_desc {};
 
 DECLARE_GAL_HANDLE(gal_fence) {
   public:
-    gal_fence_desc m_desc;
 };
 DECLARE_GAL_HANDLE(gal_semaphore){};
 
@@ -668,6 +667,7 @@ DECLARE_GAL_HANDLE(gal_command_pool) { gal_queue_type queue_type; };
 // desc to allocate command_list
 struct gal_command_list_desc {
     gal_command_pool command_pool;
+    gal_queue_type queue_type;
     bool b_secondary = false;
 };
 
@@ -722,10 +722,10 @@ struct gal_texture_subresource_desc {
 };
 
 struct gal_queue_submit_desc {
-    gal_command_list **cmds;
-    gal_fence *pSignalFence;
-    gal_semaphore **ppWaitSemaphores;
-    gal_semaphore **ppSignalSemaphores;
+    gal_command_list *cmds;
+    gal_fence pSignalFence;
+    gal_semaphore *ppWaitSemaphores;
+    gal_semaphore *ppSignalSemaphores;
     uint32_t cmd_count;
     uint32_t mWaitSemaphoreCount;
     uint32_t mSignalSemaphoreCount;

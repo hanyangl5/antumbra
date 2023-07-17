@@ -1591,7 +1591,7 @@ gal_error_code vk_destroy_rootsignature(gal_context context, gal_rootsignature r
 }
 
 // sync
-gal_error_code vk_create_fence(gal_context context, gal_fence_desc *desc, gal_fence *fence) {
+gal_error_code vk_create_fence(gal_context context, gal_fence *fence) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_fence *vk_f = ant::memory::alloc<vk_fence>(nullptr);
     if (!vk_f) {
@@ -1608,7 +1608,6 @@ gal_error_code vk_create_fence(gal_context context, gal_fence_desc *desc, gal_fe
     }
     vk_f->b_submitted = false;
     *fence = vk_f;
-    vk_f->m_desc = *desc;
     return gal_error_code::SUC;
 }
 gal_error_code vk_wait_fences(gal_context context, gal_fence *fences, u32 count) {
@@ -1624,11 +1623,11 @@ gal_error_code vk_wait_fences(gal_context context, gal_fence *fences, u32 count)
 
     VkResult result;
     if (!submit_fences.empty()) {
-        result = vkWaitForFences(vk_ctx->device, submit_fences.size(), submit_fences.data(), VK_TRUE, UINT64_MAX);
+        result = vkWaitForFences(vk_ctx->device, static_cast<u32>(submit_fences.size()), submit_fences.data(), VK_TRUE, UINT64_MAX);
         if (result != VK_SUCCESS) {
             return gal_error_code::ERR;
         }
-        result = vkResetFences(vk_ctx->device, submit_fences.size(), submit_fences.data());
+        result = vkResetFences(vk_ctx->device, static_cast<u32>(submit_fences.size()), submit_fences.data());
         if (result != VK_SUCCESS) {
             return gal_error_code::ERR;
         }
@@ -1654,7 +1653,7 @@ gal_error_code vk_wait_gpu() {
     //vkDeviceWaitIdle();
     return gal_error_code::SUC;
 }
-gal_error_code vk_create_semaphore(gal_context context, gal_semaphore_desc *desc, gal_semaphore *semaphore) {
+gal_error_code vk_create_semaphore(gal_context context, gal_semaphore *semaphore) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_semaphore *vk_s = ant::memory::alloc<vk_semaphore>(nullptr);
     if (!vk_s) {
@@ -1708,8 +1707,8 @@ gal_error_code vk_create_command_pool(gal_context context, gal_command_pool_desc
     if (result != VK_SUCCESS || vk_cmd_pool->m_cmd_pool == VK_NULL_HANDLE) {
         return gal_error_code::ERR;
     }
+    vk_cmd_pool->queue_type = desc->queue_type;
     *command_pool = vk_cmd_pool;
-
     return gal_error_code::SUC;
 }
 gal_error_code vk_reset_command_pool(gal_context context, gal_command_pool command_pool) {
@@ -1735,20 +1734,22 @@ gal_error_code vk_destroy_command_pool(gal_context context, gal_command_pool com
 gal_error_code vk_allocate_command_list(gal_context context, gal_command_list_desc *desc, gal_command_list *command) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_command_list *vk_cmd = ant::memory::alloc<ant::gal::vk_command_list>(nullptr);
-    if (!vk_cmd) {
+    vk_command_pool *vk_pool = reinterpret_cast<vk_command_pool *>(desc->command_pool);
+    if (desc->queue_type != vk_pool->queue_type) {
         return gal_error_code::ERR;
     }
-
     VkCommandBufferAllocateInfo alloc_info{};
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     alloc_info.pNext = nullptr;
-    alloc_info.commandPool = reinterpret_cast<vk_command_pool *>(desc->command_pool)->m_cmd_pool;
+    alloc_info.commandPool = vk_pool->m_cmd_pool;
     alloc_info.level = desc->b_secondary ? VK_COMMAND_BUFFER_LEVEL_SECONDARY : VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     alloc_info.commandBufferCount = 1;
     VkResult result = vkAllocateCommandBuffers(vk_ctx->device, &alloc_info, &vk_cmd->m_command);
     if (result != VK_SUCCESS || vk_cmd->m_command == gal_null) {
         return gal_error_code::ERR;
     }
+    vk_cmd->m_queue_type = desc->queue_type;
+    vk_cmd->m_cmd_pool = vk_pool;
     *command = vk_cmd;
     return gal_error_code::SUC;
 }
@@ -2131,12 +2132,12 @@ gal_error_code vk_queue_submit(gal_queue queue, gal_queue_submit_desc *desc) {
     vk_queue *vk_q = reinterpret_cast<vk_queue *>(queue);
 
     u32 cmdCount = desc->cmd_count;
-    gal_command_list **ppCmds = desc->cmds;
-    gal_fence *pFence = desc->pSignalFence;
+    gal_command_list *ppCmds = desc->cmds;
+    gal_fence pFence = desc->pSignalFence;
     u32 waitSemaphoreCount = desc->mWaitSemaphoreCount;
-    gal_semaphore **ppWaitSemaphores = desc->ppWaitSemaphores;
+    gal_semaphore *ppWaitSemaphores = desc->ppWaitSemaphores;
     u32 signalSemaphoreCount = desc->mSignalSemaphoreCount;
-    gal_semaphore **ppSignalSemaphores = desc->ppSignalSemaphores;
+    gal_semaphore *ppSignalSemaphores = desc->ppSignalSemaphores;
 
     // some parameter check
     // ...
@@ -2145,7 +2146,7 @@ gal_error_code vk_queue_submit(gal_queue queue, gal_queue_submit_desc *desc) {
     ACQUIRE_STACK_MEMORY_RESOURCE(stack_emmory, 256);
     ant::vector<VkCommandBuffer> cmds(&stack_emmory);
     for (u32 i = 0; i < cmdCount; ++i) {
-        cmds.push_back(reinterpret_cast<vk_command_list *>(ppCmds[i])->m_command);
+        cmds.push_back(reinterpret_cast<vk_command_list*>(ppCmds[i])->m_command);
     }
 
     ant::vector<VkSemaphore> wait_semaphores(&stack_emmory);
@@ -2161,7 +2162,7 @@ gal_error_code vk_queue_submit(gal_queue queue, gal_queue_submit_desc *desc) {
 
     ant::vector<VkSemaphore> signal_semaphores(&stack_emmory);
     for (u32 i = 0; i < signalSemaphoreCount; ++i) {
-        vk_semaphore *vk_s = reinterpret_cast<vk_semaphore *>(ppWaitSemaphores[i]);
+        vk_semaphore *vk_s = reinterpret_cast<vk_semaphore *>(ppSignalSemaphores[i]);
         if (vk_s->b_signaled) {
             signal_semaphores.push_back(reinterpret_cast<vk_semaphore *>(ppSignalSemaphores[i])->semaphore);
             vk_s->b_signaled = true;
@@ -2171,12 +2172,12 @@ gal_error_code vk_queue_submit(gal_queue queue, gal_queue_submit_desc *desc) {
     VkSubmitInfo submit_info{};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.pNext = NULL;
-    submit_info.waitSemaphoreCount = wait_semaphores.size();
+    submit_info.waitSemaphoreCount = static_cast<u32>(wait_semaphores.size());
     submit_info.pWaitSemaphores = wait_semaphores.data();
     submit_info.pWaitDstStageMask = wait_masks.data();
     submit_info.commandBufferCount = cmdCount;
     submit_info.pCommandBuffers = cmds.data();
-    submit_info.signalSemaphoreCount = signal_semaphores.size();
+    submit_info.signalSemaphoreCount = static_cast<u32>(signal_semaphores.size());
     submit_info.pSignalSemaphores = signal_semaphores.data();
 
     VkDeviceGroupSubmitInfo deviceGroupSubmitInfo = {VK_STRUCTURE_TYPE_DEVICE_GROUP_SUBMIT_INFO_KHR};
@@ -2187,10 +2188,13 @@ gal_error_code vk_queue_submit(gal_queue queue, gal_queue_submit_desc *desc) {
     //std::lock_guard<std::mutex>(vk_q->submit_mutex)
     VkResult result = vkQueueSubmit(vk_q->queue, 1, &submit_info,
                                     pFence ? reinterpret_cast<vk_fence *>(pFence)->fence : VK_NULL_HANDLE);
-
+    if (result != VK_SUCCESS) {
+        return gal_error_code::ERR;
+    }
     if (pFence) {
         reinterpret_cast<vk_fence *>(pFence)->b_submitted = true;
     }
+    return gal_error_code::SUC;
 }
 
 //gal_error_code vk_create_srvuav(gal_context context, gal_texture texture)
