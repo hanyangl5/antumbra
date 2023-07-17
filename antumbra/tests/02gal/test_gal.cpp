@@ -237,8 +237,8 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
 
     // create pso
     gal_compute_pipeline_desc comp_pipe_desc{};
-    comp_pipe_desc.root_signature = &rs;
-    comp_pipe_desc.shader = &sp;
+    comp_pipe_desc.root_signature = rs;
+    comp_pipe_desc.shader = sp;
 
     gal_pipeline_desc pipe_desc{};
     pipe_desc.desc = comp_pipe_desc;
@@ -337,8 +337,8 @@ void CS_MAIN(uint3 globalID : SV_DispatchThreadID, uint3 localID : SV_GroupThrea
 
     // create pso
     gal_compute_pipeline_desc comp_pipe_desc{};
-    comp_pipe_desc.root_signature = &rs;
-    comp_pipe_desc.shader = &sp;
+    comp_pipe_desc.root_signature = rs;
+    comp_pipe_desc.shader = sp;
 
     gal::gal_pipeline_cache pso_cache{};
 
@@ -368,8 +368,8 @@ void CS_MAIN(uint3 globalID : SV_DispatchThreadID, uint3 localID : SV_GroupThrea
 
     // create pso
     gal_compute_pipeline_desc comp_pipe_desc1{};
-    comp_pipe_desc1.root_signature = &rs;
-    comp_pipe_desc1.shader = &sp;
+    comp_pipe_desc1.root_signature = rs;
+    comp_pipe_desc1.shader = sp;
     gal_pipeline_desc pipe_desc1{};
     pipe_desc1.desc = comp_pipe_desc1;
     pipe_desc1.pipeline_cache = pso_cache1;
@@ -434,8 +434,8 @@ TEST_CASE("test compute vk") {
 
     // create pso
     gal_compute_pipeline_desc comp_pipe_desc{};
-    comp_pipe_desc.root_signature = &rs;
-    comp_pipe_desc.shader = &sp;
+    comp_pipe_desc.root_signature = rs;
+    comp_pipe_desc.shader = sp;
 
     gal_pipeline_desc pipe_desc{};
     pipe_desc.desc = comp_pipe_desc;
@@ -543,7 +543,7 @@ TEST_CASE("test buffer") {
         REQUIRE(gal_error_code::SUC == gal::cmd_copy_buffer(cmd, upload_buf, gpu_buf, 0, 0, arr.size()));
         // barrier
         gal::BufferBarrier bb{};
-        bb.mQueueType = gal_queue_type::graphcis;
+        //bb.mQueueType = gal_queue_type::graphcis;
         gal::cmd_resource_barrier();
         // 
         REQUIRE(gal_error_code::SUC == gal::cmd_copy_buffer(cmd, gpu_buf, download_buf, 0, 0, arr.size()));

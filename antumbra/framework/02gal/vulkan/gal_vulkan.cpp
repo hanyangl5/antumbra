@@ -1197,9 +1197,9 @@ gal_error_code vk_create_compute_pipeline(gal_context context, gal_pipeline_desc
 
     gal_compute_pipeline_desc &comp_desc = std::get<gal_compute_pipeline_desc>(desc->desc);
 
-    vk_shader_program *vk_sp = reinterpret_cast<vk_shader_program *>(*comp_desc.shader);
+    vk_shader_program *vk_sp = reinterpret_cast<vk_shader_program *>(comp_desc.shader);
 
-    vk_rootsignature *vk_rs = reinterpret_cast<vk_rootsignature *>(*comp_desc.root_signature);
+    vk_rootsignature *vk_rs = reinterpret_cast<vk_rootsignature *>(comp_desc.root_signature);
 
     VkPipelineShaderStageCreateInfo shader_stage_create_info{};
     shader_stage_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -1865,11 +1865,129 @@ gal_error_code vk_cmdSetStencilReferenceValue(gal_command_list command, u32 val)
     return gal_error_code::SUC;
 }
 
-gal_error_code vk_cmd_resource_barrier() {
-    //vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
+gal_error_code vk_cmd_resource_barrier(gal_command_list command, u32 buffer_barrier_count,
+                                       gal_buffer_barrier *buffer_barriers, u32 texture_barrier_count,
+                                       gal_texture_barrier *texture_barriers) {
+    ////vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
 
-    //vkCmdPipelineBarrier();
-    //vkCmdPipelineBarrier2();
+    ////vkCmdPipelineBarrier();
+    ////vkCmdPipelineBarrier2();
+    //VkAccessFlags srcAccessFlags = 0;
+    //VkAccessFlags dstAccessFlags = 0;
+    //ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 256);
+    //ant::vector<VkBufferMemoryBarrier> BBs(&stack_memory);
+
+    //for (u32 i = 0; i < buffer_barrier_count; i++) {
+    //    buffer_barriers[i];
+    //    const CGPUBufferBarrier *buffer_barrier = &desc->buffer_barriers[i];
+    //    CGPUBuffer_Vulkan *B = (CGPUBuffer_Vulkan *)buffer_barrier->buffer;
+    //    VkBufferMemoryBarrier *pBufferBarrier = NULL;
+
+    //    if (CGPU_RESOURCE_STATE_UNORDERED_ACCESS == buffer_barrier->src_state &&
+    //        CGPU_RESOURCE_STATE_UNORDERED_ACCESS == buffer_barrier->dst_state) {
+    //        pBufferBarrier = &BBs[bufferBarrierCount++];                     //-V522
+    //        pBufferBarrier->sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER; //-V522
+    //        pBufferBarrier->pNext = NULL;
+
+    //        pBufferBarrier->srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    //        pBufferBarrier->dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+    //    } else {
+    //        pBufferBarrier = &BBs[bufferBarrierCount++];
+    //        pBufferBarrier->sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    //        pBufferBarrier->pNext = NULL;
+
+    //        pBufferBarrier->srcAccessMask = VkUtil_ResourceStateToVkAccessFlags(buffer_barrier->src_state);
+    //        pBufferBarrier->dstAccessMask = VkUtil_ResourceStateToVkAccessFlags(buffer_barrier->dst_state);
+    //    }
+
+    //    if (pBufferBarrier) {
+    //        pBufferBarrier->buffer = B->pVkBuffer;
+    //        pBufferBarrier->size = VK_WHOLE_SIZE;
+    //        pBufferBarrier->offset = 0;
+
+    //        if (buffer_barrier->queue_acquire) {
+    //            pBufferBarrier->dstQueueFamilyIndex = (u32)A->mQueueFamilyIndices[Cmd->mType];
+    //            pBufferBarrier->srcQueueFamilyIndex = (u32)A->mQueueFamilyIndices[buffer_barrier->queue_type];
+    //        } else if (buffer_barrier->queue_release) {
+    //            pBufferBarrier->srcQueueFamilyIndex = (u32)A->mQueueFamilyIndices[Cmd->mType];
+    //            pBufferBarrier->dstQueueFamilyIndex = (u32)A->mQueueFamilyIndices[buffer_barrier->queue_type];
+    //        } else {
+    //            pBufferBarrier->srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    //            pBufferBarrier->dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    //        }
+    //        srcAccessFlags |= pBufferBarrier->srcAccessMask;
+    //        dstAccessFlags |= pBufferBarrier->dstAccessMask;
+    //    }
+    //}
+
+    //ant::vector<VkImageMemoryBarrier> tbs(&stack_memory);
+
+    //for (u32 i = 0; i < texture_barrier_count; i++) {
+    //    gal_texture_barrier *texture_barrier = &texture_barriers[i];
+    //    vk_texture *vk_t = reinterpret_cast<vk_texture*>(texture_barrier->pTexture);
+    //    
+    //    if (gal_resource_state::RW_TEXTURE == texture_barrier->mCurrentState &&
+    //        gal_resource_state::RW_TEXTURE == texture_barrier->mNewState) {
+    //        VkImageMemoryBarrier b ;
+    //        b.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    //        b.pNext = nullptr;
+    //        b.image = vk_t->m_image;
+    //         tbs.push_back(b);
+    //        pImageBarrier = &tbs[imageBarrierCount++];
+
+    //        pImageBarrier->srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    //        pImageBarrier->dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+    //        pImageBarrier->oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+    //        pImageBarrier->newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    //    } else {
+    //        pImageBarrier = &TBs[imageBarrierCount++];
+    //        pImageBarrier->sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    //        pImageBarrier->pNext = NULL;
+
+    //        pImageBarrier->srcAccessMask = VkUtil_ResourceStateToVkAccessFlags(texture_barrier->src_state);
+    //        pImageBarrier->dstAccessMask = VkUtil_ResourceStateToVkAccessFlags(texture_barrier->dst_state);
+    //        pImageBarrier->oldLayout = VkUtil_ResourceStateToImageLayout(texture_barrier->src_state);
+    //        pImageBarrier->newLayout = VkUtil_ResourceStateToImageLayout(texture_barrier->dst_state);
+    //    }
+
+    //    if (pImageBarrier) {
+    //        pImageBarrier->image = T->pVkImage;
+    //        pImageBarrier->subresourceRange.aspectMask = (VkImageAspectFlags)T->super.aspect_mask;
+    //        pImageBarrier->subresourceRange.baseMipLevel =
+    //            texture_barrier->subresource_barrier ? texture_barrier->mip_level : 0;
+    //        pImageBarrier->subresourceRange.levelCount =
+    //            texture_barrier->subresource_barrier ? 1 : VK_REMAINING_MIP_LEVELS;
+    //        pImageBarrier->subresourceRange.baseArrayLayer =
+    //            texture_barrier->subresource_barrier ? texture_barrier->array_layer : 0;
+    //        pImageBarrier->subresourceRange.layerCount =
+    //            texture_barrier->subresource_barrier ? 1 : VK_REMAINING_ARRAY_LAYERS;
+
+    //        if (texture_barrier->queue_acquire && texture_barrier->src_state != gal_resource_state::UNDEFINIED) {
+    //            pImageBarrier->dstQueueFamilyIndex = (u32)A->mQueueFamilyIndices[Cmd->mType];
+    //            pImageBarrier->srcQueueFamilyIndex = (u32)A->mQueueFamilyIndices[texture_barrier->queue_type];
+    //        } else if (texture_barrier->queue_release && texture_barrier->src_state != gal_resource_state::UNDEFINIED) {
+    //            pImageBarrier->srcQueueFamilyIndex = (u32)A->mQueueFamilyIndices[Cmd->mType];
+    //            pImageBarrier->dstQueueFamilyIndex = (u32)A->mQueueFamilyIndices[texture_barrier->queue_type];
+    //        } else {
+    //            pImageBarrier->srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    //            pImageBarrier->dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    //        }
+
+    //        srcAccessFlags |= pImageBarrier->srcAccessMask;
+    //        dstAccessFlags |= pImageBarrier->dstAccessMask;
+    //    }
+    //}
+
+    //// Commit barriers
+    //VkPipelineStageFlags srcStageMask =
+    //    VkUtil_DeterminePipelineStageFlags(A, srcAccessFlags, command->m_queue_type);
+    //VkPipelineStageFlags dstStageMask =
+    //    VkUtil_DeterminePipelineStageFlags(A, dstAccessFlags, command->m_queue_type);
+    //if (!BBs.empty() || !tbs.empty()) {
+    //    vkCmdPipelineBarrier(reinterpret_cast<vk_command_list *>(command)->m_command, srcStageMask, dstStageMask, 0, 0,
+    //                         nullptr, static_cast<u32>(BBs.size()), BBs.data(), static_cast<u32>(tbs.size()),
+    //                         tbs.data());
+    //}
     return gal_error_code::SUC;
 }
 

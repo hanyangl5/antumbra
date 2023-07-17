@@ -586,13 +586,15 @@ DECLARE_GAL_HANDLE(gal_rootsignature){};
 DECLARE_GAL_HANDLE(gal_pipeline_cache){};
 
 struct gal_compute_pipeline_desc {
-    gal_shader_program *shader;
-    gal_rootsignature* root_signature;
+    //gal_shader_program *shader;
+    //gal_rootsignature* root_signature;
+    gal_shader_program shader;
+    gal_rootsignature root_signature;
 };
 struct gal_raytracing_pipeline_desc {};
 
 struct gal_graphics_pipeline_desc {
-    gal_shader_program *shader;
+    gal_shader_program shader;
     gal_rootsignature root_signature;
     gal_vertex_layout *pVertexLayout;
     gal_blend_state_desc *pBlendState;
@@ -673,8 +675,9 @@ struct gal_command_list_desc {
 
 struct gal_renderpass_begin_desc {};
 
-struct BufferBarrier {
-    gal_buffer *pBuffer;
+
+struct gal_buffer_barrier {
+    gal_buffer pBuffer;
     gal_resource_state mCurrentState;
     gal_resource_state mNewState;
     u8 mBeginOnly : 1;
@@ -684,8 +687,8 @@ struct BufferBarrier {
     u8 mQueueType : 5;
 };
 
-struct TextureBarrier {
-    gal_texture *pTexture;
+struct gal_texture_barrier {
+    gal_texture pTexture;
     gal_resource_state mCurrentState;
     gal_resource_state mNewState;
     u8 mBeginOnly : 1;
