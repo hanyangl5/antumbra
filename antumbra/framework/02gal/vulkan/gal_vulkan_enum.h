@@ -23,9 +23,10 @@ DECLARE_VK_HANDLE(context) {
     VkDevice device = VK_NULL_HANDLE;
     VmaAllocator vma_allocator = VK_NULL_HANDLE;
 
-    vk_queue graphics_queue;
-    vk_queue compute_queue;
-    vk_queue transfer_queue;
+    //vk_queue graphics_queue;
+    //vk_queue compute_queue;
+    //vk_queue transfer_queue;
+    ant::fixed_array<vk_queue, 3> queues;
     f32 default_queue_property = 0.0f;
 };
 

@@ -1400,7 +1400,7 @@ constexpr VkIndexType utils_to_vk_index_type(gal_index_type type) {
     }
 }
 
-constexpr VkImageAspectFlags utils_to_vk_aspect_mask(gal_texture_format format, [[maybe_unused]]bool b_has_stencil) {
+constexpr VkImageAspectFlags utils_to_vk_aspect_mask(gal_texture_format format, [[maybe_unused]] bool b_has_stencil) {
     VkImageAspectFlags flags = 0;
     if (gal_tf_has_depth_or_stencil(format)) {
         if (gal_tf_has_stencil(format)) {
@@ -1414,4 +1414,159 @@ constexpr VkImageAspectFlags utils_to_vk_aspect_mask(gal_texture_format format, 
     flags |= VK_IMAGE_ASPECT_COLOR_BIT;
     return flags;
 }
+
+constexpr VkAccessFlags utils_to_vk_access_flags(gal_resource_state state) {
+    VkAccessFlags flags = VK_ACCESS_NONE;
+    if ((state & gal_resource_state::COPY_SRC) != gal_resource_state::UNDEFINIED) {
+        flags |= VK_ACCESS_TRANSFER_READ_BIT;
+    }
+    if ((state & gal_resource_state::COPY_DST) != gal_resource_state::UNDEFINIED) {
+        flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
+    }
+    if ((state & gal_resource_state::VERTEX_BUFFER) != gal_resource_state::UNDEFINIED) {
+        flags |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+    }
+    if ((state & gal_resource_state::CONSTANT_BUFFER) != gal_resource_state::UNDEFINIED) {
+        flags |= VK_ACCESS_UNIFORM_READ_BIT;
+    }
+    if ((state & gal_resource_state::TEXTURE) != gal_resource_state::UNDEFINIED) {
+        flags |= VK_ACCESS_UNIFORM_READ_BIT;
+    }
+    if ((state & gal_resource_state::INDEX_BUFFER) != gal_resource_state::UNDEFINIED) {
+        flags |= VK_ACCESS_INDEX_READ_BIT;
+    }
+    if ((state & gal_resource_state::RW_BUFFER) != gal_resource_state::UNDEFINIED) {
+        flags |= VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+    }
+    if ((state & gal_resource_state::RW_TEXTURE) != gal_resource_state::UNDEFINIED) {
+        flags |= VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+    }
+    if ((state & gal_resource_state::RENDER_TARGET) != gal_resource_state::UNDEFINIED) {
+        flags |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    }
+    if ((state & gal_resource_state::INDIRECT_BUFFER) != gal_resource_state::UNDEFINIED) {
+        flags |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+    }
+    if ((state & gal_resource_state::DEPTH_READ) != gal_resource_state::UNDEFINIED) {
+        flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+    }
+    if ((state & gal_resource_state::DEPTH_WRITE) != gal_resource_state::UNDEFINIED) {
+        flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    }
+    if ((state & gal_resource_state::DEPTH_READ) != gal_resource_state::UNDEFINIED) {
+        flags |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+    }
+
+    return flags;
+}
+VkPipelineStageFlags util_determine_pipeline_stage_flags(VkAccessFlags accessFlags, gal_queue_type queueType) {
+    VkPipelineStageFlags flags = 0;
+
+    switch (queueType) {
+    case gal_queue_type::graphcis: {
+        if ((accessFlags & (VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)) != 0)
+            flags |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+
+        if ((accessFlags & (VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT)) !=
+            0) {
+            flags |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+            flags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            //if (pRenderer->pActiveGpuSettings->mGeometryShaderSupported) {
+            //    flags |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
+            //}
+            //if (pRenderer->pActiveGpuSettings->mTessellationSupported) {
+            //    flags |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT;
+            //    flags |= VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
+            //}
+            flags |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+#ifdef VK_RAYTRACING_AVAILABLE
+            if (pRenderer->mVulkan.mRaytracingSupported) {
+                flags |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+            }
+#endif
+        }
+
+        if ((accessFlags & VK_ACCESS_INPUT_ATTACHMENT_READ_BIT) != 0)
+            flags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+
+        if ((accessFlags & (VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)) != 0)
+            flags |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+        if ((accessFlags &
+             (VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)) != 0)
+            flags |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        break;
+    }
+    case gal_queue_type::compute: {
+        if ((accessFlags & (VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)) != 0 ||
+            (accessFlags & VK_ACCESS_INPUT_ATTACHMENT_READ_BIT) != 0 ||
+            (accessFlags & (VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)) != 0 ||
+            (accessFlags &
+             (VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)) != 0)
+            return VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
+        if ((accessFlags & (VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT)) != 0)
+            flags |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+
+        break;
+    }
+    case gal_queue_type::transfer:
+        return VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    default:
+        break;
+    }
+
+    // Compatible with both compute and graphics queues
+    if ((accessFlags & VK_ACCESS_INDIRECT_COMMAND_READ_BIT) != 0)
+        flags |= VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+
+    if ((accessFlags & (VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT)) != 0)
+        flags |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+    if ((accessFlags & (VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_WRITE_BIT)) != 0)
+        flags |= VK_PIPELINE_STAGE_HOST_BIT;
+
+    if (flags == 0)
+        flags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
+    return flags;
+}
+VkImageLayout util_to_vk_image_layout(gal_resource_state usage) {
+    if ((usage & gal_resource_state::COPY_SRC) != gal_resource_state::UNDEFINIED) {
+        return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    }
+    if ((usage & gal_resource_state::COPY_DST) != gal_resource_state::UNDEFINIED) {
+        return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    }
+    if ((usage & gal_resource_state::RENDER_TARGET) != gal_resource_state::UNDEFINIED) {
+        return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    }
+    if ((usage & gal_resource_state::DEPTH_WRITE) != gal_resource_state::UNDEFINIED) {
+        return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    }
+    if ((usage & gal_resource_state::PRESENT) != gal_resource_state::UNDEFINIED) {
+        return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    }
+    if ((usage & gal_resource_state::RW_BUFFER) != gal_resource_state::UNDEFINIED) {
+        return VK_IMAGE_LAYOUT_GENERAL;
+    }
+    if ((usage & gal_resource_state::RW_TEXTURE) != gal_resource_state::UNDEFINIED) {
+        return VK_IMAGE_LAYOUT_GENERAL;
+    }
+    if ((usage & gal_resource_state::COMMON) != gal_resource_state::UNDEFINIED) {
+        return VK_IMAGE_LAYOUT_GENERAL;
+    }
+    if ((usage & gal_resource_state::CONSTANT_BUFFER) != gal_resource_state::UNDEFINIED) {
+        return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    }
+    if ((usage & gal_resource_state::TEXTURE) != gal_resource_state::UNDEFINIED) {
+        return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    }
+    if ((usage & gal_resource_state::DEPTH_READ) != gal_resource_state::UNDEFINIED) {
+        return VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL;
+    }
+
+    return VK_IMAGE_LAYOUT_UNDEFINED;
+}
+
 } // namespace ant::gal

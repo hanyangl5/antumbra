@@ -69,17 +69,13 @@ namespace ant::gal {
 //        base = (VkBaseOutStructure *)base->pNext;  \
 //    }
 
+constexpr u32 utils_to_vk_queue_index(gal_queue_type type) { return static_cast<u32>(type) - 1; }
+constexpr u32 graphics_queue_index = utils_to_vk_queue_index(gal_queue_type::graphcis);
+constexpr u32 compute_queue_index = utils_to_vk_queue_index(gal_queue_type::compute);
+constexpr u32 transfer_queue_index = utils_to_vk_queue_index(gal_queue_type::transfer);
+
 constexpr u32 utils_to_vk_queue_family_index(gal_queue_type queue_type, vk_context *vk_ctx) {
-    switch (queue_type) {
-    case ant::gal::gal_queue_type::graphcis:
-        return vk_ctx->graphics_queue.queue_family_index;
-    case ant::gal::gal_queue_type::compute:
-        return vk_ctx->compute_queue.queue_family_index;
-    case ant::gal::gal_queue_type::transfer:
-        return vk_ctx->transfer_queue.queue_family_index;
-    default:
-        return 0;
-    }
+    return vk_ctx->queues[utils_to_vk_queue_index(queue_type)].queue_family_index;
 }
 
 gal_error_code vk_init_gal(gal_context *context) {
@@ -402,25 +398,39 @@ gal_error_code vk_create_device(gal_desc *gal_desc, gal_context *context) {
     device_create_info.pNext = &device_features;
 
     VkResult res = vkCreateDevice(vk_ctx->active_gpu, &device_create_info, nullptr, &vk_ctx->device);
-
-    // create device queue
-    vkGetDeviceQueue(vk_ctx->device, queue_family_indices[0], 0, &vk_ctx->graphics_queue.queue);
-
-    if (gal_desc->b_async_compute) {
-        vkGetDeviceQueue(vk_ctx->device, queue_family_indices[1], 0, &vk_ctx->compute_queue.queue);
-    } else {
-        vkGetDeviceQueue(vk_ctx->device, queue_family_indices[0], 0, &vk_ctx->compute_queue.queue);
-    }
-
-    if (gal_desc->b_async_transfer) {
-        vkGetDeviceQueue(vk_ctx->device, queue_family_indices[2], 0, &vk_ctx->transfer_queue.queue);
-    } else {
-        vkGetDeviceQueue(vk_ctx->device, queue_family_indices[0], 0, &vk_ctx->transfer_queue.queue);
-    }
-
     if (res != VK_SUCCESS || vk_ctx->device == VK_NULL_HANDLE) {
         return gal_error_code::ERR;
     }
+    // create device queue
+    vkGetDeviceQueue(vk_ctx->device, queue_family_indices[graphics_queue_index], 0,
+                     &vk_ctx->queues[graphics_queue_index].queue);
+
+    if (gal_desc->b_async_compute) {
+        vkGetDeviceQueue(vk_ctx->device, queue_family_indices[compute_queue_index], 0,
+                         &vk_ctx->queues[compute_queue_index].queue);
+    } else {
+        vkGetDeviceQueue(vk_ctx->device, queue_family_indices[graphics_queue_index], 0,
+                         &vk_ctx->queues[compute_queue_index].queue);
+    }
+
+    if (gal_desc->b_async_transfer) {
+        vkGetDeviceQueue(vk_ctx->device, queue_family_indices[transfer_queue_index], 0,
+                         &vk_ctx->queues[transfer_queue_index].queue);
+    } else {
+        vkGetDeviceQueue(vk_ctx->device, queue_family_indices[graphics_queue_index], 0,
+                         &vk_ctx->queues[transfer_queue_index].queue);
+    }
+
+    vk_ctx->queues[utils_to_vk_queue_index(gal_queue_type::graphcis)].queue_family_index =
+        queue_family_indices[graphics_queue_index];
+    vk_ctx->queues[utils_to_vk_queue_index(gal_queue_type::compute)].queue_family_index =
+        queue_family_indices[compute_queue_index];
+    vk_ctx->queues[utils_to_vk_queue_index(gal_queue_type::transfer)].queue_family_index =
+        queue_family_indices[transfer_queue_index];
+    vk_ctx->queues[utils_to_vk_queue_index(gal_queue_type::graphcis)].m_type = gal_queue_type::graphcis;
+    vk_ctx->queues[utils_to_vk_queue_index(gal_queue_type::compute)].m_type = gal_queue_type::compute;
+    vk_ctx->queues[utils_to_vk_queue_index(gal_queue_type::transfer)].m_type = gal_queue_type::transfer;
+
 
     // TODO(hyl5): query supported memory type of gpu, platform differences
     return gal_error_code::SUC;
@@ -1623,7 +1633,8 @@ gal_error_code vk_wait_fences(gal_context context, gal_fence *fences, u32 count)
 
     VkResult result;
     if (!submit_fences.empty()) {
-        result = vkWaitForFences(vk_ctx->device, static_cast<u32>(submit_fences.size()), submit_fences.data(), VK_TRUE, UINT64_MAX);
+        result = vkWaitForFences(vk_ctx->device, static_cast<u32>(submit_fences.size()), submit_fences.data(), VK_TRUE,
+                                 UINT64_MAX);
         if (result != VK_SUCCESS) {
             return gal_error_code::ERR;
         }
@@ -1707,7 +1718,10 @@ gal_error_code vk_create_command_pool(gal_context context, gal_command_pool_desc
     if (result != VK_SUCCESS || vk_cmd_pool->m_cmd_pool == VK_NULL_HANDLE) {
         return gal_error_code::ERR;
     }
-    vk_cmd_pool->queue_type = desc->queue_type;
+    if (vk_ctx->queues[utils_to_vk_queue_index(desc->queue_type)].used == false) {
+        return gal_error_code::ERR;
+    }
+    vk_cmd_pool->queue = &vk_ctx->queues[utils_to_vk_queue_index(desc->queue_type)];
     *command_pool = vk_cmd_pool;
     return gal_error_code::SUC;
 }
@@ -1735,7 +1749,7 @@ gal_error_code vk_allocate_command_list(gal_context context, gal_command_list_de
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_command_list *vk_cmd = ant::memory::alloc<ant::gal::vk_command_list>(nullptr);
     vk_command_pool *vk_pool = reinterpret_cast<vk_command_pool *>(desc->command_pool);
-    if (desc->queue_type != vk_pool->queue_type) {
+    if (desc->queue_type != vk_pool->queue->m_type) {
         return gal_error_code::ERR;
     }
     VkCommandBufferAllocateInfo alloc_info{};
@@ -1748,7 +1762,6 @@ gal_error_code vk_allocate_command_list(gal_context context, gal_command_list_de
     if (result != VK_SUCCESS || vk_cmd->m_command == gal_null) {
         return gal_error_code::ERR;
     }
-    vk_cmd->m_queue_type = desc->queue_type;
     vk_cmd->m_cmd_pool = vk_pool;
     *command = vk_cmd;
     return gal_error_code::SUC;
@@ -1868,121 +1881,104 @@ gal_error_code vk_cmdSetStencilReferenceValue(gal_command_list command, u32 val)
 gal_error_code vk_cmd_resource_barrier(gal_command_list command, u32 buffer_barrier_count,
                                        gal_buffer_barrier *buffer_barriers, u32 texture_barrier_count,
                                        gal_texture_barrier *texture_barriers) {
-    ////vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
+    vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
 
-    ////vkCmdPipelineBarrier();
-    ////vkCmdPipelineBarrier2();
     VkAccessFlags srcAccessFlags = 0;
     VkAccessFlags dstAccessFlags = 0;
     ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 256);
-    ant::vector<VkBufferMemoryBarrier> BBs(&stack_memory);
+    ant::vector<VkBufferMemoryBarrier> bbs(&stack_memory);
 
     for (u32 i = 0; i < buffer_barrier_count; i++) {
         buffer_barriers[i];
-        gal_buffer_barrier* buffer_barrier = &buffer_barriers[i];
-        vk_buffer *vk_b = reinterpret_cast<vk_buffer *>(buffer_barrier->pBuffer);
+        gal_buffer_barrier *buffer_barrier = &buffer_barriers[i];
+        vk_buffer *vk_b = reinterpret_cast<vk_buffer *>(buffer_barrier->buffer);
         VkBufferMemoryBarrier b{};
         b.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
         b.pNext = nullptr;
-
-        if (gal_resource_state::RW_BUFFER == buffer_barrier->mCurrentState &&
-            gal_resource_state::RW_BUFFER == buffer_barrier->mNewState) {
+        b.buffer = vk_b->m_buffer;
+        if (gal_resource_state::RW_BUFFER == buffer_barrier->src_state &&
+            gal_resource_state::RW_BUFFER == buffer_barrier->dst_state) {
             b.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
             b.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
         } else {
-            b.srcAccessMask = VkUtil_ResourceStateToVkAccessFlags(buffer_barrier->src_state);
-            b.dstAccessMask = VkUtil_ResourceStateToVkAccessFlags(buffer_barrier->dst_state);
+            b.srcAccessMask = utils_to_vk_access_flags(buffer_barrier->src_state);
+            b.dstAccessMask = utils_to_vk_access_flags(buffer_barrier->dst_state);
+        }
+        b.size = VK_WHOLE_SIZE;
+        b.offset = 0; // FIXME(hyl5): more options?
+
+        if (buffer_barrier->op == queue_op::ACQUIRE) {
+            b.srcQueueFamilyIndex = reinterpret_cast<vk_queue *>(buffer_barrier->target_queue)->queue_family_index;
+            b.dstQueueFamilyIndex = reinterpret_cast<vk_queue *>(vk_cmd->m_cmd_pool->queue)->queue_family_index;
+        }
+        if (buffer_barrier->op == queue_op::RELEASE) {
+            b.dstAccessMask = reinterpret_cast<vk_queue *>(buffer_barrier->target_queue)->queue_family_index;
+            b.srcAccessMask = reinterpret_cast<vk_queue *>(vk_cmd->m_cmd_pool->queue)->queue_family_index;
         }
 
-        if (pBufferBarrier) {
-            pBufferBarrier->buffer = B->pVkBuffer;
-            pBufferBarrier->size = VK_WHOLE_SIZE;
-            pBufferBarrier->offset = 0;
+        srcAccessFlags |= b.srcAccessMask;
+        dstAccessFlags |= b.dstAccessMask;
 
-            if (buffer_barrier->queue_acquire) {
-                pBufferBarrier->dstQueueFamilyIndex = (u32)A->mQueueFamilyIndices[Cmd->mType];
-                pBufferBarrier->srcQueueFamilyIndex = (u32)A->mQueueFamilyIndices[buffer_barrier->queue_type];
-            } else if (buffer_barrier->queue_release) {
-                pBufferBarrier->srcQueueFamilyIndex = (u32)A->mQueueFamilyIndices[Cmd->mType];
-                pBufferBarrier->dstQueueFamilyIndex = (u32)A->mQueueFamilyIndices[buffer_barrier->queue_type];
-            } else {
-                pBufferBarrier->srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                pBufferBarrier->dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            }
-            srcAccessFlags |= pBufferBarrier->srcAccessMask;
-            dstAccessFlags |= pBufferBarrier->dstAccessMask;
-        }
-        BBs.push_back(b);
+        bbs.push_back(b);
     }
 
-    //ant::vector<VkImageMemoryBarrier> tbs(&stack_memory);
+    ant::vector<VkImageMemoryBarrier> tbs(&stack_memory);
 
-    //for (u32 i = 0; i < texture_barrier_count; i++) {
-    //    gal_texture_barrier *texture_barrier = &texture_barriers[i];
-    //    vk_texture *vk_t = reinterpret_cast<vk_texture*>(texture_barrier->pTexture);
-    //    
-    //    if (gal_resource_state::RW_TEXTURE == texture_barrier->mCurrentState &&
-    //        gal_resource_state::RW_TEXTURE == texture_barrier->mNewState) {
-    //        VkImageMemoryBarrier b ;
-    //        b.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    //        b.pNext = nullptr;
-    //        b.image = vk_t->m_image;
-    //         tbs.push_back(b);
-    //        pImageBarrier = &tbs[imageBarrierCount++];
+    for (u32 i = 0; i < texture_barrier_count; i++) {
+        gal_texture_barrier *texture_barrier = &texture_barriers[i];
+        vk_texture *vk_t = reinterpret_cast<vk_texture *>(texture_barrier->texture);
 
-    //        pImageBarrier->srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-    //        pImageBarrier->dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
-    //        pImageBarrier->oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-    //        pImageBarrier->newLayout = VK_IMAGE_LAYOUT_GENERAL;
-    //    } else {
-    //        pImageBarrier = &TBs[imageBarrierCount++];
-    //        pImageBarrier->sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    //        pImageBarrier->pNext = NULL;
+        VkImageMemoryBarrier t{};
+        t.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        t.pNext = nullptr;
+        t.image = vk_t->m_image;
+        if (gal_resource_state::RW_TEXTURE == texture_barrier->src_state &&
+            gal_resource_state::RW_TEXTURE == texture_barrier->dst_state) {
 
-    //        pImageBarrier->srcAccessMask = VkUtil_ResourceStateToVkAccessFlags(texture_barrier->src_state);
-    //        pImageBarrier->dstAccessMask = VkUtil_ResourceStateToVkAccessFlags(texture_barrier->dst_state);
-    //        pImageBarrier->oldLayout = VkUtil_ResourceStateToImageLayout(texture_barrier->src_state);
-    //        pImageBarrier->newLayout = VkUtil_ResourceStateToImageLayout(texture_barrier->dst_state);
-    //    }
+            t.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            t.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+            t.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+            t.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+        } else {
 
-    //    if (pImageBarrier) {
-    //        pImageBarrier->image = T->pVkImage;
-    //        pImageBarrier->subresourceRange.aspectMask = (VkImageAspectFlags)T->super.aspect_mask;
-    //        pImageBarrier->subresourceRange.baseMipLevel =
-    //            texture_barrier->subresource_barrier ? texture_barrier->mip_level : 0;
-    //        pImageBarrier->subresourceRange.levelCount =
-    //            texture_barrier->subresource_barrier ? 1 : VK_REMAINING_MIP_LEVELS;
-    //        pImageBarrier->subresourceRange.baseArrayLayer =
-    //            texture_barrier->subresource_barrier ? texture_barrier->array_layer : 0;
-    //        pImageBarrier->subresourceRange.layerCount =
-    //            texture_barrier->subresource_barrier ? 1 : VK_REMAINING_ARRAY_LAYERS;
+            t.srcAccessMask = utils_to_vk_access_flags(texture_barrier->src_state);
+            t.dstAccessMask = utils_to_vk_access_flags(texture_barrier->dst_state);
+            t.oldLayout = util_to_vk_image_layout(texture_barrier->src_state);
+            t.newLayout = util_to_vk_image_layout(texture_barrier->dst_state);
+        }
 
-    //        if (texture_barrier->queue_acquire && texture_barrier->src_state != gal_resource_state::UNDEFINIED) {
-    //            pImageBarrier->dstQueueFamilyIndex = (u32)A->mQueueFamilyIndices[Cmd->mType];
-    //            pImageBarrier->srcQueueFamilyIndex = (u32)A->mQueueFamilyIndices[texture_barrier->queue_type];
-    //        } else if (texture_barrier->queue_release && texture_barrier->src_state != gal_resource_state::UNDEFINIED) {
-    //            pImageBarrier->srcQueueFamilyIndex = (u32)A->mQueueFamilyIndices[Cmd->mType];
-    //            pImageBarrier->dstQueueFamilyIndex = (u32)A->mQueueFamilyIndices[texture_barrier->queue_type];
-    //        } else {
-    //            pImageBarrier->srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    //            pImageBarrier->dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    //        }
+        t.subresourceRange.aspectMask = utils_to_vk_aspect_mask(vk_t->m_desc.format, false);
+        t.subresourceRange.baseMipLevel = texture_barrier->mSubresourceBarrier ? texture_barrier->mMipLevel : 0;
+        t.subresourceRange.levelCount = texture_barrier->mSubresourceBarrier ? 1 : VK_REMAINING_MIP_LEVELS;
+        t.subresourceRange.baseArrayLayer = texture_barrier->mSubresourceBarrier ? texture_barrier->mArrayLayer : 0;
+        t.subresourceRange.layerCount = texture_barrier->mSubresourceBarrier ? 1 : VK_REMAINING_ARRAY_LAYERS;
+        if (texture_barrier->op == queue_op::ACQUIRE && texture_barrier->src_state != gal_resource_state::UNDEFINIED) {
+            t.srcQueueFamilyIndex = reinterpret_cast<vk_queue *>(texture_barrier->target_queue)->queue_family_index;
+            t.dstQueueFamilyIndex =
+                reinterpret_cast<vk_queue *>(reinterpret_cast<vk_command_list *>(command)->m_cmd_pool->queue)
+                    ->queue_family_index;
+        }
+        if (texture_barrier->op == queue_op::RELEASE && texture_barrier->src_state != gal_resource_state::UNDEFINIED) {
+            t.dstAccessMask = reinterpret_cast<vk_queue *>(texture_barrier->target_queue)->queue_family_index;
+            t.srcAccessMask =
+                reinterpret_cast<vk_queue *>(reinterpret_cast<vk_command_list *>(command)->m_cmd_pool->queue)
+                    ->queue_family_index;
+        }
 
-    //        srcAccessFlags |= pImageBarrier->srcAccessMask;
-    //        dstAccessFlags |= pImageBarrier->dstAccessMask;
-    //    }
-    //}
+        srcAccessFlags |= t.srcAccessMask;
+        dstAccessFlags |= t.dstAccessMask;
+        tbs.push_back(t);
+    }
 
-    //// Commit barriers
-    //VkPipelineStageFlags srcStageMask =
-    //    VkUtil_DeterminePipelineStageFlags(A, srcAccessFlags, command->m_queue_type);
-    //VkPipelineStageFlags dstStageMask =
-    //    VkUtil_DeterminePipelineStageFlags(A, dstAccessFlags, command->m_queue_type);
-    //if (!BBs.empty() || !tbs.empty()) {
-    //    vkCmdPipelineBarrier(reinterpret_cast<vk_command_list *>(command)->m_command, srcStageMask, dstStageMask, 0, 0,
-    //                         nullptr, static_cast<u32>(BBs.size()), BBs.data(), static_cast<u32>(tbs.size()),
-    //                         tbs.data());
-    //}
+    // Commit barriers
+    VkPipelineStageFlags srcStageMask =
+        util_determine_pipeline_stage_flags(srcAccessFlags, vk_cmd->m_cmd_pool->queue->m_type);
+    VkPipelineStageFlags dstStageMask =
+        util_determine_pipeline_stage_flags(dstAccessFlags, vk_cmd->m_cmd_pool->queue->m_type);
+    if (!bbs.empty() || !tbs.empty()) {
+        vkCmdPipelineBarrier(vk_cmd->m_command, srcStageMask, dstStageMask, 0, 0, nullptr, static_cast<u32>(bbs.size()),
+                             bbs.data(), static_cast<u32>(tbs.size()), tbs.data());
+    }
     return gal_error_code::SUC;
 }
 
@@ -2179,33 +2175,10 @@ gal_error_code vk_cmd_copy_texture_to_buffer() {
 
 gal_error_code vk_add_queue(gal_context context, gal_queue_desc *desc, gal_queue *queue) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_queue *t_queue = nullptr;
-    switch (desc->type) {
-    case gal_queue_type::graphcis:
-        if (vk_ctx->graphics_queue.used == false) {
-            vk_ctx->graphics_queue.used = true;
-            t_queue = &vk_ctx->graphics_queue;
-        } else {
-            return gal_error_code::ERR;
-        }
-        break;
-    case gal_queue_type::compute:
-        if (vk_ctx->compute_queue.used == false) {
-            vk_ctx->compute_queue.used = true;
-            t_queue = &vk_ctx->compute_queue;
-        } else {
-            return gal_error_code::ERR;
-        }
-        break;
-    case gal_queue_type::transfer:
-        if (vk_ctx->transfer_queue.used == false) {
-            vk_ctx->transfer_queue.used = true;
-            t_queue = &vk_ctx->transfer_queue;
-        } else {
-            return gal_error_code::ERR;
-        }
-        break;
-    default:
+    vk_queue *t_queue = &vk_ctx->queues[utils_to_vk_queue_index(desc->type)];
+    if (t_queue->used == false) {
+        t_queue->used = true;
+    } else {
         return gal_error_code::ERR;
     }
 
@@ -2213,8 +2186,8 @@ gal_error_code vk_add_queue(gal_context context, gal_queue_desc *desc, gal_queue
     if (!vk_q) {
         return gal_error_code::ERR;
     }
-    *queue = vk_q;
     *vk_q = *t_queue;
+    *queue = vk_q;
     return gal_error_code::SUC;
 }
 
@@ -2222,18 +2195,7 @@ gal_error_code vk_remove_queue(gal_context context, gal_queue queue) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     if (queue != gal_null) {
         vk_queue *vk_q = reinterpret_cast<vk_queue *>(queue);
-        switch (queue->m_type) {
-        case gal_queue_type::graphcis:
-            vk_ctx->graphics_queue.used = false;
-        case gal_queue_type::compute:
-            vk_ctx->compute_queue.used = false;
-            break;
-        case gal_queue_type::transfer:
-            vk_ctx->transfer_queue.used = false;
-            break;
-        default:
-            return gal_error_code::ERR;
-        }
+        vk_ctx->queues[utils_to_vk_queue_index(queue->m_type)].used = false;
         ant::memory::afree(vk_q);
         queue = gal_null;
     }
@@ -2259,7 +2221,7 @@ gal_error_code vk_queue_submit(gal_queue queue, gal_queue_submit_desc *desc) {
     ACQUIRE_STACK_MEMORY_RESOURCE(stack_emmory, 256);
     ant::vector<VkCommandBuffer> cmds(&stack_emmory);
     for (u32 i = 0; i < cmdCount; ++i) {
-        cmds.push_back(reinterpret_cast<vk_command_list*>(ppCmds[i])->m_command);
+        cmds.push_back(reinterpret_cast<vk_command_list *>(ppCmds[i])->m_command);
     }
 
     ant::vector<VkSemaphore> wait_semaphores(&stack_emmory);

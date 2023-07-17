@@ -620,7 +620,11 @@ DECLARE_GAL_HANDLE(gal_pipeline) {
     gal_pipeline_desc m_desc;
     gal_pipeline_type m_type;
 };
-DECLARE_GAL_HANDLE(gal_command_list) { gal_queue_type m_queue_type; };
+DECLARE_GAL_HANDLE(gal_command_list) { 
+    //gal_queue queue;
+    //gal_queue_type m_queue_type;
+
+};
 
 DECLARE_GAL_HANDLE(gal_descriptorpool){};
 
@@ -664,7 +668,10 @@ struct gal_command_pool_desc {
     bool b_transient;
 };
 
-DECLARE_GAL_HANDLE(gal_command_pool) { gal_queue_type queue_type; };
+DECLARE_GAL_HANDLE(gal_command_pool) { 
+    //gal_queue_type queue_type; 
+    gal_queue queue;
+};
 
 // desc to allocate command_list
 struct gal_command_list_desc {
@@ -675,27 +682,37 @@ struct gal_command_list_desc {
 
 struct gal_renderpass_begin_desc {};
 
+enum class queue_op {
+    UNDEFINED,
+    RELEASE,
+    ACQUIRE
+};
 
 struct gal_buffer_barrier {
     gal_buffer buffer;
     gal_resource_state src_state;
-    gal_resource_state mNewState;
-    u8 mBeginOnly : 1;
-    u8 mEndOnly : 1;
-    u8 mAcquire : 1;
-    u8 mRelease : 1;
-    u8 mQueueType : 5;
+    gal_resource_state dst_state;
+    queue_op op;
+    gal_queue target_queue; // the other queue type
+    //u8 mBeginOnly : 1;
+    //u8 mEndOnly : 1;
+    //u8 mAcquire : 1;
+    //u8 mRelease : 1;
+    //u8 mQueueType : 5;
+    // FIXME(hyl5): ownership transfer might needed according to vulkan spec
 };
 
 struct gal_texture_barrier {
-    gal_texture pTexture;
-    gal_resource_state mCurrentState;
-    gal_resource_state mNewState;
-    u8 mBeginOnly : 1;
-    u8 mEndOnly : 1;
-    u8 mAcquire : 1;
-    u8 mRelease : 1;
-    u8 mQueueType : 5;
+    gal_texture texture;
+    gal_resource_state src_state;
+    gal_resource_state dst_state;
+    queue_op op;
+    gal_queue target_queue; // the other queue type
+    //u8 mBeginOnly : 1;
+    //u8 mEndOnly : 1;
+    //u8 mAcquire : 1;
+    //u8 mRelease : 1;
+    //u8 mQueueType : 5;
     /// Specifiy whether following barrier targets particular subresource
     u8 mSubresourceBarrier : 1;
     /// Following values are ignored if mSubresourceBarrier is false
