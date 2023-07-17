@@ -152,6 +152,12 @@ TEST_CASE("test gal command pool") {
     auto command_test = [](gal::gal_api api) {
         ant::gal::gal_command_pool cmd_pool{};
         gal::gal_context context = initialize(api);
+
+        gal_queue gfx_queue{};
+        gal_queue_desc q_desc{};
+        q_desc.type = gal_queue_type::graphcis;
+        gal::add_queue(context, &q_desc, &gfx_queue);
+
         gal::gal_command_pool_desc desc{};
         desc.b_transient = false;
         desc.queue_type = gal_queue_type::graphcis;
@@ -160,15 +166,16 @@ TEST_CASE("test gal command pool") {
 
         gal_command_list cmd{};
         gal_command_list_desc cmd_desc{};
+        cmd_desc.queue_type = gal_queue_type::graphcis;
         cmd_desc.command_pool = cmd_pool;
         cmd_desc.b_secondary = false;
         result = gal::allocate_command_list(context, &cmd_desc, &cmd);
         REQUIRE(result == gal::gal_error_code::SUC);
-        gal::cmd_begin(cmd);
-        gal::cmd_end(cmd);
         result = gal::reset_command_pool(context, cmd_pool);
         REQUIRE(result == gal::gal_error_code::SUC);
         result = gal::destroy_command_pool(context, cmd_pool);
+        REQUIRE(result == gal::gal_error_code::SUC);
+        result = gal::remove_queue(context, gfx_queue);
         REQUIRE(result == gal::gal_error_code::SUC);
         destroy(context);
     };
@@ -239,8 +246,8 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
 
     // create pso
     gal_compute_pipeline_desc comp_pipe_desc{};
-    comp_pipe_desc.root_signature = &rs;
-    comp_pipe_desc.shader = &sp;
+    comp_pipe_desc.root_signature = rs;
+    comp_pipe_desc.shader = sp;
 
     gal_pipeline_desc pipe_desc{};
     pipe_desc.desc = comp_pipe_desc;
@@ -339,8 +346,8 @@ void CS_MAIN(uint3 globalID : SV_DispatchThreadID, uint3 localID : SV_GroupThrea
 
     // create pso
     gal_compute_pipeline_desc comp_pipe_desc{};
-    comp_pipe_desc.root_signature = &rs;
-    comp_pipe_desc.shader = &sp;
+    comp_pipe_desc.root_signature = rs;
+    comp_pipe_desc.shader = sp;
 
     gal::gal_pipeline_cache pso_cache{};
 
@@ -370,8 +377,8 @@ void CS_MAIN(uint3 globalID : SV_DispatchThreadID, uint3 localID : SV_GroupThrea
 
     // create pso
     gal_compute_pipeline_desc comp_pipe_desc1{};
-    comp_pipe_desc1.root_signature = &rs;
-    comp_pipe_desc1.shader = &sp;
+    comp_pipe_desc1.root_signature = rs;
+    comp_pipe_desc1.shader = sp;
     gal_pipeline_desc pipe_desc1{};
     pipe_desc1.desc = comp_pipe_desc1;
     pipe_desc1.pipeline_cache = pso_cache1;
@@ -396,7 +403,6 @@ void CS_MAIN(uint3 globalID : SV_DispatchThreadID, uint3 localID : SV_GroupThrea
 }
 
 TEST_CASE("test dispatch") {}
-
 
 TEST_CASE("test compute vk") {
     ant::str test_cs = " [numthreads(8, 8, 1)] void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) {}";
@@ -436,8 +442,8 @@ TEST_CASE("test compute vk") {
 
     // create pso
     gal_compute_pipeline_desc comp_pipe_desc{};
-    comp_pipe_desc.root_signature = &rs;
-    comp_pipe_desc.shader = &sp;
+    comp_pipe_desc.root_signature = rs;
+    comp_pipe_desc.shader = sp;
 
     gal_pipeline_desc pipe_desc{};
     pipe_desc.desc = comp_pipe_desc;
@@ -446,31 +452,131 @@ TEST_CASE("test compute vk") {
     result = gal::create_compute_pipeline(context, &pipe_desc, &comp_pipe);
     REQUIRE(result == gal_error_code::SUC);
 
-    ant::gal::gal_command_pool cmd_pool{};
-    gal::gal_command_pool_desc cmd_pool_desc{};
-    cmd_pool_desc.b_transient = false;
-    cmd_pool_desc.queue_type = gal_queue_type::graphcis;
-    result = gal::create_command_pool(context, &cmd_pool_desc, &cmd_pool);
-    REQUIRE(result == gal::gal_error_code::SUC);
-
-    gal_command_list cmd{};
-    gal_command_list_desc cmd_desc{};
-    cmd_desc.command_pool = cmd_pool;
-    cmd_desc.b_secondary = false;
-    result = gal::allocate_command_list(context, &cmd_desc, &cmd);
-    REQUIRE(result == gal::gal_error_code::SUC);
-    gal::cmd_begin(cmd);
-    gal::cmd_bind_pipeline(cmd, comp_pipe);
-    gal::cmd_dispatch(cmd, 1, 1, 1);
-    gal::cmd_end(cmd);
-    result = gal::reset_command_pool(context, cmd_pool);
-    REQUIRE(result == gal::gal_error_code::SUC);
-    result = gal::destroy_command_pool(context, cmd_pool);
-    REQUIRE(result == gal::gal_error_code::SUC);
-
     result = gal::destroy_pipeline(context, comp_pipe);
     REQUIRE(result == gal_error_code::SUC);
     result = gal::destroy_rootsignature(context, rs);
     REQUIRE(result == gal_error_code::SUC);
     sg.release();
+}
+
+TEST_CASE("test buffer") {
+    auto command_test = [](gal::gal_api api) {
+        ant::gal::gal_command_pool cmd_pool{};
+        gal::gal_context context = initialize(api);
+
+        gal_queue gfx_queue{};
+        gal_queue_desc queue_desc{};
+        queue_desc.type = gal_queue_type::graphcis;
+        gal::add_queue(context, &queue_desc, &gfx_queue);
+
+        gal::gal_command_pool_desc desc{};
+        desc.b_transient = false;
+        desc.queue_type = gal_queue_type::graphcis;
+        gal_error_code result = gal::create_command_pool(context, &desc, &cmd_pool);
+        REQUIRE(result == gal::gal_error_code::SUC);
+
+        ant::fixed_array<u8, 64> arr;
+        for (u8 i = 0; i < 64; i++) {
+            arr[i] = i;
+        }
+
+        gal_buffer upload_buf{};
+        gal_buffer_desc upload_buf_desc{};
+        upload_buf_desc.descriptor_types = gal_descriptor_type::UNDEFINED;
+        upload_buf_desc.memory_flags = gal_memory_flag::CPU_UPLOAD;
+        upload_buf_desc.initial_state = gal_resource_state::COPY_SRC;
+        //upload_buf_desc.flags = gal_buffer_flag::PERSISTENT_MAP;
+        upload_buf_desc.size = arr.size();
+        result = gal::create_buffer(context, &upload_buf_desc, &upload_buf);
+        REQUIRE(result == gal::gal_error_code::SUC);
+        read_range range{0, arr.size()};
+        result = gal::mapbuffer(context, upload_buf, &range);
+        REQUIRE(result == gal::gal_error_code::SUC);
+        //
+        std::memcpy(upload_buf->cpu_mapped_address, arr.data(), arr.size());
+        result = gal::unmapbuffer(context, upload_buf);
+        REQUIRE(result == gal::gal_error_code::SUC);
+        gal_buffer gpu_buf{};
+        gal_buffer_desc gpu_buf_desc{};
+        gpu_buf_desc.descriptor_types = gal_descriptor_type::RW_BUFFER;
+        gpu_buf_desc.memory_flags = gal_memory_flag::GPU_DEDICATED;
+        gpu_buf_desc.initial_state = gal_resource_state::COPY_DST;
+        gpu_buf_desc.flags = gal_buffer_flag::OWN_MEMORY;
+        gpu_buf_desc.size = arr.size();
+        result = gal::create_buffer(context, &gpu_buf_desc, &gpu_buf);
+        REQUIRE(result == gal::gal_error_code::SUC);
+        // download buf
+        gal_buffer download_buf{};
+        gal_buffer_desc download_buf_desc{};
+        download_buf_desc.descriptor_types = gal_descriptor_type::UNDEFINED;
+        download_buf_desc.memory_flags = gal_memory_flag::GPU_DOWNLOAD;
+        download_buf_desc.initial_state = gal_resource_state::COPY_DST;
+        //download_buf_desc.flags = gal_buffer_flag::PERSISTENT_MAP;
+        download_buf_desc.size = arr.size();
+        result = gal::create_buffer(context, &download_buf_desc, &download_buf);
+        REQUIRE(result == gal::gal_error_code::SUC);
+        ant::fixed_array<u8, 64> dumped_arr;
+
+        gal_command_list cmd{};
+        gal_command_list_desc cmd_desc{};
+        cmd_desc.command_pool = cmd_pool;
+        cmd_desc.b_secondary = false;
+        cmd_desc.queue_type = gal_queue_type::graphcis;
+        result = gal::allocate_command_list(context, &cmd_desc, &cmd);
+        REQUIRE(result == gal::gal_error_code::SUC);
+
+        REQUIRE(gal_error_code::SUC == gal::cmd_begin(cmd));
+        REQUIRE(gal_error_code::SUC == gal::cmd_copy_buffer(cmd, upload_buf, gpu_buf, 0, 0, arr.size()));
+        // barrier
+        gal::gal_buffer_barrier bb{};
+        bb.buffer = gpu_buf;
+        bb.src_state = gal::gal_resource_state::COPY_DST;
+        bb.dst_state = gal::gal_resource_state::COPY_SRC;
+        //bb.mQueueType = gal_queue_type::graphcis;
+        result = gal::cmd_resource_barrier(cmd, 1, &bb, 0, nullptr);
+        REQUIRE(result == gal::gal_error_code::SUC);
+        REQUIRE(gal_error_code::SUC == gal::cmd_copy_buffer(cmd, gpu_buf, download_buf, 0, 0, arr.size()));
+        REQUIRE(gal_error_code::SUC == gal::cmd_end(cmd));
+
+        gal_fence fence{};
+        result = gal::create_fence(context, &fence);
+        REQUIRE(result == gal::gal_error_code::SUC);
+        // submmit
+        gal_queue_submit_desc submit_desc{};
+        submit_desc.cmds = &cmd;
+        submit_desc.cmd_count = 1;
+        submit_desc.mSignalSemaphoreCount = 0;
+        submit_desc.mWaitSemaphoreCount = 0;
+        submit_desc.pSignalFence = fence;
+        result = gal::queue_submit(gfx_queue, &submit_desc);
+        REQUIRE(result == gal::gal_error_code::SUC);
+        result = gal::wait_fences(context, &fence, 1);
+        REQUIRE(result == gal::gal_error_code::SUC);
+
+        // download
+        result = gal::mapbuffer(context, download_buf, &range);
+        REQUIRE(result == gal::gal_error_code::SUC);
+        std::memcpy(dumped_arr.data(), download_buf->cpu_mapped_address, arr.size());
+        result = gal::unmapbuffer(context, download_buf);
+        REQUIRE(result == gal::gal_error_code::SUC);
+
+        for (u32 i = 0; i < arr.size(); i++) {
+            REQUIRE(dumped_arr[i] == arr[i]);
+        }
+
+        result = gal::reset_command_pool(context, cmd_pool);
+        REQUIRE(result == gal::gal_error_code::SUC);
+        result = gal::destroy_command_pool(context, cmd_pool);
+        REQUIRE(result == gal::gal_error_code::SUC);
+        result = gal::destroy_buffer(context, upload_buf);
+        REQUIRE(result == gal::gal_error_code::SUC);
+        result = gal::destroy_buffer(context, gpu_buf);
+        REQUIRE(result == gal::gal_error_code::SUC);
+        result = gal::destroy_buffer(context, download_buf);
+        REQUIRE(result == gal::gal_error_code::SUC);
+        result = gal::destroy_fence(context, fence);
+        REQUIRE(result == gal::gal_error_code::SUC);
+        destroy(context);
+    };
+    command_test(gal_api::VULKAN);
 }

@@ -453,9 +453,20 @@ struct gal_buffer_desc {
     gal_buffer_flag flags;
 };
 
+struct gal_queue_desc {
+    gal_queue_type type;
+};
+
+DECLARE_GAL_HANDLE(gal_queue) {
+    public :
+    gal_queue_type m_type;
+};
+
+
 DECLARE_GAL_HANDLE(gal_buffer) {
   public:
     gal_buffer_desc m_gal_buffer_desc;
+    void *cpu_mapped_address;
 };
 
 struct gal_texture_desc {
@@ -521,7 +532,11 @@ DECLARE_GAL_HANDLE(gal_sampler) {
     gal_sampler_desc m_gal_sampler_desc;
 };
 
-DECLARE_GAL_HANDLE(gal_fence){};
+struct gal_fence_desc {};
+
+DECLARE_GAL_HANDLE(gal_fence) {
+  public:
+};
 DECLARE_GAL_HANDLE(gal_semaphore){};
 
 struct gal_swap_chain_desc {
@@ -571,13 +586,15 @@ DECLARE_GAL_HANDLE(gal_rootsignature){};
 DECLARE_GAL_HANDLE(gal_pipeline_cache){};
 
 struct gal_compute_pipeline_desc {
-    gal_shader_program *shader;
-    gal_rootsignature* root_signature;
+    //gal_shader_program *shader;
+    //gal_rootsignature* root_signature;
+    gal_shader_program shader;
+    gal_rootsignature root_signature;
 };
 struct gal_raytracing_pipeline_desc {};
 
 struct gal_graphics_pipeline_desc {
-    gal_shader_program *shader;
+    gal_shader_program shader;
     gal_rootsignature root_signature;
     gal_vertex_layout *pVertexLayout;
     gal_blend_state_desc *pBlendState;
@@ -603,7 +620,11 @@ DECLARE_GAL_HANDLE(gal_pipeline) {
     gal_pipeline_desc m_desc;
     gal_pipeline_type m_type;
 };
-DECLARE_GAL_HANDLE(gal_command_list) { gal_queue_type m_queue_type; };
+DECLARE_GAL_HANDLE(gal_command_list) { 
+    //gal_queue queue;
+    //gal_queue_type m_queue_type;
+
+};
 
 DECLARE_GAL_HANDLE(gal_descriptorpool){};
 
@@ -640,8 +661,6 @@ struct gal_rootsignature_desc {
     compiled_shader_group *shader;
 };
 
-struct gal_fence_desc {};
-
 struct gal_semaphore_desc {};
 
 struct gal_command_pool_desc {
@@ -649,36 +668,51 @@ struct gal_command_pool_desc {
     bool b_transient;
 };
 
-DECLARE_GAL_HANDLE(gal_command_pool) { gal_queue_type queue_type; };
+DECLARE_GAL_HANDLE(gal_command_pool) { 
+    //gal_queue_type queue_type; 
+    gal_queue queue;
+};
 
 // desc to allocate command_list
 struct gal_command_list_desc {
     gal_command_pool command_pool;
+    gal_queue_type queue_type;
     bool b_secondary = false;
 };
 
 struct gal_renderpass_begin_desc {};
 
-struct BufferBarrier {
-    gal_buffer *pBuffer;
-    gal_resource_state mCurrentState;
-    gal_resource_state mNewState;
-    u8 mBeginOnly : 1;
-    u8 mEndOnly : 1;
-    u8 mAcquire : 1;
-    u8 mRelease : 1;
-    u8 mQueueType : 5;
+enum class queue_op {
+    UNDEFINED,
+    RELEASE,
+    ACQUIRE
 };
 
-struct TextureBarrier {
-    gal_texture *pTexture;
-    gal_resource_state mCurrentState;
-    gal_resource_state mNewState;
-    u8 mBeginOnly : 1;
-    u8 mEndOnly : 1;
-    u8 mAcquire : 1;
-    u8 mRelease : 1;
-    u8 mQueueType : 5;
+struct gal_buffer_barrier {
+    gal_buffer buffer;
+    gal_resource_state src_state;
+    gal_resource_state dst_state;
+    queue_op op;
+    gal_queue target_queue; // the other queue type
+    //u8 mBeginOnly : 1;
+    //u8 mEndOnly : 1;
+    //u8 mAcquire : 1;
+    //u8 mRelease : 1;
+    //u8 mQueueType : 5;
+    // FIXME(hyl5): ownership transfer might needed according to vulkan spec
+};
+
+struct gal_texture_barrier {
+    gal_texture texture;
+    gal_resource_state src_state;
+    gal_resource_state dst_state;
+    queue_op op;
+    gal_queue target_queue; // the other queue type
+    //u8 mBeginOnly : 1;
+    //u8 mEndOnly : 1;
+    //u8 mAcquire : 1;
+    //u8 mRelease : 1;
+    //u8 mQueueType : 5;
     /// Specifiy whether following barrier targets particular subresource
     u8 mSubresourceBarrier : 1;
     /// Following values are ignored if mSubresourceBarrier is false
@@ -707,6 +741,16 @@ struct gal_texture_subresource_desc {
     u32 array_layer;
 };
 
+struct gal_queue_submit_desc {
+    gal_command_list *cmds;
+    gal_fence pSignalFence;
+    gal_semaphore *ppWaitSemaphores;
+    gal_semaphore *ppSignalSemaphores;
+    uint32_t cmd_count;
+    uint32_t mWaitSemaphoreCount;
+    uint32_t mSignalSemaphoreCount;
+    bool mSubmitDone;
+};
 //enum class gal_descriptor_resource_type {
 //    UNDEFINED,
 //    BUFFER,
@@ -739,5 +783,11 @@ struct gal_texture_subresource_desc {
 //  protected:
 //    gal_uav_descriptor_view_desc m_desc;
 //};
+
+struct read_range {
+    u64 offset;
+    u64 size;
+} ;
+
 
 } // namespace ant::gal

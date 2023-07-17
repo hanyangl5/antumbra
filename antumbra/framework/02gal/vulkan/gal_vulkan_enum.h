@@ -1,7 +1,7 @@
 #pragma once
 
 #include <variant>
-
+#include <mutex>
 #include "../enum.h"
 #include "../gal.h"
 
@@ -9,21 +9,27 @@ namespace ant::gal {
 
 #define DECLARE_VK_HANDLE(name) struct vk_##name : public gal_##name##_T
 
+
+DECLARE_VK_HANDLE(queue){
+    bool used = false;
+    u32 queue_family_index = 0;
+    VkQueue queue = VK_NULL_HANDLE;
+    //std::mutex submit_mutex; // prevent submit single queue in multithread
+};
+
 DECLARE_VK_HANDLE(context) {
     VkInstance instance = VK_NULL_HANDLE;
     VkPhysicalDevice active_gpu = VK_NULL_HANDLE;
     VkDevice device = VK_NULL_HANDLE;
     VmaAllocator vma_allocator = VK_NULL_HANDLE;
 
-    // queues
-    u32 graphcis_queue_family_index = 0;
-    u32 compute_queue_family_index = 0;
-    u32 transfer_queue_family_index = 0;
+    //vk_queue graphics_queue;
+    //vk_queue compute_queue;
+    //vk_queue transfer_queue;
+    ant::fixed_array<vk_queue, 3> queues;
     f32 default_queue_property = 0.0f;
-    VkQueue graphics_queue = VK_NULL_HANDLE;
-    VkQueue compute_queue = VK_NULL_HANDLE;
-    VkQueue transfer_queue = VK_NULL_HANDLE;
 };
+
 
 DECLARE_VK_HANDLE(buffer) {
     VkBuffer m_buffer;
@@ -67,8 +73,14 @@ DECLARE_VK_HANDLE(render_target) {
 //    std::variant<vk_buffer_desciptor_view, vk_image_desciptor_view> m_view;
 //};
 
-struct vk_fence {};
-struct vk_semaphore {};
+DECLARE_VK_HANDLE(fence) {
+    VkFence fence;
+    bool b_submitted;
+};
+DECLARE_VK_HANDLE(semaphore) {
+    VkSemaphore semaphore;
+    bool b_signaled;
+};
 DECLARE_VK_HANDLE(swap_chain) {
     ant::fixed_array<gal_render_target, MAX_SWAPCHAIN_IMAGES> &get_render_targets() { return m_render_targets; }
     VkSwapchainKHR m_swap_chain = VK_NULL_HANDLE;
@@ -92,7 +104,7 @@ DECLARE_VK_HANDLE(shader_program) {
     VkSpecializationInfo *m_specialization_info;
 };
 
-struct vk_rootsignature {
+DECLARE_VK_HANDLE(rootsignature) {
     ant::fixed_array<VkDescriptorSetLayout, MAX_DESCRIPTOR_SET_COUNT> set_layouts;
     VkPipelineLayout pipeline_layout;
 };
@@ -101,7 +113,7 @@ struct vk_rootsignature {
 DECLARE_VK_HANDLE(pipeline) {
     VkPipeline pipeline;
 };
-struct vk_pipeline_cache {
+DECLARE_VK_HANDLE(pipeline_cache) {
     VkPipelineCache pipeline_cache;
 };
 
