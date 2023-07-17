@@ -677,8 +677,8 @@ struct gal_renderpass_begin_desc {};
 
 
 struct gal_buffer_barrier {
-    gal_buffer pBuffer;
-    gal_resource_state mCurrentState;
+    gal_buffer buffer;
+    gal_resource_state src_state;
     gal_resource_state mNewState;
     u8 mBeginOnly : 1;
     u8 mEndOnly : 1;

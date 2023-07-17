@@ -125,7 +125,9 @@ __GAL_HELPER_MACRO__(gal_error_code, unmapbuffer, gal_context context, gal_buffe
 
 __GAL_HELPER_MACRO__(gal_error_code, cmd_begin, gal_command_list command);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_end, gal_command_list command);
-__GAL_HELPER_MACRO__(gal_error_code, cmd_resource_barrier);
+__GAL_HELPER_MACRO__(gal_error_code, cmd_resource_barrier, gal_command_list command, u32 buffer_barrier_count,
+                     gal_buffer_barrier *buffer_barriers, u32 texture_barrier_count,
+                     gal_texture_barrier *texture_barriers);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_bind_index_buffer, gal_command_list command, gal_buffer index_buffer, gal_index_type index_type, u64 offset);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_bind_vertex_buffer, gal_command_list command, u32 vertex_buffer_count, gal_buffer *vertex_buffers, u32 *stides, u64 *offsets);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_bind_pipeline, gal_command_list command, gal_pipeline pipeline);

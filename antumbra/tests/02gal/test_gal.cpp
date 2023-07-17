@@ -542,9 +542,9 @@ TEST_CASE("test buffer") {
         REQUIRE(gal_error_code::SUC == gal::cmd_begin(cmd));
         REQUIRE(gal_error_code::SUC == gal::cmd_copy_buffer(cmd, upload_buf, gpu_buf, 0, 0, arr.size()));
         // barrier
-        gal::BufferBarrier bb{};
+        gal::gal_buffer_barrier bb{};
         //bb.mQueueType = gal_queue_type::graphcis;
-        gal::cmd_resource_barrier();
+        gal::cmd_resource_barrier(cmd, 1, &bb, 0, nullptr);
         // 
         REQUIRE(gal_error_code::SUC == gal::cmd_copy_buffer(cmd, gpu_buf, download_buf, 0, 0, arr.size()));
         REQUIRE(gal_error_code::SUC == gal::cmd_end(cmd));

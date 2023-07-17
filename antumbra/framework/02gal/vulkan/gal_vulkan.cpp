@@ -1872,53 +1872,48 @@ gal_error_code vk_cmd_resource_barrier(gal_command_list command, u32 buffer_barr
 
     ////vkCmdPipelineBarrier();
     ////vkCmdPipelineBarrier2();
-    //VkAccessFlags srcAccessFlags = 0;
-    //VkAccessFlags dstAccessFlags = 0;
-    //ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 256);
-    //ant::vector<VkBufferMemoryBarrier> BBs(&stack_memory);
+    VkAccessFlags srcAccessFlags = 0;
+    VkAccessFlags dstAccessFlags = 0;
+    ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 256);
+    ant::vector<VkBufferMemoryBarrier> BBs(&stack_memory);
 
-    //for (u32 i = 0; i < buffer_barrier_count; i++) {
-    //    buffer_barriers[i];
-    //    const CGPUBufferBarrier *buffer_barrier = &desc->buffer_barriers[i];
-    //    CGPUBuffer_Vulkan *B = (CGPUBuffer_Vulkan *)buffer_barrier->buffer;
-    //    VkBufferMemoryBarrier *pBufferBarrier = NULL;
+    for (u32 i = 0; i < buffer_barrier_count; i++) {
+        buffer_barriers[i];
+        gal_buffer_barrier* buffer_barrier = &buffer_barriers[i];
+        vk_buffer *vk_b = reinterpret_cast<vk_buffer *>(buffer_barrier->pBuffer);
+        VkBufferMemoryBarrier b{};
+        b.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        b.pNext = nullptr;
 
-    //    if (CGPU_RESOURCE_STATE_UNORDERED_ACCESS == buffer_barrier->src_state &&
-    //        CGPU_RESOURCE_STATE_UNORDERED_ACCESS == buffer_barrier->dst_state) {
-    //        pBufferBarrier = &BBs[bufferBarrierCount++];                     //-V522
-    //        pBufferBarrier->sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER; //-V522
-    //        pBufferBarrier->pNext = NULL;
+        if (gal_resource_state::RW_BUFFER == buffer_barrier->mCurrentState &&
+            gal_resource_state::RW_BUFFER == buffer_barrier->mNewState) {
+            b.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+            b.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+        } else {
+            b.srcAccessMask = VkUtil_ResourceStateToVkAccessFlags(buffer_barrier->src_state);
+            b.dstAccessMask = VkUtil_ResourceStateToVkAccessFlags(buffer_barrier->dst_state);
+        }
 
-    //        pBufferBarrier->srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-    //        pBufferBarrier->dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
-    //    } else {
-    //        pBufferBarrier = &BBs[bufferBarrierCount++];
-    //        pBufferBarrier->sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-    //        pBufferBarrier->pNext = NULL;
+        if (pBufferBarrier) {
+            pBufferBarrier->buffer = B->pVkBuffer;
+            pBufferBarrier->size = VK_WHOLE_SIZE;
+            pBufferBarrier->offset = 0;
 
-    //        pBufferBarrier->srcAccessMask = VkUtil_ResourceStateToVkAccessFlags(buffer_barrier->src_state);
-    //        pBufferBarrier->dstAccessMask = VkUtil_ResourceStateToVkAccessFlags(buffer_barrier->dst_state);
-    //    }
-
-    //    if (pBufferBarrier) {
-    //        pBufferBarrier->buffer = B->pVkBuffer;
-    //        pBufferBarrier->size = VK_WHOLE_SIZE;
-    //        pBufferBarrier->offset = 0;
-
-    //        if (buffer_barrier->queue_acquire) {
-    //            pBufferBarrier->dstQueueFamilyIndex = (u32)A->mQueueFamilyIndices[Cmd->mType];
-    //            pBufferBarrier->srcQueueFamilyIndex = (u32)A->mQueueFamilyIndices[buffer_barrier->queue_type];
-    //        } else if (buffer_barrier->queue_release) {
-    //            pBufferBarrier->srcQueueFamilyIndex = (u32)A->mQueueFamilyIndices[Cmd->mType];
-    //            pBufferBarrier->dstQueueFamilyIndex = (u32)A->mQueueFamilyIndices[buffer_barrier->queue_type];
-    //        } else {
-    //            pBufferBarrier->srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    //            pBufferBarrier->dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    //        }
-    //        srcAccessFlags |= pBufferBarrier->srcAccessMask;
-    //        dstAccessFlags |= pBufferBarrier->dstAccessMask;
-    //    }
-    //}
+            if (buffer_barrier->queue_acquire) {
+                pBufferBarrier->dstQueueFamilyIndex = (u32)A->mQueueFamilyIndices[Cmd->mType];
+                pBufferBarrier->srcQueueFamilyIndex = (u32)A->mQueueFamilyIndices[buffer_barrier->queue_type];
+            } else if (buffer_barrier->queue_release) {
+                pBufferBarrier->srcQueueFamilyIndex = (u32)A->mQueueFamilyIndices[Cmd->mType];
+                pBufferBarrier->dstQueueFamilyIndex = (u32)A->mQueueFamilyIndices[buffer_barrier->queue_type];
+            } else {
+                pBufferBarrier->srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                pBufferBarrier->dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            }
+            srcAccessFlags |= pBufferBarrier->srcAccessMask;
+            dstAccessFlags |= pBufferBarrier->dstAccessMask;
+        }
+        BBs.push_back(b);
+    }
 
     //ant::vector<VkImageMemoryBarrier> tbs(&stack_memory);
 
