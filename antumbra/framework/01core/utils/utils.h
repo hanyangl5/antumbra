@@ -4,21 +4,24 @@
 #include <chrono>
 #include <ctime>
 #include <type_traits>
+#ifdef _MSC_VER 
 #include <utility>
-
+#elif __clang__
+#include <functional> // std::hash is defined in functional in clang
+#endif
 // third party libraries
 
 // project headers
 
 #define DELETE_COPY_MOVE(class_name)                                                                                   \
-    class_name##(const class_name &) = delete;                                                                         \
-    class_name##(class_name &&) = delete;                                                                              \
+    class_name(const class_name &) = delete;                                                                         \
+    class_name(class_name &&) = delete;                                                                              \
     class_name &operator=(const class_name &) = delete;                                                                \
     class_name &operator=(class_name &&) = delete;
 
 #define DEFAULT_COPY_MOVE(class_name)                                                                                  \
-    class_name##(const class_name &) = default;                                                                        \
-    class_name##(class_name &&) = default;                                                                             \
+    class_name(const class_name &) = default;                                                                        \
+    class_name(class_name &&) = default;                                                                             \
     class_name &operator=(const class_name &) = default;                                                               \
     class_name &operator=(class_name &&) = default;
 

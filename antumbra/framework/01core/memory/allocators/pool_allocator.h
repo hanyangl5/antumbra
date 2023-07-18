@@ -28,7 +28,7 @@ class pool_allocator final : public allocator_base {
     u64 m_chunk_count;
 
     void *m_ptr = nullptr;
-    u64 m_offset = 0;
+    // u64 m_offset = 0;
 };
 
 } // namespace ant::memory

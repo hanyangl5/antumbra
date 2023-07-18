@@ -37,15 +37,21 @@
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
 #define VMA_IMPLEMENTATION 1
 
-//#ifndef NDEBUG
+#ifndef NDEBUG
+#ifndef VMA_DEBUG_LOG_FORMAT
+   #define VMA_DEBUG_LOG_FORMAT(format, ...)
+   /*
+   #define VMA_DEBUG_LOG_FORMAT(format, ...) do { \
+       printf((format), __VA_ARGS__); \
+       printf("\n"); \
+   } while(false)
+   */
+#endif
 
-#define VMA_DEBUG_LOG(format, ...)                                                                                     \
-    do {                                                                                                               \
-        printf(format, __VA_ARGS__);                                                                                   \
-        printf("\n");                                                                                                  \
-    } while (false)
-
-//#endif // !NDEBUG
+#ifndef VMA_DEBUG_LOG
+    #define VMA_DEBUG_LOG(str)   VMA_DEBUG_LOG_FORMAT("%s", (str))
+#endif
+#endif // !NDEBUG
 #include <vk_mem_alloc.h>
 
 #include "framework/01core/io/file_system.h"

@@ -82,7 +82,7 @@ enum class gal_api { UNDEFINED, VULKAN, D3D12 };
     struct name##_T
 
 // declare gal handle
-inline constexpr nullptr_t gal_null = nullptr;
+inline constexpr std::nullptr_t gal_null = nullptr;
 
 struct gal_desc {
     // gal optional feature
@@ -581,9 +581,13 @@ DECLARE_GAL_HANDLE(gal_shader_program) {
     //shader::pipeline_reflection *pReflection;
 };
 
-DECLARE_GAL_HANDLE(gal_rootsignature){};
+DECLARE_GAL_HANDLE(gal_rootsignature){
 
-DECLARE_GAL_HANDLE(gal_pipeline_cache){};
+};
+
+DECLARE_GAL_HANDLE(gal_pipeline_cache){
+    
+};
 
 struct gal_compute_pipeline_desc {
     //gal_shader_program *shader;

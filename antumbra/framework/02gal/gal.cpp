@@ -21,7 +21,7 @@ extern gal_error_code d3d12_init_gal(gal_context *context);
 #ifdef WIN32
         //return d3d12_init_gal(context);
 #else
-        return gal_error_code::unsupported_platform;
+        return gal_error_code::ERR;
 #endif
         break;
     default:

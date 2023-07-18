@@ -96,10 +96,10 @@ __GAL_HELPER_MACRO__(gal_error_code, create_compute_pipeline, gal_context contex
 
 __GAL_HELPER_MACRO__(gal_error_code, destroy_pipeline, gal_context context, gal_pipeline pipeline);
 //__GAL_HELPER_MACRO__(gal_error_code, create_descriptorpool);
-__GAL_HELPER_MACRO__(gal_error_code, destroy_descriptorpool);
+__GAL_HELPER_MACRO__(gal_error_code, destroy_descriptorpool, gal_context context);
 // consume the descriptorset from pool
-__GAL_HELPER_MACRO__(gal_error_code, consume_descriptorset);
-__GAL_HELPER_MACRO__(gal_error_code, free_descriptorset);
+__GAL_HELPER_MACRO__(gal_error_code, consume_descriptorset, gal_context context);
+__GAL_HELPER_MACRO__(gal_error_code, free_descriptorset, gal_context context);
 __GAL_HELPER_MACRO__(gal_error_code, create_rootsignature, gal_context context, gal_rootsignature_desc* desc, gal_rootsignature* root_signature);
 __GAL_HELPER_MACRO__(gal_error_code, destroy_rootsignature, gal_context context, gal_rootsignature root_signature);
 // sync
@@ -141,14 +141,14 @@ __GAL_HELPER_MACRO__(gal_error_code, cmd_draw_indexed_instanced, gal_command_lis
 //__GAL_HELPER_MACRO__(gal_error_code, cmd_draw_indirect_indexed_instanced);
 //__GAL_HELPER_MACRO__(gal_error_code, cmd_draw_mesh_task);
 //__GAL_HELPER_MACRO__(gal_error_code, cmd_draw_indirect_mesh_task);
-__GAL_HELPER_MACRO__(gal_error_code, cmd_copy_texture);
+__GAL_HELPER_MACRO__(gal_error_code, cmd_copy_texture, gal_command_list command);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_copy_buffer, gal_command_list command, gal_buffer src, gal_buffer dst, u64 src_offset, u64 dst_offset, u64 size);
-__GAL_HELPER_MACRO__(gal_error_code, cmd_fill_buffer);
-__GAL_HELPER_MACRO__(gal_error_code, cmd_fill_texture);
-__GAL_HELPER_MACRO__(gal_error_code, cmd_upload_buffer);
-__GAL_HELPER_MACRO__(gal_error_code, cmd_upload_texture);
+__GAL_HELPER_MACRO__(gal_error_code, cmd_fill_buffer, gal_command_list command);
+__GAL_HELPER_MACRO__(gal_error_code, cmd_fill_texture, gal_command_list command);
+__GAL_HELPER_MACRO__(gal_error_code, cmd_upload_buffer, gal_command_list command);
+__GAL_HELPER_MACRO__(gal_error_code, cmd_upload_texture, gal_command_list command);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_update_subresources, gal_command_list command, gal_texture dst, gal_buffer src, u32 subresource_count, gal_texture_subresource_desc *descs);
-__GAL_HELPER_MACRO__(gal_error_code, cmd_copy_texture_to_buffer);
+__GAL_HELPER_MACRO__(gal_error_code, cmd_copy_texture_to_buffer, gal_command_list command);
 
 __GAL_HELPER_MACRO__(gal_error_code, queue_submit, gal_queue queue, gal_queue_submit_desc *desc);
 

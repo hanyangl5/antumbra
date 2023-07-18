@@ -4,9 +4,12 @@
 #include <filesystem>
 
 // third party libraries
+#ifdef _WIN32_
 #include <dxcompiler/d3d12shader.h>
+#else
+#include <dxcompiler/WinAdapter.h>
 #include <dxcompiler/dxcapi.h>
-
+#endif
 // project headers
 #include "framework/01core/memory/container.h"
 #include "framework/01core/singleton/public_singleton.h"

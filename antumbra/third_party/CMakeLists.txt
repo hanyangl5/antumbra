@@ -40,14 +40,20 @@ add_library(${PROJECT_NAME} third_party_dummy.cpp TracyClient.cpp)
 
 set(ANT_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/antumbralibs)
 set(VK_LIB_PATH ${ANT_LIB_PATH}/vulkan)
-set(DXC_LIB_PATH ${ANT_LIB_PATH}/dxc_2023_03_01 CACHE INTERNAL "dxc lib path")
 
-find_library(DXC_LIBRARY dxcompiler PATHS ${DXC_LIB_PATH}/lib/x64)
+if(WIN32)
+    set(DXC_LIB_PATH ${ANT_LIB_PATH}/dxc_2023_03_01/windows CACHE INTERNAL "dxc lib path")
+    find_library(DXC_LIBRARY dxcompiler PATHS ${DXC_LIB_PATH}/lib/x64)
+elseif(APPLE OR LINUX)
+    set(DXC_LIB_PATH ${ANT_LIB_PATH}/dxc_2023_03_01/linux CACHE INTERNAL "dxc lib path")
+    find_library(DXC_LIBRARY dxcompiler PATHS ${DXC_LIB_PATH}/lib)
+endif()
+
+
 if(DXC_LIBRARY)
     message("found dxcompiler in ${DXC_LIB_PATH}")
-    target_include_directories(${PROJECT_NAME} PUBLIC ${DXC_LIB_PATH}/inc)
+    target_include_directories(${PROJECT_NAME} PUBLIC ${DXC_LIB_PATH}/include)
     target_link_libraries(${PROJECT_NAME} PUBLIC ${DXC_LIBRARY})
-    link_directories(${DXC_LIB_PATH}/bin/x64)
 else()
     message("dxcompiler not found")
 endif()
@@ -79,7 +85,7 @@ if(ANTUMBRA_BUILD_D3D12)
 endif()
 
 # add include dirs
-target_include_directories(${PROJECT_NAME} PUBLIC
+target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC
     spdlog/include
     glm/glm
     glfw/include
