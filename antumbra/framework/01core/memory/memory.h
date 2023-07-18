@@ -30,7 +30,7 @@ template <typename T = void, typename... Args> T *alloc(Args &&...args, memory_p
         if (b_enable_memory_tracking) {
             LOG_ERROR("[memory]: memory allocation failed");
         }
-        return false;
+        return nullptr;
     }
     return new (memory) T(std::forward<Args>(args)...);
 }
