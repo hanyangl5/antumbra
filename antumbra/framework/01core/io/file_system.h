@@ -17,7 +17,6 @@
 
 #pragma once
 
-#include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
