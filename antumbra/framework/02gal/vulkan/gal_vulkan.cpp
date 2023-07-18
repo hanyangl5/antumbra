@@ -39,8 +39,8 @@
 
 #ifndef NDEBUG
 #ifndef VMA_DEBUG_LOG_FORMAT
-   #define VMA_DEBUG_LOG_FORMAT(format, ...)
-   /*
+#define VMA_DEBUG_LOG_FORMAT(format, ...)
+/*
    #define VMA_DEBUG_LOG_FORMAT(format, ...) do { \
        printf((format), __VA_ARGS__); \
        printf("\n"); \
@@ -49,7 +49,7 @@
 #endif
 
 #ifndef VMA_DEBUG_LOG
-    #define VMA_DEBUG_LOG(str)   VMA_DEBUG_LOG_FORMAT("%s", (str))
+#define VMA_DEBUG_LOG(str) VMA_DEBUG_LOG_FORMAT("%s", (str))
 #endif
 #endif // !NDEBUG
 #include <vk_mem_alloc.h>
@@ -436,7 +436,6 @@ gal_error_code vk_create_device(gal_desc *gal_desc, gal_context *context) {
     vk_ctx->queues[utils_to_vk_queue_index(gal_queue_type::graphcis)].m_type = gal_queue_type::graphcis;
     vk_ctx->queues[utils_to_vk_queue_index(gal_queue_type::compute)].m_type = gal_queue_type::compute;
     vk_ctx->queues[utils_to_vk_queue_index(gal_queue_type::transfer)].m_type = gal_queue_type::transfer;
-
 
     // TODO(hyl5): query supported memory type of gpu, platform differences
     return gal_error_code::SUC;
@@ -1498,15 +1497,24 @@ struct vk_descriptorpool {
 //gal_error_code vk_create_descriptorpool(gal_context context, gal_descriptorpool_desc* desc, gal_descriptorpool* descriptorpool) {
 //    return gal_error_code::SUC;
 //}
-gal_error_code vk_destroy_descriptorpool() {
+gal_error_code vk_destroy_descriptorpool(gal_context context) {
+    if (context) {
+        return gal_error_code::ERR;
+    }
     //vkDestroyDescriptorPool();
     return gal_error_code::SUC;
 }
-gal_error_code vk_consume_descriptorset() {
+gal_error_code vk_consume_descriptorset(gal_context context) {
+    if (context) {
+        return gal_error_code::ERR;
+    }
     //vkAllocateDescriptorSets();
     return gal_error_code::SUC;
 }
-gal_error_code vk_free_descriptorset() {
+gal_error_code vk_free_descriptorset(gal_context context) {
+    if (context) {
+        return gal_error_code::ERR;
+    }
     //vkFreeDescriptorSets()
     return gal_error_code::SUC;
 }
@@ -1666,10 +1674,10 @@ gal_error_code vk_destroy_fence(gal_context context, gal_fence fence) {
     }
     return gal_error_code::SUC;
 }
-gal_error_code vk_wait_gpu() {
-    //vkDeviceWaitIdle();
-    return gal_error_code::SUC;
-}
+//gal_error_code vk_wait_gpu() {
+//    //vkDeviceWaitIdle();
+//    return gal_error_code::SUC;
+//}
 gal_error_code vk_create_semaphore(gal_context context, gal_semaphore *semaphore) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_semaphore *vk_s = ant::memory::alloc<vk_semaphore>(nullptr);
@@ -2094,15 +2102,19 @@ gal_error_code vk_cmd_draw_indexed_instanced(gal_command_list command, u32 index
 //    return gal_error_code::SUC;
 //}
 
-gal_error_code vk_cmd_draw_mesh_task() {
+gal_error_code vk_cmd_draw_mesh_task(gal_command_list command) {
     //vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
-
+    if (command) {
+        return gal_error_code::ERR;
+    }
     // vkCmdDrawMeshTasksEXT
     return gal_error_code::SUC;
 }
-gal_error_code vk_cmd_copy_texture() {
+gal_error_code vk_cmd_copy_texture(gal_command_list command) {
     //vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
-
+    if (command) {
+        return gal_error_code::ERR;
+    }
     //vkCmdCopyImage();
     //vkCmdCopyImage2();
     return gal_error_code::SUC;
@@ -2119,18 +2131,34 @@ gal_error_code vk_cmd_copy_buffer(gal_command_list command, gal_buffer src, gal_
                     reinterpret_cast<vk_buffer *>(dst)->m_buffer, 1, &bc);
     return gal_error_code::SUC;
 }
-gal_error_code vk_cmd_fill_buffer() {
+gal_error_code vk_cmd_fill_buffer(gal_command_list command) {
+    if (command) {
+        return gal_error_code::ERR;
+    }
     //vkCmdFillBuffer();
     return gal_error_code::SUC;
 }
-gal_error_code vk_cmd_fill_texture() {
+gal_error_code vk_cmd_fill_texture(gal_command_list command) {
+    if (command) {
+        return gal_error_code::ERR;
+    }
     //vkCmdClearColorImage();
     //vkCmdClearDepthStencilImage();
     //vkCmdClearAttachments();
     return gal_error_code::SUC;
 }
-gal_error_code vk_cmd_upload_buffer() { return gal_error_code::SUC; }
-gal_error_code vk_cmd_upload_texture() { return gal_error_code::SUC; }
+gal_error_code vk_cmd_upload_buffer(gal_command_list command) {
+    if (command) {
+        return gal_error_code::ERR;
+    }
+    return gal_error_code::SUC;
+}
+gal_error_code vk_cmd_upload_texture(gal_command_list command) {
+    if (command) {
+        return gal_error_code::ERR;
+    }
+    return gal_error_code::SUC;
+}
 gal_error_code vk_cmd_update_subresources(gal_command_list command, gal_texture dst, gal_buffer src,
                                           u32 subresource_count, gal_texture_subresource_desc *descs) {
     vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
@@ -2173,7 +2201,10 @@ gal_error_code vk_cmd_update_subresources(gal_command_list command, gal_texture 
                            subresource_count, regions.data());
     return gal_error_code::SUC;
 }
-gal_error_code vk_cmd_copy_texture_to_buffer() {
+gal_error_code vk_cmd_copy_texture_to_buffer(gal_command_list command) {
+    if (command) {
+        return gal_error_code::ERR;
+    }
     //vkCmdCopyImageToBuffer();
     //vkCmdCopyImageToBuffer2();
     return gal_error_code::SUC;
