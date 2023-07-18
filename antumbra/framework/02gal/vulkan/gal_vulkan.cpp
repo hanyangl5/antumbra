@@ -69,17 +69,13 @@ namespace ant::gal {
 //        base = (VkBaseOutStructure *)base->pNext;  \
 //    }
 
+constexpr u32 utils_to_vk_queue_index(gal_queue_type type) { return static_cast<u32>(type) - 1; }
+constexpr u32 graphics_queue_index = utils_to_vk_queue_index(gal_queue_type::graphcis);
+constexpr u32 compute_queue_index = utils_to_vk_queue_index(gal_queue_type::compute);
+constexpr u32 transfer_queue_index = utils_to_vk_queue_index(gal_queue_type::transfer);
+
 constexpr u32 utils_to_vk_queue_family_index(gal_queue_type queue_type, vk_context *vk_ctx) {
-    switch (queue_type) {
-    case ant::gal::gal_queue_type::graphcis:
-        return vk_ctx->graphcis_queue_family_index;
-    case ant::gal::gal_queue_type::compute:
-        return vk_ctx->compute_queue_family_index;
-    case ant::gal::gal_queue_type::transfer:
-        return vk_ctx->transfer_queue_family_index;
-    default:
-        return 0;
-    }
+    return vk_ctx->queues[utils_to_vk_queue_index(queue_type)].queue_family_index;
 }
 
 gal_error_code vk_init_gal(gal_context *context) {
@@ -87,8 +83,8 @@ gal_error_code vk_init_gal(gal_context *context) {
     if (vk_ctx == gal_null) {
         return gal_error_code::ERR;
     }
-    *context = reinterpret_cast<gal_context>(vk_ctx);
     load_gal_vk_functions();
+    *context = vk_ctx;
     return gal_error_code::SUC;
 }
 
@@ -402,25 +398,39 @@ gal_error_code vk_create_device(gal_desc *gal_desc, gal_context *context) {
     device_create_info.pNext = &device_features;
 
     VkResult res = vkCreateDevice(vk_ctx->active_gpu, &device_create_info, nullptr, &vk_ctx->device);
-
-    // create device queue
-    vkGetDeviceQueue(vk_ctx->device, queue_family_indices[0], 0, &vk_ctx->graphics_queue);
-
-    if (gal_desc->b_async_compute) {
-        vkGetDeviceQueue(vk_ctx->device, queue_family_indices[1], 0, &vk_ctx->compute_queue);
-    } else {
-        vkGetDeviceQueue(vk_ctx->device, queue_family_indices[0], 0, &vk_ctx->compute_queue);
-    }
-
-    if (gal_desc->b_async_transfer) {
-        vkGetDeviceQueue(vk_ctx->device, queue_family_indices[2], 0, &vk_ctx->transfer_queue);
-    } else {
-        vkGetDeviceQueue(vk_ctx->device, queue_family_indices[0], 0, &vk_ctx->transfer_queue);
-    }
-
     if (res != VK_SUCCESS || vk_ctx->device == VK_NULL_HANDLE) {
         return gal_error_code::ERR;
     }
+    // create device queue
+    vkGetDeviceQueue(vk_ctx->device, queue_family_indices[graphics_queue_index], 0,
+                     &vk_ctx->queues[graphics_queue_index].queue);
+
+    if (gal_desc->b_async_compute) {
+        vkGetDeviceQueue(vk_ctx->device, queue_family_indices[compute_queue_index], 0,
+                         &vk_ctx->queues[compute_queue_index].queue);
+    } else {
+        vkGetDeviceQueue(vk_ctx->device, queue_family_indices[graphics_queue_index], 0,
+                         &vk_ctx->queues[compute_queue_index].queue);
+    }
+
+    if (gal_desc->b_async_transfer) {
+        vkGetDeviceQueue(vk_ctx->device, queue_family_indices[transfer_queue_index], 0,
+                         &vk_ctx->queues[transfer_queue_index].queue);
+    } else {
+        vkGetDeviceQueue(vk_ctx->device, queue_family_indices[graphics_queue_index], 0,
+                         &vk_ctx->queues[transfer_queue_index].queue);
+    }
+
+    vk_ctx->queues[utils_to_vk_queue_index(gal_queue_type::graphcis)].queue_family_index =
+        queue_family_indices[graphics_queue_index];
+    vk_ctx->queues[utils_to_vk_queue_index(gal_queue_type::compute)].queue_family_index =
+        queue_family_indices[compute_queue_index];
+    vk_ctx->queues[utils_to_vk_queue_index(gal_queue_type::transfer)].queue_family_index =
+        queue_family_indices[transfer_queue_index];
+    vk_ctx->queues[utils_to_vk_queue_index(gal_queue_type::graphcis)].m_type = gal_queue_type::graphcis;
+    vk_ctx->queues[utils_to_vk_queue_index(gal_queue_type::compute)].m_type = gal_queue_type::compute;
+    vk_ctx->queues[utils_to_vk_queue_index(gal_queue_type::transfer)].m_type = gal_queue_type::transfer;
+
 
     // TODO(hyl5): query supported memory type of gpu, platform differences
     return gal_error_code::SUC;
@@ -467,8 +477,6 @@ gal_error_code vk_create_buffer(gal_context context, gal_buffer_desc *desc, gal_
     if (!vk_buf) {
         return gal_error_code::ERR;
     }
-    *buffer = reinterpret_cast<gal_buffer>(vk_buf);
-    vk_buf->m_gal_buffer_desc = *desc;
 
     VkBufferCreateInfo buffer_create_info{};
     buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -476,16 +484,24 @@ gal_error_code vk_create_buffer(gal_context context, gal_buffer_desc *desc, gal_
     buffer_create_info.usage = util_to_vk_buffer_usage(desc->descriptor_types);
 
     VmaAllocationCreateInfo alloc_info = {};
-    alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
 
+    if (desc->memory_flags == gal_memory_flag::UNDEFINED) {
+        return gal_error_code::ERR;
+    }
     if ((desc->memory_flags & gal_memory_flag::GPU_DEDICATED) != gal_memory_flag::UNDEFINED) {
         alloc_info.requiredFlags |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        alloc_info.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_GPU_ONLY;
+        buffer_create_info.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT; //
     }
     if ((desc->memory_flags & gal_memory_flag::CPU_UPLOAD) != gal_memory_flag::UNDEFINED) {
         alloc_info.requiredFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+        alloc_info.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_CPU_TO_GPU;
+        buffer_create_info.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT; // stage buffer upload
     }
     if ((desc->memory_flags & gal_memory_flag::GPU_DOWNLOAD) != gal_memory_flag::UNDEFINED) {
         alloc_info.requiredFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+        alloc_info.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_GPU_TO_CPU;
+        buffer_create_info.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT; // stage buffer download
     }
 
     if ((desc->flags & gal_buffer_flag::OWN_MEMORY) != gal_buffer_flag::UNDEFINED) {
@@ -494,15 +510,19 @@ gal_error_code vk_create_buffer(gal_context context, gal_buffer_desc *desc, gal_
         alloc_info.flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
     }
 
+    VmaAllocationInfo vma_alloc_info = {};
+
     VkResult result = vmaCreateBuffer(vk_ctx->vma_allocator, &buffer_create_info, &alloc_info, &vk_buf->m_buffer,
-                                      &vk_buf->m_allocation, nullptr);
+                                      &vk_buf->m_allocation, &vma_alloc_info);
 
     if (result != VK_SUCCESS || vk_buf->m_buffer == VK_NULL_HANDLE || vk_buf->m_allocation == VK_NULL_HANDLE) {
         return gal_error_code::ERR;
     }
-
+    vk_buf->cpu_mapped_address = vma_alloc_info.pMappedData;
     // todo create buffer view for texelbuffer
 
+    *buffer = vk_buf;
+    vk_buf->m_gal_buffer_desc = *desc;
     return gal_error_code::SUC;
 }
 
@@ -521,11 +541,10 @@ gal_error_code vk_destroy_buffer(gal_context context, gal_buffer buffer) {
 gal_error_code vk_create_texture(gal_context context, gal_texture_desc *desc, gal_texture *texture) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_texture *vk_tex = ant::memory::alloc<ant::gal::vk_texture>(nullptr);
-    *texture = reinterpret_cast<gal_texture>(vk_tex);
-    if (!*texture) {
+
+    if (!vk_tex) {
         return gal_error_code::ERR;
     }
-    vk_tex->m_desc = *desc;
 
     u32 array_size = desc->array_size > 1u ? desc->array_size : 1u;
     u32 depth = desc->depth > 1u ? desc->depth : 1u;
@@ -568,16 +587,18 @@ gal_error_code vk_create_texture(gal_context context, gal_texture_desc *desc, ga
         return gal_error_code::ERR;
     }
     VmaAllocationCreateInfo allocation_create_info{};
-    allocation_create_info.usage = VMA_MEMORY_USAGE_AUTO;
 
     if ((desc->memory_flags & gal_memory_flag::GPU_DEDICATED) != gal_memory_flag::UNDEFINED) {
         allocation_create_info.requiredFlags |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        allocation_create_info.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_GPU_ONLY;
     }
     if ((desc->memory_flags & gal_memory_flag::CPU_UPLOAD) != gal_memory_flag::UNDEFINED) {
         allocation_create_info.requiredFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+        allocation_create_info.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_CPU_TO_GPU;
     }
     if ((desc->memory_flags & gal_memory_flag::GPU_DOWNLOAD) != gal_memory_flag::UNDEFINED) {
         allocation_create_info.requiredFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+        allocation_create_info.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_GPU_TO_CPU;
     }
     if (desc->native_handle) {
         vk_tex->m_image = reinterpret_cast<VkImage>(desc->native_handle);
@@ -588,6 +609,8 @@ gal_error_code vk_create_texture(gal_context context, gal_texture_desc *desc, ga
             return gal_error_code::ERR;
         }
     }
+    *texture = vk_tex;
+    vk_tex->m_desc = *desc;
     return gal_error_code::SUC;
 }
 
@@ -609,11 +632,10 @@ gal_error_code vk_destroy_texture(gal_context context, gal_texture texture) {
 gal_error_code vk_create_sampler(gal_context context, gal_sampler_desc *sampler_desc, gal_sampler *sampler) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_sampler *vk_spl = ant::memory::alloc<ant::gal::vk_sampler>(nullptr);
-    *sampler = reinterpret_cast<gal_sampler>(vk_spl);
-    if (!*sampler) {
+
+    if (!vk_spl) {
         return gal_error_code::ERR;
     }
-    vk_spl->m_gal_sampler_desc = *sampler_desc;
 
     VkSamplerCreateInfo sampler_create_info{};
     sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -637,6 +659,8 @@ gal_error_code vk_create_sampler(gal_context context, gal_sampler_desc *sampler_
 
         return gal_error_code::ERR;
     }
+    *sampler = vk_spl;
+    vk_spl->m_gal_sampler_desc = *sampler_desc;
     return gal_error_code::SUC;
 }
 
@@ -655,11 +679,10 @@ gal_error_code vk_create_render_target(gal_context context, gal_render_target_de
                                        gal_render_target *render_target) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_render_target *vk_rt = ant::memory::alloc<vk_render_target>(nullptr);
-    *render_target = reinterpret_cast<gal_render_target>(vk_rt);
-    if (!*render_target) {
+
+    if (!vk_rt) {
         return gal_error_code::ERR;
     }
-    vk_rt->m_desc = *desc;
 
     bool const isDepth = gal_tf_is_depth_only(desc->format) || gal_tf_is_depth_and_stencil(desc->format);
 
@@ -773,6 +796,8 @@ gal_error_code vk_create_render_target(gal_context context, gal_render_target_de
     // Render targets wont be created during runtime so this overhead will be minimal
     //util_initial_transition(pRenderer, pRenderTarget->pTexture, desc->mStartState);
 
+    *render_target = vk_rt;
+    vk_rt->m_desc = *desc;
     return gal_error_code::SUC;
 }
 
@@ -796,11 +821,11 @@ gal_error_code vk_destroy_render_target(gal_context context, gal_render_target r
 gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *desc, gal_swap_chain *swap_chain) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_swap_chain *vk_sc = ant::memory::alloc<vk_swap_chain>(nullptr);
-    *swap_chain = reinterpret_cast<gal_swap_chain>(vk_sc);
-    if (!*swap_chain) {
+
+    if (!vk_sc) {
         return gal_error_code::ERR;
     }
-    vk_sc->m_desc = *desc;
+
     VkResult result;
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
     VkWin32SurfaceCreateInfoKHR add_info{};
@@ -1045,9 +1070,9 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
         descColor.native_handle = (void *)vk_sc->swap_chain_images[i];
         vk_create_render_target(context, &descColor, &vk_sc->get_render_targets()[i]);
     }
-    /************************************************************************/
-    /************************************************************************/
 
+    *swap_chain = vk_sc;
+    vk_sc->m_desc = *desc;
     return gal_error_code::SUC;
 }
 gal_error_code vk_destroy_swap_chain(gal_context context, gal_swap_chain swap_chain) {
@@ -1077,9 +1102,7 @@ gal_error_code vk_create_shader_program(gal_context context, gal_shader_program_
 
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_shader_program *vk_sp = ant::memory::alloc<ant::gal::vk_shader_program>(nullptr);
-    vk_sp->m_desc = *desc;
-    *shader_program = reinterpret_cast<gal_shader_program>(vk_sp);
-    if (!shader_program) {
+    if (!vk_sp) {
         return gal_error_code::ERR;
     }
 
@@ -1118,6 +1141,8 @@ gal_error_code vk_create_shader_program(gal_context context, gal_shader_program_
     //createPipelineReflection(stageReflections, stage_count, desc->pReflection);
 
     //addShaderDependencies(pShaderProgram, desc);
+    vk_sp->m_desc = *desc;
+    *shader_program = vk_sp;
     return gal_error_code::SUC;
 }
 
@@ -1125,8 +1150,7 @@ gal_error_code vk_create_pipeline_cache(gal_context context, gal_pipeline_cache_
                                         gal_pipeline_cache *pipeline_cache) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_pipeline_cache *vk_pc = ant::memory::alloc<ant::gal::vk_pipeline_cache>(nullptr);
-    *pipeline_cache = reinterpret_cast<gal_pipeline_cache>(vk_pc);
-    if (!*pipeline_cache) {
+    if (!vk_pc) {
         return gal_error_code::ERR;
     }
     if (desc->data.data() == nullptr) {
@@ -1149,6 +1173,7 @@ gal_error_code vk_create_pipeline_cache(gal_context context, gal_pipeline_cache_
             return gal_error_code::ERR;
         }
     }
+    *pipeline_cache = vk_pc;
     return gal_error_code::SUC;
 }
 gal_error_code vk_destroy_pipeline_cache(gal_context context, gal_pipeline_cache _pipeline_cache) {
@@ -1175,18 +1200,16 @@ gal_error_code vk_get_pipeline_cache_data(gal_context context, gal_pipeline_cach
 gal_error_code vk_create_compute_pipeline(gal_context context, gal_pipeline_desc *desc, gal_pipeline *pipeline) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_pipeline *vk_pipe = ant::memory::alloc<ant::gal::vk_pipeline>(nullptr);
-    *pipeline = reinterpret_cast<gal_pipeline>(vk_pipe);
 
-    if (!*pipeline) {
+    if (!vk_pipe) {
         return gal_error_code::ERR;
     }
-    vk_pipe->m_desc = *desc;
-    vk_pipe->m_type = gal_pipeline_type::COMPUTE;
+
     gal_compute_pipeline_desc &comp_desc = std::get<gal_compute_pipeline_desc>(desc->desc);
 
-    vk_shader_program *vk_sp = reinterpret_cast<vk_shader_program *>(*comp_desc.shader);
+    vk_shader_program *vk_sp = reinterpret_cast<vk_shader_program *>(comp_desc.shader);
 
-    vk_rootsignature *vk_rs = reinterpret_cast<vk_rootsignature *>(*comp_desc.root_signature);
+    vk_rootsignature *vk_rs = reinterpret_cast<vk_rootsignature *>(comp_desc.root_signature);
 
     VkPipelineShaderStageCreateInfo shader_stage_create_info{};
     shader_stage_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -1211,17 +1234,18 @@ gal_error_code vk_create_compute_pipeline(gal_context context, gal_pipeline_desc
     if (result != VK_SUCCESS || vk_pipe->pipeline == VK_NULL_HANDLE) {
         return gal_error_code::ERR;
     }
+    *pipeline = vk_pipe;
+    vk_pipe->m_desc = *desc;
+    vk_pipe->m_type = gal_pipeline_type::COMPUTE;
     return gal_error_code::SUC;
 }
 
 gal_error_code vk_create_graphics_pipeline(gal_context context, gal_pipeline_desc *desc, gal_pipeline *pipeline) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_pipeline *vk_pipe = ant::memory::alloc<ant::gal::vk_pipeline>(nullptr);
-    *pipeline = reinterpret_cast<gal_pipeline>(vk_pipe);
-
-    vk_pipe->m_desc = *desc;
-    vk_pipe->m_type = gal_pipeline_type::GRAPHICS;
-
+    if (!vk_pipe) {
+        return gal_error_code::ERR;
+    }
     gal_graphics_pipeline_desc gfx_desc = std::get<gal_graphics_pipeline_desc>(desc->desc);
 
     vk_shader_program *vk_sp = reinterpret_cast<vk_shader_program *>(gfx_desc.shader);
@@ -1436,6 +1460,9 @@ gal_error_code vk_create_graphics_pipeline(gal_context context, gal_pipeline_des
     if (result != VK_SUCCESS || vk_pipe->pipeline == gal_null) {
         return gal_error_code::ERR;
     }
+    *pipeline = vk_pipe;
+    vk_pipe->m_desc = *desc;
+    vk_pipe->m_type = gal_pipeline_type::COMPUTE;
     return gal_error_code::SUC;
 }
 //gal_error_code vk_create_raytracing_pipeline(gal_context context, gal_raytracing_pipeline_desc *desc,
@@ -1484,7 +1511,6 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
     if (!vk_rs) {
         return gal_error_code::ERR;
     }
-    *root_signature = reinterpret_cast<gal_rootsignature>(vk_rs);
 
     const auto &refl = desc->shader->reflection();
     u32 set_count = static_cast<u32>(refl->sets.size());
@@ -1559,6 +1585,8 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
     if (result != VK_SUCCESS) {
         return gal_error_code::ERR;
     }
+    *root_signature = vk_rs;
+
     return gal_error_code::SUC;
 }
 gal_error_code vk_destroy_rootsignature(gal_context context, gal_rootsignature root_signature) {
@@ -1573,28 +1601,99 @@ gal_error_code vk_destroy_rootsignature(gal_context context, gal_rootsignature r
 }
 
 // sync
-gal_error_code vk_create_fence() {
-    //vkCreateFence();
+gal_error_code vk_create_fence(gal_context context, gal_fence *fence) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
+    vk_fence *vk_f = ant::memory::alloc<vk_fence>(nullptr);
+    if (!vk_f) {
+        return gal_error_code::ERR;
+    }
+
+    VkFenceCreateInfo fence_ci{};
+    fence_ci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fence_ci.pNext = NULL;
+    fence_ci.flags = 0;
+    VkResult result = vkCreateFence(vk_ctx->device, &fence_ci, nullptr, &vk_f->fence);
+    if (result != VK_SUCCESS) {
+        return gal_error_code::ERR;
+    }
+    vk_f->b_submitted = false;
+    *fence = vk_f;
     return gal_error_code::SUC;
 }
-gal_error_code vk_wait_fence() {
-    //vkWaitForFences();
+gal_error_code vk_wait_fences(gal_context context, gal_fence *fences, u32 count) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
+
+    ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 64);
+    ant::vector<VkFence> submit_fences(&stack_memory);
+    for (u32 i = 0; i < count; ++i) {
+        if (reinterpret_cast<vk_fence *>(fences[i])->b_submitted == true) {
+            submit_fences.push_back(reinterpret_cast<vk_fence *>(fences[i])->fence);
+        }
+    }
+
+    VkResult result;
+    if (!submit_fences.empty()) {
+        result = vkWaitForFences(vk_ctx->device, static_cast<u32>(submit_fences.size()), submit_fences.data(), VK_TRUE,
+                                 UINT64_MAX);
+        if (result != VK_SUCCESS) {
+            return gal_error_code::ERR;
+        }
+        result = vkResetFences(vk_ctx->device, static_cast<u32>(submit_fences.size()), submit_fences.data());
+        if (result != VK_SUCCESS) {
+            return gal_error_code::ERR;
+        }
+    }
+
+    for (u32 i = 0; i < count; ++i) {
+        reinterpret_cast<vk_fence *>(fences[i])->b_submitted = false;
+    }
     return gal_error_code::SUC;
 }
-gal_error_code vk_destroy_fence() {
-    //vkDestroyFence();
+
+gal_error_code vk_destroy_fence(gal_context context, gal_fence fence) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
+    if (fence != gal_null) {
+        vk_fence *vk_f = reinterpret_cast<vk_fence *>(fence);
+        vkDestroyFence(vk_ctx->device, vk_f->fence, nullptr);
+        ant::memory::afree(vk_f);
+        fence = gal_null;
+    }
     return gal_error_code::SUC;
 }
 gal_error_code vk_wait_gpu() {
     //vkDeviceWaitIdle();
     return gal_error_code::SUC;
 }
-gal_error_code vk_create_semaphore() {
-    //vkCreateSemaphore();
+gal_error_code vk_create_semaphore(gal_context context, gal_semaphore *semaphore) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
+    vk_semaphore *vk_s = ant::memory::alloc<vk_semaphore>(nullptr);
+    if (!vk_s) {
+        return gal_error_code::ERR;
+    }
+
+    VkSemaphoreCreateInfo semaphore_ci{};
+    semaphore_ci.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    semaphore_ci.pNext = NULL;
+    semaphore_ci.flags = 0;
+    VkResult result = vkCreateSemaphore(vk_ctx->device, &semaphore_ci, nullptr, &vk_s->semaphore);
+    if (result != VK_SUCCESS) {
+        return gal_error_code::ERR;
+    }
+    // Set signal initial state.
+    vk_s->b_signaled = false;
+
+    *semaphore = vk_s;
     return gal_error_code::SUC;
 }
-gal_error_code vk_destroy_semaphore() {
-    //vkDestroySemaphore();
+
+gal_error_code vk_destroy_semaphore(gal_context context, gal_semaphore semaphore) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
+    if (semaphore != gal_null) {
+        vk_semaphore *vk_s = reinterpret_cast<vk_semaphore *>(semaphore);
+        vkDestroySemaphore(vk_ctx->device, vk_s->semaphore, nullptr);
+        ant::memory::afree(vk_s);
+        semaphore = gal_null;
+    }
     return gal_error_code::SUC;
 }
 // cmds
@@ -1605,8 +1704,6 @@ gal_error_code vk_create_command_pool(gal_context context, gal_command_pool_desc
     if (!vk_cmd_pool) {
         return gal_error_code::ERR;
     }
-    *command_pool = reinterpret_cast<gal_command_pool>(vk_cmd_pool);
-
     VkCommandPoolCreateInfo ci{};
     ci.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     ci.pNext = nullptr;
@@ -1621,6 +1718,11 @@ gal_error_code vk_create_command_pool(gal_context context, gal_command_pool_desc
     if (result != VK_SUCCESS || vk_cmd_pool->m_cmd_pool == VK_NULL_HANDLE) {
         return gal_error_code::ERR;
     }
+    if (vk_ctx->queues[utils_to_vk_queue_index(desc->queue_type)].used == false) {
+        return gal_error_code::ERR;
+    }
+    vk_cmd_pool->queue = &vk_ctx->queues[utils_to_vk_queue_index(desc->queue_type)];
+    *command_pool = vk_cmd_pool;
     return gal_error_code::SUC;
 }
 gal_error_code vk_reset_command_pool(gal_context context, gal_command_pool command_pool) {
@@ -1646,21 +1748,22 @@ gal_error_code vk_destroy_command_pool(gal_context context, gal_command_pool com
 gal_error_code vk_allocate_command_list(gal_context context, gal_command_list_desc *desc, gal_command_list *command) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_command_list *vk_cmd = ant::memory::alloc<ant::gal::vk_command_list>(nullptr);
-    if (!vk_cmd) {
+    vk_command_pool *vk_pool = reinterpret_cast<vk_command_pool *>(desc->command_pool);
+    if (desc->queue_type != vk_pool->queue->m_type) {
         return gal_error_code::ERR;
     }
-    *command = reinterpret_cast<gal_command_list>(vk_cmd);
-
     VkCommandBufferAllocateInfo alloc_info{};
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     alloc_info.pNext = nullptr;
-    alloc_info.commandPool = reinterpret_cast<vk_command_pool *>(desc->command_pool)->m_cmd_pool;
+    alloc_info.commandPool = vk_pool->m_cmd_pool;
     alloc_info.level = desc->b_secondary ? VK_COMMAND_BUFFER_LEVEL_SECONDARY : VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     alloc_info.commandBufferCount = 1;
     VkResult result = vkAllocateCommandBuffers(vk_ctx->device, &alloc_info, &vk_cmd->m_command);
     if (result != VK_SUCCESS || vk_cmd->m_command == gal_null) {
         return gal_error_code::ERR;
     }
+    vk_cmd->m_cmd_pool = vk_pool;
+    *command = vk_cmd;
     return gal_error_code::SUC;
 }
 
@@ -1674,6 +1777,39 @@ gal_error_code vk_free_command_list(gal_context context, gal_command_list comman
         ant::memory::afree(vk_cmd);
         command = gal_null;
     }
+    return gal_error_code::SUC;
+}
+
+gal_error_code vk_mapbuffer(gal_context context, gal_buffer buffer, read_range *range) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
+    vk_buffer *vk_buf = reinterpret_cast<vk_buffer *>(buffer);
+    if (((buffer->m_gal_buffer_desc.memory_flags & gal_memory_flag::CPU_UPLOAD) == gal_memory_flag::UNDEFINED &&
+         (buffer->m_gal_buffer_desc.memory_flags & gal_memory_flag::GPU_DOWNLOAD) == gal_memory_flag::UNDEFINED) ||
+        (buffer->m_gal_buffer_desc.memory_flags & gal_memory_flag::GPU_DEDICATED) == gal_memory_flag::GPU_DEDICATED) {
+        return gal_error_code::ERR;
+    }
+
+    if (range) {
+        vk_buf->cpu_mapped_address = static_cast<u8 *>(vk_buf->cpu_mapped_address) + range->offset;
+    }
+
+    VkResult result = vmaMapMemory(vk_ctx->vma_allocator, vk_buf->m_allocation, &vk_buf->cpu_mapped_address);
+    if (result != VK_SUCCESS) {
+        return gal_error_code::ERR;
+    }
+    return gal_error_code::SUC;
+}
+
+gal_error_code vk_unmapbuffer(gal_context context, gal_buffer buffer) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
+    vk_buffer *vk_buf = reinterpret_cast<vk_buffer *>(buffer);
+    if (((buffer->m_gal_buffer_desc.memory_flags & gal_memory_flag::CPU_UPLOAD) == gal_memory_flag::UNDEFINED &&
+         (buffer->m_gal_buffer_desc.memory_flags & gal_memory_flag::GPU_DOWNLOAD) == gal_memory_flag::UNDEFINED) ||
+        (buffer->m_gal_buffer_desc.memory_flags & gal_memory_flag::GPU_DEDICATED) == gal_memory_flag::GPU_DEDICATED) {
+        return gal_error_code::ERR;
+    }
+    vmaUnmapMemory(vk_ctx->vma_allocator, vk_buf->m_allocation);
+    vk_buf->cpu_mapped_address = nullptr;
     return gal_error_code::SUC;
 }
 
@@ -1742,11 +1878,107 @@ gal_error_code vk_cmdSetStencilReferenceValue(gal_command_list command, u32 val)
     return gal_error_code::SUC;
 }
 
-gal_error_code vk_cmd_resource_barrier() {
-    //vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
+gal_error_code vk_cmd_resource_barrier(gal_command_list command, u32 buffer_barrier_count,
+                                       gal_buffer_barrier *buffer_barriers, u32 texture_barrier_count,
+                                       gal_texture_barrier *texture_barriers) {
+    vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
 
-    //vkCmdPipelineBarrier();
-    //vkCmdPipelineBarrier2();
+    VkAccessFlags srcAccessFlags = 0;
+    VkAccessFlags dstAccessFlags = 0;
+    ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 256);
+    ant::vector<VkBufferMemoryBarrier> bbs(&stack_memory);
+
+    for (u32 i = 0; i < buffer_barrier_count; i++) {
+        buffer_barriers[i];
+        gal_buffer_barrier *buffer_barrier = &buffer_barriers[i];
+        vk_buffer *vk_b = reinterpret_cast<vk_buffer *>(buffer_barrier->buffer);
+        VkBufferMemoryBarrier b{};
+        b.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        b.pNext = nullptr;
+        b.buffer = vk_b->m_buffer;
+        if (gal_resource_state::RW_BUFFER == buffer_barrier->src_state &&
+            gal_resource_state::RW_BUFFER == buffer_barrier->dst_state) {
+            b.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+            b.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+        } else {
+            b.srcAccessMask = utils_to_vk_access_flags(buffer_barrier->src_state);
+            b.dstAccessMask = utils_to_vk_access_flags(buffer_barrier->dst_state);
+        }
+        b.size = VK_WHOLE_SIZE;
+        b.offset = 0; // FIXME(hyl5): more options?
+
+        if (buffer_barrier->op == queue_op::ACQUIRE) {
+            b.srcQueueFamilyIndex = reinterpret_cast<vk_queue *>(buffer_barrier->target_queue)->queue_family_index;
+            b.dstQueueFamilyIndex = reinterpret_cast<vk_queue *>(vk_cmd->m_cmd_pool->queue)->queue_family_index;
+        }
+        if (buffer_barrier->op == queue_op::RELEASE) {
+            b.dstAccessMask = reinterpret_cast<vk_queue *>(buffer_barrier->target_queue)->queue_family_index;
+            b.srcAccessMask = reinterpret_cast<vk_queue *>(vk_cmd->m_cmd_pool->queue)->queue_family_index;
+        }
+
+        srcAccessFlags |= b.srcAccessMask;
+        dstAccessFlags |= b.dstAccessMask;
+
+        bbs.push_back(b);
+    }
+
+    ant::vector<VkImageMemoryBarrier> tbs(&stack_memory);
+
+    for (u32 i = 0; i < texture_barrier_count; i++) {
+        gal_texture_barrier *texture_barrier = &texture_barriers[i];
+        vk_texture *vk_t = reinterpret_cast<vk_texture *>(texture_barrier->texture);
+
+        VkImageMemoryBarrier t{};
+        t.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        t.pNext = nullptr;
+        t.image = vk_t->m_image;
+        if (gal_resource_state::RW_TEXTURE == texture_barrier->src_state &&
+            gal_resource_state::RW_TEXTURE == texture_barrier->dst_state) {
+
+            t.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            t.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+            t.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+            t.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+        } else {
+
+            t.srcAccessMask = utils_to_vk_access_flags(texture_barrier->src_state);
+            t.dstAccessMask = utils_to_vk_access_flags(texture_barrier->dst_state);
+            t.oldLayout = util_to_vk_image_layout(texture_barrier->src_state);
+            t.newLayout = util_to_vk_image_layout(texture_barrier->dst_state);
+        }
+
+        t.subresourceRange.aspectMask = utils_to_vk_aspect_mask(vk_t->m_desc.format, false);
+        t.subresourceRange.baseMipLevel = texture_barrier->mSubresourceBarrier ? texture_barrier->mMipLevel : 0;
+        t.subresourceRange.levelCount = texture_barrier->mSubresourceBarrier ? 1 : VK_REMAINING_MIP_LEVELS;
+        t.subresourceRange.baseArrayLayer = texture_barrier->mSubresourceBarrier ? texture_barrier->mArrayLayer : 0;
+        t.subresourceRange.layerCount = texture_barrier->mSubresourceBarrier ? 1 : VK_REMAINING_ARRAY_LAYERS;
+        if (texture_barrier->op == queue_op::ACQUIRE && texture_barrier->src_state != gal_resource_state::UNDEFINIED) {
+            t.srcQueueFamilyIndex = reinterpret_cast<vk_queue *>(texture_barrier->target_queue)->queue_family_index;
+            t.dstQueueFamilyIndex =
+                reinterpret_cast<vk_queue *>(reinterpret_cast<vk_command_list *>(command)->m_cmd_pool->queue)
+                    ->queue_family_index;
+        }
+        if (texture_barrier->op == queue_op::RELEASE && texture_barrier->src_state != gal_resource_state::UNDEFINIED) {
+            t.dstAccessMask = reinterpret_cast<vk_queue *>(texture_barrier->target_queue)->queue_family_index;
+            t.srcAccessMask =
+                reinterpret_cast<vk_queue *>(reinterpret_cast<vk_command_list *>(command)->m_cmd_pool->queue)
+                    ->queue_family_index;
+        }
+
+        srcAccessFlags |= t.srcAccessMask;
+        dstAccessFlags |= t.dstAccessMask;
+        tbs.push_back(t);
+    }
+
+    // Commit barriers
+    VkPipelineStageFlags srcStageMask =
+        util_determine_pipeline_stage_flags(srcAccessFlags, vk_cmd->m_cmd_pool->queue->m_type);
+    VkPipelineStageFlags dstStageMask =
+        util_determine_pipeline_stage_flags(dstAccessFlags, vk_cmd->m_cmd_pool->queue->m_type);
+    if (!bbs.empty() || !tbs.empty()) {
+        vkCmdPipelineBarrier(vk_cmd->m_command, srcStageMask, dstStageMask, 0, 0, nullptr, static_cast<u32>(bbs.size()),
+                             bbs.data(), static_cast<u32>(tbs.size()), tbs.data());
+    }
     return gal_error_code::SUC;
 }
 
@@ -1869,6 +2101,7 @@ gal_error_code vk_cmd_copy_texture() {
     //vkCmdCopyImage2();
     return gal_error_code::SUC;
 }
+
 gal_error_code vk_cmd_copy_buffer(gal_command_list command, gal_buffer src, gal_buffer dst, u64 src_offset,
                                   u64 dst_offset, u64 size) {
     vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
@@ -1939,26 +2172,106 @@ gal_error_code vk_cmd_copy_texture_to_buffer() {
     //vkCmdCopyImageToBuffer2();
     return gal_error_code::SUC;
 }
-//
-//gal_error_code vk_map_buffer(gal_context context, gal_buffer buffer, ReadRange *pRange) {
-//
-//    if ((buffer->m_gal_buffer_desc.memory_flags & gal_memory_flag::GPU_DEDICATED) == gal_memory_flag::UNDEFINED) {
-//        return gal_error_code::ERR;
-//    };
-//    VkResult result = (
-//        vmaMapMemory(pRenderer->mVulkan.pVmaAllocator, pBuffer->mVulkan.pVkAllocation, &pBuffer->pCpuMappedAddress));
-//
-//    if (pRange) {
-//        pBuffer->pCpuMappedAddress = ((uint8_t *)pBuffer->pCpuMappedAddress + pRange->mOffset);
-//    }
-//}
-//
-//gal_error_code vk_unmap_buffer(gal_context context, gal_buffer *pBuffer) {
-//    ASSERT(pBuffer->mMemoryUsage != RESOURCE_MEMORY_USAGE_GPU_ONLY && "Trying to unmap non-cpu accessible resource");
-//
-//    vmaUnmapMemory(pRenderer->mVulkan.pVmaAllocator, pBuffer->mVulkan.pVkAllocation);
-//    pBuffer->pCpuMappedAddress = NULL;
-//}
+
+gal_error_code vk_add_queue(gal_context context, gal_queue_desc *desc, gal_queue *queue) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
+    vk_queue *t_queue = &vk_ctx->queues[utils_to_vk_queue_index(desc->type)];
+    if (t_queue->used == false) {
+        t_queue->used = true;
+    } else {
+        return gal_error_code::ERR;
+    }
+
+    vk_queue *vk_q = ant::memory::alloc<ant::gal::vk_queue>(nullptr);
+    if (!vk_q) {
+        return gal_error_code::ERR;
+    }
+    *vk_q = *t_queue;
+    *queue = vk_q;
+    return gal_error_code::SUC;
+}
+
+gal_error_code vk_remove_queue(gal_context context, gal_queue queue) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
+    if (queue != gal_null) {
+        vk_queue *vk_q = reinterpret_cast<vk_queue *>(queue);
+        vk_ctx->queues[utils_to_vk_queue_index(queue->m_type)].used = false;
+        ant::memory::afree(vk_q);
+        queue = gal_null;
+    }
+    return gal_error_code::SUC;
+}
+
+gal_error_code vk_queue_submit(gal_queue queue, gal_queue_submit_desc *desc) {
+    //vk_context *vk_ctx = reinterpret_cast<vk_context *> (context);
+    vk_queue *vk_q = reinterpret_cast<vk_queue *>(queue);
+
+    u32 cmdCount = desc->cmd_count;
+    gal_command_list *ppCmds = desc->cmds;
+    gal_fence pFence = desc->pSignalFence;
+    u32 waitSemaphoreCount = desc->mWaitSemaphoreCount;
+    gal_semaphore *ppWaitSemaphores = desc->ppWaitSemaphores;
+    u32 signalSemaphoreCount = desc->mSignalSemaphoreCount;
+    gal_semaphore *ppSignalSemaphores = desc->ppSignalSemaphores;
+
+    // some parameter check
+    // ...
+    //
+
+    ACQUIRE_STACK_MEMORY_RESOURCE(stack_emmory, 256);
+    ant::vector<VkCommandBuffer> cmds(&stack_emmory);
+    for (u32 i = 0; i < cmdCount; ++i) {
+        cmds.push_back(reinterpret_cast<vk_command_list *>(ppCmds[i])->m_command);
+    }
+
+    ant::vector<VkSemaphore> wait_semaphores(&stack_emmory);
+    ant::vector<VkPipelineStageFlags> wait_masks(&stack_emmory);
+    for (u32 i = 0; i < waitSemaphoreCount; ++i) {
+        vk_semaphore *vk_s = reinterpret_cast<vk_semaphore *>(ppWaitSemaphores[i]);
+        if (vk_s->b_signaled) {
+            wait_semaphores.push_back(vk_s->semaphore);
+            wait_masks.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+            vk_s->b_signaled = false;
+        }
+    }
+
+    ant::vector<VkSemaphore> signal_semaphores(&stack_emmory);
+    for (u32 i = 0; i < signalSemaphoreCount; ++i) {
+        vk_semaphore *vk_s = reinterpret_cast<vk_semaphore *>(ppSignalSemaphores[i]);
+        if (vk_s->b_signaled) {
+            signal_semaphores.push_back(reinterpret_cast<vk_semaphore *>(ppSignalSemaphores[i])->semaphore);
+            vk_s->b_signaled = true;
+        }
+    }
+
+    VkSubmitInfo submit_info{};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.pNext = NULL;
+    submit_info.waitSemaphoreCount = static_cast<u32>(wait_semaphores.size());
+    submit_info.pWaitSemaphores = wait_semaphores.data();
+    submit_info.pWaitDstStageMask = wait_masks.data();
+    submit_info.commandBufferCount = cmdCount;
+    submit_info.pCommandBuffers = cmds.data();
+    submit_info.signalSemaphoreCount = static_cast<u32>(signal_semaphores.size());
+    submit_info.pSignalSemaphores = signal_semaphores.data();
+
+    VkDeviceGroupSubmitInfo deviceGroupSubmitInfo = {VK_STRUCTURE_TYPE_DEVICE_GROUP_SUBMIT_INFO_KHR};
+
+    // Lightweight lock to make sure multiple threads dont use the same queue simultaneously
+    // Many setups have just one queue family and one queue. In this case, async compute, async transfer doesn't exist and we end up using
+    // the same queue for all three operations
+    //std::lock_guard<std::mutex>(vk_q->submit_mutex)
+    VkResult result = vkQueueSubmit(vk_q->queue, 1, &submit_info,
+                                    pFence ? reinterpret_cast<vk_fence *>(pFence)->fence : VK_NULL_HANDLE);
+    if (result != VK_SUCCESS) {
+        return gal_error_code::ERR;
+    }
+    if (pFence) {
+        reinterpret_cast<vk_fence *>(pFence)->b_submitted = true;
+    }
+    return gal_error_code::SUC;
+}
+
 //gal_error_code vk_create_srvuav(gal_context context, gal_texture texture)
 //gal_error_code vk_create_srvuav(gal_context context, gal_buffer buffer)
 //{
@@ -2020,7 +2333,6 @@ gal_error_code vk_cmd_copy_texture_to_buffer() {
 //        }
 //    }
 //}
-
 // pipeline
 //gal_error_code vk_create_shader(gal_context context, gal_shader_desc *desc, gal_shader *_shader) {
 //    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
