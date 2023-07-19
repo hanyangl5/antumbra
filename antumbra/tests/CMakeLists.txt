@@ -122,7 +122,9 @@ configure_compile_options_no_werror(${PROJECT_NAME})
 
 # include directories
 target_include_directories(${PROJECT_NAME} PRIVATE
-    framework
+    framework)
+    
+target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
     ../third_party/Catch2)
 
 # link libraries

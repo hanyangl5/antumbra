@@ -33,13 +33,13 @@ namespace ant::gal {
 
 // TODO(hyl5): static or inline?
 
-constexpr void load_gal_vk_functions() {
+inline void load_gal_vk_functions() {
 #define VK_LOAD_FUNCTION_PTRS
 #include "../helper/helper_macro.h"
 #undef VK_LOAD_FUNCTION_PTRS
 }
 
-constexpr void offload_gal_vk_functions() {
+inline void offload_gal_vk_functions() {
 #define VK_OFFLOAD_FUNCTION_PTRS
 #include "../helper/helper_macro.h"
 #undef VK_LOAD_FUNCTION_PTRS
@@ -1383,7 +1383,7 @@ constexpr VkPipelineBindPoint utils_to_vk_pipeline_bind_point(gal_pipeline_type 
     case ant::gal::gal_pipeline_type::GRAPHICS:
         return VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS;
     case ant::gal::gal_pipeline_type::RAYTRACING:
-        VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR;
+        return VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR;
     default:
         return VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_MAX_ENUM;
     }

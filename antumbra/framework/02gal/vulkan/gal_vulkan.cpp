@@ -30,6 +30,8 @@
 
 #ifdef WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
+#elif __linux__
+#define VK_USE_PLATFORM_XLIB_KHR
 #endif
 #include <vulkan/vulkan.h>
 #define VMA_RECORDING_ENABLED 1
@@ -756,7 +758,9 @@ gal_error_code vk_create_render_target(gal_context context, gal_render_target_de
     VkImageViewType view_type = utils_to_vk_image_view_type(desc->dimension);
 
     vk_texture *vk_tex = reinterpret_cast<vk_texture *>(vk_rt->m_texture);
-    VkImageViewCreateInfo rtvDesc = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr};
+    VkImageViewCreateInfo rtvDesc{};
+    rtvDesc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    rtvDesc.pNext = nullptr;
     rtvDesc.flags = 0;
     rtvDesc.image = vk_tex->m_image;
     rtvDesc.viewType = view_type;
@@ -844,38 +848,53 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
         return gal_error_code::ERR;
     }
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
-    DECLARE_ZERO(VkXlibSurfaceCreateInfoKHR, add_info);
+    VkXlibSurfaceCreateInfoKHR add_info{};
     add_info.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
     add_info.pNext = nullptr;
     add_info.flags = 0;
     add_info.dpy = desc->mWindowHandle.display;   //TODO
     add_info.window = desc->mWindowHandle.window; //TODO
-    CHECK_VKRESULT(vkCreateXlibSurfaceKHR(pRenderer->mVulkan.pVkInstance, &add_info, nullptr, &vkSurface));
+    result = (vkCreateXlibSurfaceKHR(vk_ctx->instance, &add_info, nullptr, &vk_sc->m_surface));
+    if (result != VK_SUCCESS || vk_sc->m_surface == VK_NULL_HANDLE) {
+        return gal_error_code::ERR;
+    }
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
-    DECLARE_ZERO(VkXcbSurfaceCreateInfoKHR, add_info);
+    VkXcbSurfaceCreateInfoKHR add_info{};
     add_info.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     add_info.pNext = nullptr;
     add_info.flags = 0;
     add_info.connection = desc->mWindowHandle.connection; //TODO
     add_info.window = desc->mWindowHandle.window;         //TODO
-    CHECK_VKRESULT(vkCreateXcbSurfaceKHR(pRenderer->pVkInstance, &add_info, nullptr, &vkSurface));
+    result = (vkCreateXcbSurfaceKHR(pRenderer->pVkInstance, &add_info, nullptr, &vk_sc->m_surface));
+    if (result != VK_SUCCESS || vk_sc->m_surface == VK_NULL_HANDLE) {
+        return gal_error_code::ERR;
+    }
 #elif defined(VK_USE_PLATFORM_IOS_MVK)
     // Add IOS support here
 #elif defined(VK_USE_PLATFORM_MACOS_MVK)
     // Add MacOS support here
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
-    DECLARE_ZERO(VkAndroidSurfaceCreateInfoKHR, add_info);
+    VkAndroidSurfaceCreateInfoKHR add_info{};
     add_info.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
     add_info.pNext = nullptr;
     add_info.flags = 0;
     add_info.window = desc->mWindowHandle.window;
-    CHECK_VKRESULT(vkCreateAndroidSurfaceKHR(pRenderer->mVulkan.pVkInstance, &add_info, nullptr, &vkSurface));
+    result = (vkCreateAndroidSurfaceKHR(vk_ctx->instance, &add_info, nullptr, &vk_sc->m_surface));
+    if (result != VK_SUCCESS || vk_sc->m_surface == VK_NULL_HANDLE) {
+        return gal_error_code::ERR;
+    }
 #elif defined(VK_USE_PLATFORM_GGP)
-    extern VkResult ggpCreateSurface(VkInstance, VkSurfaceKHR * surface);
-    CHECK_VKRESULT(ggpCreateSurface(pRenderer->pVkInstance, &vkSurface));
+    extern VkResult ggpCreateSurface(VkInstance, vk_sc->m_surfaceKHR * surface);
+    result = (ggpCreateSurface(pRenderer->pVkInstance, &vk_sc->m_surface));
+    if (result != VK_SUCCESS || vk_sc->m_surface == VK_NULL_HANDLE) {
+        return gal_error_code::ERR;
+    }
 #elif defined(VK_USE_PLATFORM_VI_NN)
-    extern VkResult nxCreateSurface(VkInstance, VkSurfaceKHR * surface);
-    CHECK_VKRESULT(nxCreateSurface(pRenderer->mVulkan.pVkInstance, &vkSurface));
+    extern VkResult nxCreateSurface(VkInstance, vk_sc->m_surfaceKHR * surface);
+    result = (nxCreateSurface(vk_ctx->instance, &vk_sc->m_surface));
+    if (result != VK_SUCCESS || vk_sc->m_surface == VK_NULL_HANDLE) {
+        return gal_error_code::ERR;
+    }
 #else
 #error PLATFORM NOT SUPPORTED
 #endif
@@ -990,7 +1009,7 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
     }
 
     // Swapchain
-    VkExtent2D extent = {0};
+    VkExtent2D extent{};
     extent.width = std::clamp(desc->width, caps.minImageExtent.width, caps.maxImageExtent.width);
     extent.height = std::clamp(desc->height, caps.minImageExtent.height, caps.maxImageExtent.height);
 
@@ -1300,9 +1319,9 @@ gal_error_code vk_create_graphics_pipeline(gal_context context, gal_pipeline_des
         return gal_error_code::ERR;
     }
     u32 input_binding_count = 0;
-    VkVertexInputBindingDescription input_bindings[MAX_VERTEX_BINDINGS] = {{0}};
+    VkVertexInputBindingDescription input_bindings[MAX_VERTEX_BINDINGS]{};
     u32 input_attribute_count = 0;
-    VkVertexInputAttributeDescription input_attributes[MAX_VERTEX_ATTRIBS] = {{0}};
+    VkVertexInputAttributeDescription input_attributes[MAX_VERTEX_ATTRIBS]{};
 
     // Make sure there's attributes
     if (pVertexLayout != nullptr) {
@@ -1903,7 +1922,6 @@ gal_error_code vk_cmd_resource_barrier(gal_command_list command, u32 buffer_barr
     ant::vector<VkBufferMemoryBarrier> bbs(&stack_memory);
 
     for (u32 i = 0; i < buffer_barrier_count; i++) {
-        buffer_barriers[i];
         gal_buffer_barrier *buffer_barrier = &buffer_barriers[i];
         vk_buffer *vk_b = reinterpret_cast<vk_buffer *>(buffer_barrier->buffer);
         VkBufferMemoryBarrier b{};
@@ -2292,7 +2310,8 @@ gal_error_code vk_queue_submit(gal_queue queue, gal_queue_submit_desc *desc) {
     submit_info.signalSemaphoreCount = static_cast<u32>(signal_semaphores.size());
     submit_info.pSignalSemaphores = signal_semaphores.data();
 
-    VkDeviceGroupSubmitInfo deviceGroupSubmitInfo = {VK_STRUCTURE_TYPE_DEVICE_GROUP_SUBMIT_INFO_KHR};
+    VkDeviceGroupSubmitInfo deviceGroupSubmitInfo {};
+    deviceGroupSubmitInfo.sType = VK_STRUCTURE_TYPE_DEVICE_GROUP_SUBMIT_INFO_KHR;
 
     // Lightweight lock to make sure multiple threads dont use the same queue simultaneously
     // Many setups have just one queue family and one queue. In this case, async compute, async transfer doesn't exist and we end up using

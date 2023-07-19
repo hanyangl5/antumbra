@@ -33,7 +33,7 @@
 #include "format.h"
 #include "framework/01core/memory/memory.h"
 #include "framework/01core/utils/utils.h"
-
+#include "framework/01core/platform/platform.h"
 namespace ant::gal {
 struct compiled_shader_group;
 
@@ -544,6 +544,7 @@ struct gal_swap_chain_desc {
 #ifdef WIN32
     HWND hwnd_window;
 #endif
+    WindowHandle mWindowHandle;
     bool b_present;
     u32 image_count;
     u32 width;
