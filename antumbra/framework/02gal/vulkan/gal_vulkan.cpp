@@ -30,6 +30,10 @@
 
 #ifdef WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
+#elif __linux__
+#define VK_USE_PLATFORM_XLIB_KHR
+#elif __APPLE__
+#define VK_USE_PLATFORM_MACOS_MVK
 #endif
 #include <vulkan/vulkan.h>
 #define VMA_RECORDING_ENABLED 1
@@ -37,15 +41,21 @@
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
 #define VMA_IMPLEMENTATION 1
 
-//#ifndef NDEBUG
+#ifndef NDEBUG
+#ifndef VMA_DEBUG_LOG_FORMAT
+#define VMA_DEBUG_LOG_FORMAT(format, ...)
+/*
+   #define VMA_DEBUG_LOG_FORMAT(format, ...) do { \
+       printf((format), __VA_ARGS__); \
+       printf("\n"); \
+   } while(false)
+   */
+#endif
 
-#define VMA_DEBUG_LOG(format, ...)                                                                                     \
-    do {                                                                                                               \
-        printf(format, __VA_ARGS__);                                                                                   \
-        printf("\n");                                                                                                  \
-    } while (false)
-
-//#endif // !NDEBUG
+#ifndef VMA_DEBUG_LOG
+#define VMA_DEBUG_LOG(str) VMA_DEBUG_LOG_FORMAT("%s", (str))
+#endif
+#endif // !NDEBUG
 #include <vk_mem_alloc.h>
 
 #include "framework/01core/io/file_system.h"
@@ -750,7 +760,9 @@ gal_error_code vk_create_render_target(gal_context context, gal_render_target_de
     VkImageViewType view_type = utils_to_vk_image_view_type(desc->dimension);
 
     vk_texture *vk_tex = reinterpret_cast<vk_texture *>(vk_rt->m_texture);
-    VkImageViewCreateInfo rtvDesc = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr};
+    VkImageViewCreateInfo rtvDesc{};
+    rtvDesc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    rtvDesc.pNext = nullptr;
     rtvDesc.flags = 0;
     rtvDesc.image = vk_tex->m_image;
     rtvDesc.viewType = view_type;
@@ -838,38 +850,53 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
         return gal_error_code::ERR;
     }
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
-    DECLARE_ZERO(VkXlibSurfaceCreateInfoKHR, add_info);
+    VkXlibSurfaceCreateInfoKHR add_info{};
     add_info.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
     add_info.pNext = nullptr;
     add_info.flags = 0;
     add_info.dpy = desc->mWindowHandle.display;   //TODO
     add_info.window = desc->mWindowHandle.window; //TODO
-    CHECK_VKRESULT(vkCreateXlibSurfaceKHR(pRenderer->mVulkan.pVkInstance, &add_info, nullptr, &vkSurface));
+    result = (vkCreateXlibSurfaceKHR(vk_ctx->instance, &add_info, nullptr, &vk_sc->m_surface));
+    if (result != VK_SUCCESS || vk_sc->m_surface == VK_NULL_HANDLE) {
+        return gal_error_code::ERR;
+    }
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
-    DECLARE_ZERO(VkXcbSurfaceCreateInfoKHR, add_info);
+    VkXcbSurfaceCreateInfoKHR add_info{};
     add_info.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     add_info.pNext = nullptr;
     add_info.flags = 0;
     add_info.connection = desc->mWindowHandle.connection; //TODO
     add_info.window = desc->mWindowHandle.window;         //TODO
-    CHECK_VKRESULT(vkCreateXcbSurfaceKHR(pRenderer->pVkInstance, &add_info, nullptr, &vkSurface));
+    result = (vkCreateXcbSurfaceKHR(pRenderer->pVkInstance, &add_info, nullptr, &vk_sc->m_surface));
+    if (result != VK_SUCCESS || vk_sc->m_surface == VK_NULL_HANDLE) {
+        return gal_error_code::ERR;
+    }
 #elif defined(VK_USE_PLATFORM_IOS_MVK)
     // Add IOS support here
 #elif defined(VK_USE_PLATFORM_MACOS_MVK)
     // Add MacOS support here
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
-    DECLARE_ZERO(VkAndroidSurfaceCreateInfoKHR, add_info);
+    VkAndroidSurfaceCreateInfoKHR add_info{};
     add_info.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
     add_info.pNext = nullptr;
     add_info.flags = 0;
     add_info.window = desc->mWindowHandle.window;
-    CHECK_VKRESULT(vkCreateAndroidSurfaceKHR(pRenderer->mVulkan.pVkInstance, &add_info, nullptr, &vkSurface));
+    result = (vkCreateAndroidSurfaceKHR(vk_ctx->instance, &add_info, nullptr, &vk_sc->m_surface));
+    if (result != VK_SUCCESS || vk_sc->m_surface == VK_NULL_HANDLE) {
+        return gal_error_code::ERR;
+    }
 #elif defined(VK_USE_PLATFORM_GGP)
-    extern VkResult ggpCreateSurface(VkInstance, VkSurfaceKHR * surface);
-    CHECK_VKRESULT(ggpCreateSurface(pRenderer->pVkInstance, &vkSurface));
+    extern VkResult ggpCreateSurface(VkInstance, vk_sc->m_surfaceKHR * surface);
+    result = (ggpCreateSurface(pRenderer->pVkInstance, &vk_sc->m_surface));
+    if (result != VK_SUCCESS || vk_sc->m_surface == VK_NULL_HANDLE) {
+        return gal_error_code::ERR;
+    }
 #elif defined(VK_USE_PLATFORM_VI_NN)
-    extern VkResult nxCreateSurface(VkInstance, VkSurfaceKHR * surface);
-    CHECK_VKRESULT(nxCreateSurface(pRenderer->mVulkan.pVkInstance, &vkSurface));
+    extern VkResult nxCreateSurface(VkInstance, vk_sc->m_surfaceKHR * surface);
+    result = (nxCreateSurface(vk_ctx->instance, &vk_sc->m_surface));
+    if (result != VK_SUCCESS || vk_sc->m_surface == VK_NULL_HANDLE) {
+        return gal_error_code::ERR;
+    }
 #else
 #error PLATFORM NOT SUPPORTED
 #endif
@@ -984,7 +1011,7 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
     }
 
     // Swapchain
-    VkExtent2D extent = {0};
+    VkExtent2D extent{};
     extent.width = std::clamp(desc->width, caps.minImageExtent.width, caps.maxImageExtent.width);
     extent.height = std::clamp(desc->height, caps.minImageExtent.height, caps.maxImageExtent.height);
 
@@ -1189,7 +1216,7 @@ gal_error_code vk_get_pipeline_cache_data(gal_context context, gal_pipeline_cach
                                           void *_data) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_pipeline_cache *vk_pc = reinterpret_cast<vk_pipeline_cache *>(_pipeline_cache);
-    VkResult result = vkGetPipelineCacheData(vk_ctx->device, vk_pc->pipeline_cache, _size, _data);
+    VkResult result = vkGetPipelineCacheData(vk_ctx->device, vk_pc->pipeline_cache, _size, _data); 
     if (result != VK_SUCCESS) {
         return gal_error_code::ERR;
     }
@@ -1294,9 +1321,9 @@ gal_error_code vk_create_graphics_pipeline(gal_context context, gal_pipeline_des
         return gal_error_code::ERR;
     }
     u32 input_binding_count = 0;
-    VkVertexInputBindingDescription input_bindings[MAX_VERTEX_BINDINGS] = {{0}};
+    VkVertexInputBindingDescription input_bindings[MAX_VERTEX_BINDINGS]{};
     u32 input_attribute_count = 0;
-    VkVertexInputAttributeDescription input_attributes[MAX_VERTEX_ATTRIBS] = {{0}};
+    VkVertexInputAttributeDescription input_attributes[MAX_VERTEX_ATTRIBS]{};
 
     // Make sure there's attributes
     if (pVertexLayout != nullptr) {
@@ -1518,11 +1545,17 @@ gal_error_code vk_destroy_descriptorpool() {
     //vkDestroyDescriptorPool();
     return gal_error_code::SUC;
 }
-gal_error_code vk_consume_descriptorset() {
+gal_error_code vk_consume_descriptorset(gal_context context) {
+    if (context) {
+        return gal_error_code::ERR;
+    }
     //vkAllocateDescriptorSets();
     return gal_error_code::SUC;
 }
-gal_error_code vk_free_descriptorset() {
+gal_error_code vk_free_descriptorset(gal_context context) {
+    if (context) {
+        return gal_error_code::ERR;
+    }
     //vkFreeDescriptorSets()
     return gal_error_code::SUC;
 }
@@ -1682,10 +1715,10 @@ gal_error_code vk_destroy_fence(gal_context context, gal_fence fence) {
     }
     return gal_error_code::SUC;
 }
-gal_error_code vk_wait_gpu() {
-    //vkDeviceWaitIdle();
-    return gal_error_code::SUC;
-}
+//gal_error_code vk_wait_gpu() {
+//    //vkDeviceWaitIdle();
+//    return gal_error_code::SUC;
+//}
 gal_error_code vk_create_semaphore(gal_context context, gal_semaphore *semaphore) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_semaphore *vk_s = ant::memory::alloc<vk_semaphore>(nullptr);
@@ -1911,7 +1944,6 @@ gal_error_code vk_cmd_resource_barrier(gal_command_list command, u32 buffer_barr
     ant::vector<VkBufferMemoryBarrier> bbs(&stack_memory);
 
     for (u32 i = 0; i < buffer_barrier_count; i++) {
-        buffer_barriers[i];
         gal_buffer_barrier *buffer_barrier = &buffer_barriers[i];
         vk_buffer *vk_b = reinterpret_cast<vk_buffer *>(buffer_barrier->buffer);
         VkBufferMemoryBarrier b{};
@@ -2110,15 +2142,19 @@ gal_error_code vk_cmd_draw_indexed_instanced(gal_command_list command, u32 index
 //    return gal_error_code::SUC;
 //}
 
-gal_error_code vk_cmd_draw_mesh_task() {
+gal_error_code vk_cmd_draw_mesh_task(gal_command_list command) {
     //vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
-
+    if (command) {
+        return gal_error_code::ERR;
+    }
     // vkCmdDrawMeshTasksEXT
     return gal_error_code::SUC;
 }
-gal_error_code vk_cmd_copy_texture() {
+gal_error_code vk_cmd_copy_texture(gal_command_list command) {
     //vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
-
+    if (command) {
+        return gal_error_code::ERR;
+    }
     //vkCmdCopyImage();
     //vkCmdCopyImage2();
     return gal_error_code::SUC;
@@ -2135,18 +2171,34 @@ gal_error_code vk_cmd_copy_buffer(gal_command_list command, gal_buffer src, gal_
                     reinterpret_cast<vk_buffer *>(dst)->m_buffer, 1, &bc);
     return gal_error_code::SUC;
 }
-gal_error_code vk_cmd_fill_buffer() {
+gal_error_code vk_cmd_fill_buffer(gal_command_list command) {
+    if (command) {
+        return gal_error_code::ERR;
+    }
     //vkCmdFillBuffer();
     return gal_error_code::SUC;
 }
-gal_error_code vk_cmd_fill_texture() {
+gal_error_code vk_cmd_fill_texture(gal_command_list command) {
+    if (command) {
+        return gal_error_code::ERR;
+    }
     //vkCmdClearColorImage();
     //vkCmdClearDepthStencilImage();
     //vkCmdClearAttachments();
     return gal_error_code::SUC;
 }
-gal_error_code vk_cmd_upload_buffer() { return gal_error_code::SUC; }
-gal_error_code vk_cmd_upload_texture() { return gal_error_code::SUC; }
+gal_error_code vk_cmd_upload_buffer(gal_command_list command) {
+    if (command) {
+        return gal_error_code::ERR;
+    }
+    return gal_error_code::SUC;
+}
+gal_error_code vk_cmd_upload_texture(gal_command_list command) {
+    if (command) {
+        return gal_error_code::ERR;
+    }
+    return gal_error_code::SUC;
+}
 gal_error_code vk_cmd_update_subresources(gal_command_list command, gal_texture dst, gal_buffer src,
                                           u32 subresource_count, gal_texture_subresource_desc *descs) {
     vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
@@ -2189,7 +2241,10 @@ gal_error_code vk_cmd_update_subresources(gal_command_list command, gal_texture 
                            subresource_count, regions.data());
     return gal_error_code::SUC;
 }
-gal_error_code vk_cmd_copy_texture_to_buffer() {
+gal_error_code vk_cmd_copy_texture_to_buffer(gal_command_list command) {
+    if (command) {
+        return gal_error_code::ERR;
+    }
     //vkCmdCopyImageToBuffer();
     //vkCmdCopyImageToBuffer2();
     return gal_error_code::SUC;
@@ -2277,7 +2332,8 @@ gal_error_code vk_queue_submit(gal_queue queue, gal_queue_submit_desc *desc) {
     submit_info.signalSemaphoreCount = static_cast<u32>(signal_semaphores.size());
     submit_info.pSignalSemaphores = signal_semaphores.data();
 
-    VkDeviceGroupSubmitInfo deviceGroupSubmitInfo = {VK_STRUCTURE_TYPE_DEVICE_GROUP_SUBMIT_INFO_KHR};
+    VkDeviceGroupSubmitInfo deviceGroupSubmitInfo {};
+    deviceGroupSubmitInfo.sType = VK_STRUCTURE_TYPE_DEVICE_GROUP_SUBMIT_INFO_KHR;
 
     // Lightweight lock to make sure multiple threads dont use the same queue simultaneously
     // Many setups have just one queue family and one queue. In this case, async compute, async transfer doesn't exist and we end up using

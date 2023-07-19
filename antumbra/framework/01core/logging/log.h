@@ -6,8 +6,6 @@
 #include "framework/01core/utils/utils.h"
 #include "framework/01core/memory/container.h"
 
-enum VkResult;
-
 namespace ant {
 //inline ant::str HrToString(long hr) {
 //    char s_str[64] = {};
@@ -40,13 +38,9 @@ class Log : public Singleton<Log> {
     template <typename... args> inline void error(args &&..._args) const noexcept {
         m_logger->error(std::forward<args>(_args)...);
     }
-    template <typename... args> inline void fatal(args &&..._args) const noexcept {
-        // m_logger->fatal(std::forward<args>(_args)...);
-    }
-    //void CheckVulkanResult(VkResult _res, const char *func_name, int line) const noexcept;
-
-    //void CheckDXResult(long hr, const char *func_name, int line) const noexcept;
-
+    // template <typename... args> inline void fatal(args &&..._args) const noexcept {
+    //     m_logger->fatal(std::forward<args>(_args)...);
+    // }
     void SetLogLevel(loglevel level) noexcept;
 
   private:

@@ -30,7 +30,7 @@ template <typename T = void, typename... Args> T *alloc(Args &&...args, memory_p
         if (b_enable_memory_tracking) {
             LOG_ERROR("[memory]: memory allocation failed");
         }
-        return false;
+        return nullptr;
     }
     return new (memory) T(std::forward<Args>(args)...);
 }
@@ -39,7 +39,10 @@ template <typename T> void afree(T *ptr, memory_pool *pool = nullptr) {
     if (!ptr) {
         return;
     }
-    ptr->~T();
+    if (std::is_scalar<T>::value && std::is_void<T>::value) {
+        ptr->~T();
+    }
+
     if (pool == nullptr) {
         free(ptr);
     } else {

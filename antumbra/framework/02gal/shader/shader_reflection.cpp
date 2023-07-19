@@ -102,21 +102,21 @@ void compiled_shader::create_shader_reflection_from_spirv() {
     gal_shader_stage stage = utils_to_gal_shader_stage(spv_entry.model);
 
     auto resources = compiler.get_shader_resources();
-    u32 count = 0;
-
-    // stage input/output are used to reflect pipeline vertex attributes
-    count += static_cast<u32>(resources.stage_inputs.size());  // inputs
-    count += static_cast<u32>(resources.stage_outputs.size()); // outputs
-
-    // shader resources
-    count += static_cast<u32>(resources.uniform_buffers.size());   // constant buffers
-    count += static_cast<u32>(resources.storage_buffers.size());   // uav buffers
-    count += static_cast<u32>(resources.separate_images.size());   // textures
-    count += static_cast<u32>(resources.separate_samplers.size()); // samplers
-    count += static_cast<u32>(resources.storage_images.size());    // uav textures
+    //u32 count = 0;
+//
+    //// stage input/output are used to reflect pipeline vertex attributes
+    //count += static_cast<u32>(resources.stage_inputs.size());  // inputs
+    //count += static_cast<u32>(resources.stage_outputs.size()); // outputs
+//
+    //// shader resources
+    //count += static_cast<u32>(resources.uniform_buffers.size());   // constant buffers
+    //count += static_cast<u32>(resources.storage_buffers.size());   // uav buffers
+    //count += static_cast<u32>(resources.separate_images.size());   // textures
+    //count += static_cast<u32>(resources.separate_samplers.size()); // samplers
+    //count += static_cast<u32>(resources.storage_images.size());    // uav textures
 
     // push constants
-    count += static_cast<u32>(resources.push_constant_buffers.size()); // push constants
+    //count += static_cast<u32>(resources.push_constant_buffers.size()); // push constants
     // count += (u32)resources.acceleration_structures.size(); // raytracing structures
 
     ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 128);

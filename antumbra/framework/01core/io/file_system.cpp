@@ -125,27 +125,27 @@ void write_binary_file(const ant::vector<u8> &data, const std::filesystem::path 
     file.close();
 }
 
-bool write_json(nlohmann::json &data, const std::filesystem::path &filename) {
-    std::stringstream json;
-    json << data << " ";
+// bool write_json(nlohmann::json &data, const std::filesystem::path &filename) {
+//     std::stringstream json;
+//     json << data << " ";
 
-    if (!nlohmann::json::accept(json.str())) {
-        LOG_ERROR("Invalid JSON string");
-        return false;
-    }
+//     if (!nlohmann::json::accept(json.str())) {
+//         LOG_ERROR("Invalid JSON string");
+//         return false;
+//     }
 
-    std::ofstream out_stream;
-    out_stream.open(filename, std::ios::out | std::ios::trunc);
+//     std::ofstream out_stream;
+//     out_stream.open(filename, std::ios::out | std::ios::trunc);
 
-    if (out_stream.good()) {
-        out_stream << json.str();
-    } else {
-        LOG_ERROR("Could not load JSON file {}", filename.string());
-        return false;
-    }
+//     if (out_stream.good()) {
+//         out_stream << json.str();
+//     } else {
+//         LOG_ERROR("Could not load JSON file {}", filename.string());
+//         return false;
+//     }
 
-    out_stream.close();
-    return true;
-}
+//     out_stream.close();
+//     return true;
+// }
 
 } // namespace ant::io

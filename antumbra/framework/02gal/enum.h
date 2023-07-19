@@ -33,7 +33,7 @@
 #include "format.h"
 #include "framework/01core/memory/memory.h"
 #include "framework/01core/utils/utils.h"
-
+#include "framework/01core/platform/platform.h"
 namespace ant::gal {
 struct compiled_shader_group;
 
@@ -82,7 +82,7 @@ enum class gal_api { UNDEFINED, VULKAN, D3D12 };
     struct name##_T
 
 // declare gal handle
-inline constexpr nullptr_t gal_null = nullptr;
+inline constexpr std::nullptr_t gal_null = nullptr;
 
 struct gal_desc {
     // gal optional feature
@@ -545,6 +545,7 @@ struct gal_swap_chain_desc {
 #ifdef WIN32
     HWND hwnd_window;
 #endif
+    WindowHandle mWindowHandle;
     bool b_present;
     u32 image_count;
     u32 width;
@@ -582,9 +583,13 @@ DECLARE_GAL_HANDLE(gal_shader_program) {
     //shader::pipeline_reflection *pReflection;
 };
 
-DECLARE_GAL_HANDLE(gal_rootsignature){};
+DECLARE_GAL_HANDLE(gal_rootsignature){
 
-DECLARE_GAL_HANDLE(gal_pipeline_cache){};
+};
+
+DECLARE_GAL_HANDLE(gal_pipeline_cache){
+    
+};
 
 struct gal_compute_pipeline_desc {
     //gal_shader_program *shader;

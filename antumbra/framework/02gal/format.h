@@ -6584,7 +6584,7 @@ constexpr gal_texture_format ToUNORM(gal_texture_format fmt) {
     }
 }
 
-constexpr char *gal_tf_name(gal_texture_format fmt) {
+constexpr const char *gal_tf_name(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::UNDEFINED:
         return "UNDEFINED";

@@ -10,7 +10,7 @@ namespace ant::memory {
 class pool_allocator final : public allocator_base {
   public:
     pool_allocator(u64 pool_size, u64 chunk_size, u64 alignment = alignof(std::max_align_t)) noexcept;
-    ~pool_allocator() noexcept;
+    virtual ~pool_allocator() noexcept;
     void *do_allocate(u64 bytes, u64 alignment = alignof(std::max_align_t)) override;
     void do_deallocate(void *ptr, u64 bytes, u64 alignment = alignof(std::max_align_t)) override;
     bool do_is_equal(const std::pmr::memory_resource &other) const noexcept override;
@@ -28,7 +28,7 @@ class pool_allocator final : public allocator_base {
     u64 m_chunk_count;
 
     void *m_ptr = nullptr;
-    u64 m_offset = 0;
+    // u64 m_offset = 0;
 };
 
 } // namespace ant::memory

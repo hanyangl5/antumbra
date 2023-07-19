@@ -4,9 +4,12 @@
 #include <filesystem>
 
 // third party libraries
+#ifdef WIN32
 #include <dxcompiler/d3d12shader.h>
+#else
+#include <dxcompiler/WinAdapter.h>
+#endif
 #include <dxcompiler/dxcapi.h>
-
 // project headers
 #include "framework/01core/memory/container.h"
 #include "framework/01core/singleton/public_singleton.h"
@@ -91,7 +94,7 @@ enum class shader_target_profile {
 
 //enum class shader_hlsl_version { SM_6_0, SM_6_1, SM_6_2, SM_6_3, SM_6_4, SM_6_5, SM_6_6, SM_6_7 };
 
-constexpr wchar_t *utils_to_hlsl_target_profile(shader_target_profile tp) {
+constexpr const wchar_t *utils_to_hlsl_target_profile(shader_target_profile tp) {
     switch (tp) {
     case shader_target_profile::VS_6_0:
         return L"vs_6_0";

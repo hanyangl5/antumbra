@@ -4,7 +4,6 @@
 
 // third party libraries
 #ifdef WIN32
-
 #include <Windows.h>
 #endif // WIN32
 
@@ -58,7 +57,6 @@ void Log::SetLogLevel(loglevel level) noexcept {
         spdlog::set_level(spdlog::level::err);
         break;
     case ant::Log::loglevel::fatal:
-
         spdlog::set_level(spdlog::level::critical);
         break;
     default:

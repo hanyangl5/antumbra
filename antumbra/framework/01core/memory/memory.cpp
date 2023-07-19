@@ -7,7 +7,7 @@ void *amalloc(u64 size, memory_pool *pool) {
     if (pool == nullptr) {
         ptr = malloc(size);
     } else {
-        ptr = pool->allocate(size, 0);
+        ptr = pool->allocate(size, alignof(std::max_align_t));
     }
     if (ptr == nullptr) {
         if (b_enable_memory_tracking) {
