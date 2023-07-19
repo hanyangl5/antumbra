@@ -351,7 +351,8 @@ enum class BlendConstant {
     ONE_MINUS_BLEND_FACTOR
 };
 
-struct gal_descriptorpool_desc {};
+//struct gal_descriptorpool_desc {
+//};
 
 struct gal_blend_state_desc {
     /// Source blend factor per render target.

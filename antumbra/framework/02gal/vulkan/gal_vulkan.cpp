@@ -431,7 +431,6 @@ gal_error_code vk_create_device(gal_desc *gal_desc, gal_context *context) {
     vk_ctx->queues[utils_to_vk_queue_index(gal_queue_type::compute)].m_type = gal_queue_type::compute;
     vk_ctx->queues[utils_to_vk_queue_index(gal_queue_type::transfer)].m_type = gal_queue_type::transfer;
 
-
     // TODO(hyl5): query supported memory type of gpu, platform differences
     return gal_error_code::SUC;
 }
@@ -1489,9 +1488,32 @@ gal_error_code vk_destroy_pipeline(gal_context context, gal_pipeline pipeline) {
 struct vk_descriptorpool {
     VkDescriptorPool pool;
 };
-//gal_error_code vk_create_descriptorpool(gal_context context, gal_descriptorpool_desc* desc, gal_descriptorpool* descriptorpool) {
-//    return gal_error_code::SUC;
-//}
+
+struct vk_descriptorpool_desc {
+    u32 numDescriptorSets;
+    VkDescriptorPoolCreateFlags flags;
+    const VkDescriptorPoolSize *pPoolSizes;
+    u32 numPoolSizes;
+};
+
+// we don't expose descriptor pool creation in gal
+// A descriptor pool maintains a pool of descriptors, from which descriptor sets are allocated. Descriptor pools are externally synchronized, meaning that the application must not allocate and/or free descriptor sets from the same pool in multiple threads simultaneously.
+gal_error_code vk_create_descriptorpool(gal_context context, vk_descriptorpool_desc *desc, VkDescriptorPool *pool) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
+    VkDescriptorPoolCreateInfo descriptor_pool_ci{};
+    descriptor_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    descriptor_pool_ci.pNext = nullptr;
+    descriptor_pool_ci.poolSizeCount = desc->numPoolSizes;
+    descriptor_pool_ci.pPoolSizes = desc->pPoolSizes;
+    descriptor_pool_ci.flags = desc->flags;
+    descriptor_pool_ci.maxSets = desc->numDescriptorSets;
+
+    VkResult result = (vkCreateDescriptorPool(vk_ctx->device, &descriptor_pool_ci, nullptr, pool));
+    if (result != VK_SUCCESS) {
+        return gal_error_code::ERR;
+    }
+    return gal_error_code::SUC;
+}
 gal_error_code vk_destroy_descriptorpool() {
     //vkDestroyDescriptorPool();
     return gal_error_code::SUC;

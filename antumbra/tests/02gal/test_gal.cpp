@@ -580,3 +580,8 @@ TEST_CASE("test buffer") {
     };
     command_test(gal_api::VULKAN);
 }
+
+
+TEST_CASE("descriptor set") {
+
+}
