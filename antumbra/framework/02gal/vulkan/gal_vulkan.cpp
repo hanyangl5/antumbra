@@ -1216,7 +1216,7 @@ gal_error_code vk_get_pipeline_cache_data(gal_context context, gal_pipeline_cach
                                           void *_data) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_pipeline_cache *vk_pc = reinterpret_cast<vk_pipeline_cache *>(_pipeline_cache);
-    VkResult result = vkGetPipelineCacheData(vk_ctx->device, vk_pc->pipeline_cache, _size, _data); 
+    VkResult result = vkGetPipelineCacheData(vk_ctx->device, vk_pc->pipeline_cache, _size, _data);
     if (result != VK_SUCCESS) {
         return gal_error_code::ERR;
     }
@@ -1545,7 +1545,23 @@ gal_error_code vk_destroy_descriptorpool() {
     //vkDestroyDescriptorPool();
     return gal_error_code::SUC;
 }
-gal_error_code vk_consume_descriptorset(gal_context context) {
+
+// bit size can be computed by constexpr expression
+struct gal_descriptor_set_desc {
+    union {
+        u32 set_index : 3;
+        gal_descriptor_set_update_freq update_freq:;
+    }
+};
+
+gal_error_code vk_add_descriptorset(gal_context context, gal_descriptor_set_desc *desc, u32 set_count,
+                                    gal_descriptorset **sets) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
+    vk_descriptor_set *vk_ds = ant::memory::alloc<ant::gal::vk_descriptor_set>(nullptr);
+    if (!vk_ds) {
+        return gal_error_code::ERR;
+    }
+
     if (context) {
         return gal_error_code::ERR;
     }
@@ -2332,7 +2348,7 @@ gal_error_code vk_queue_submit(gal_queue queue, gal_queue_submit_desc *desc) {
     submit_info.signalSemaphoreCount = static_cast<u32>(signal_semaphores.size());
     submit_info.pSignalSemaphores = signal_semaphores.data();
 
-    VkDeviceGroupSubmitInfo deviceGroupSubmitInfo {};
+    VkDeviceGroupSubmitInfo deviceGroupSubmitInfo{};
     deviceGroupSubmitInfo.sType = VK_STRUCTURE_TYPE_DEVICE_GROUP_SUBMIT_INFO_KHR;
 
     // Lightweight lock to make sure multiple threads dont use the same queue simultaneously
