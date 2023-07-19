@@ -56,7 +56,7 @@ void remove(const std::filesystem::path &path);
  */
 void create_path(const std::filesystem::path &root, const std::filesystem::path &path);
 
-bool write_json(nlohmann::json &data, const std::filesystem::path &filename);
+// bool write_json(nlohmann::json &data, const std::filesystem::path &filename);
 
 ant::str read_text_file(const std::filesystem::path filename);
 

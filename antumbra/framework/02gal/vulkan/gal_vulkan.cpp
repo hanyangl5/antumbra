@@ -32,6 +32,8 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #elif __linux__
 #define VK_USE_PLATFORM_XLIB_KHR
+#elif __APPLE__
+#define VK_USE_PLATFORM_MACOS_MVK
 #endif
 #include <vulkan/vulkan.h>
 #define VMA_RECORDING_ENABLED 1
@@ -1214,7 +1216,7 @@ gal_error_code vk_get_pipeline_cache_data(gal_context context, gal_pipeline_cach
                                           void *_data) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_pipeline_cache *vk_pc = reinterpret_cast<vk_pipeline_cache *>(_pipeline_cache);
-    VkResult result = vkGetPipelineCacheData(vk_ctx->device, vk_pc->pipeline_cache, _size, _data);
+    VkResult result = vkGetPipelineCacheData(vk_ctx->device, vk_pc->pipeline_cache, _size, _data); 
     if (result != VK_SUCCESS) {
         return gal_error_code::ERR;
     }

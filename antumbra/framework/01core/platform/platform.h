@@ -33,7 +33,7 @@
 
 #if defined(__APPLE__)
 #if !defined(TARGET_IOS)
-#import <Carbon/Carbon.h>
+#include <Carbon/Carbon.h>
 #else
 #include <stdint.h>
 typedef uint64_t uint64;
