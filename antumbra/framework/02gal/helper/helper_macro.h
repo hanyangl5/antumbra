@@ -97,7 +97,7 @@ __GAL_HELPER_MACRO__(gal_error_code, create_compute_pipeline, gal_context contex
 __GAL_HELPER_MACRO__(gal_error_code, destroy_pipeline, gal_context context, gal_pipeline pipeline);
 
 // consume the descriptorset from pool
-__GAL_HELPER_MACRO__(gal_error_code, consume_descriptorset, gal_context context);
+__GAL_HELPER_MACRO__(gal_error_code, get_descriptor_set, gal_context context);
 __GAL_HELPER_MACRO__(gal_error_code, free_descriptorset, gal_context context);
 __GAL_HELPER_MACRO__(gal_error_code, create_rootsignature, gal_context context, gal_rootsignature_desc* desc, gal_rootsignature* root_signature);
 __GAL_HELPER_MACRO__(gal_error_code, destroy_rootsignature, gal_context context, gal_rootsignature root_signature);
@@ -112,7 +112,7 @@ __GAL_HELPER_MACRO__(gal_error_code, destroy_semaphore, gal_context context, gal
 __GAL_HELPER_MACRO__(gal_error_code, create_command_pool, gal_context context, gal_command_pool_desc *desc, gal_command_pool *command_pool);
 __GAL_HELPER_MACRO__(gal_error_code, reset_command_pool, gal_context context, gal_command_pool command_pool);
 __GAL_HELPER_MACRO__(gal_error_code, destroy_command_pool, gal_context context, gal_command_pool command_pool);
-__GAL_HELPER_MACRO__(gal_error_code, allocate_command_list, gal_context context, gal_command_list_desc *desc, gal_command_list *command);
+__GAL_HELPER_MACRO__(gal_error_code, get_command_list, gal_context context, gal_command_list_desc *desc, gal_command_list *command);
 __GAL_HELPER_MACRO__(gal_error_code, free_command_list, gal_context context, gal_command_list command);
 
 __GAL_HELPER_MACRO__(gal_error_code, add_queue, gal_context context, gal_queue_desc *desc, gal_queue *queue);

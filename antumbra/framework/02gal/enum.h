@@ -795,5 +795,10 @@ struct read_range {
     u64 size;
 } ;
 
+DECLARE_GAL_HANDLE(gal_descriptor_set){
+
+};
+
+enum class gal_descriptor_set_update_freq { NONE, PER_FRAME, PER_BATCH, PER_DRAW, BINDLESS };
 
 } // namespace ant::gal

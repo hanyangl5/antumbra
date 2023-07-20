@@ -105,8 +105,11 @@ DECLARE_VK_HANDLE(shader_program) {
 };
 
 DECLARE_VK_HANDLE(rootsignature) {
-    ant::fixed_array<VkDescriptorSetLayout, MAX_DESCRIPTOR_SET_COUNT> set_layouts;
     VkPipelineLayout pipeline_layout;
+    ant::fixed_array<VkDescriptorSetLayout, MAX_DESCRIPTOR_SET_COUNT> set_layouts;
+
+    VkDescriptorPoolSize mPoolSizes[MAX_DESCRIPTOR_SET_COUNT][1024];
+    u8 mPoolSizeCount[MAX_DESCRIPTOR_SET_COUNT];
 };
 
 
@@ -115,6 +118,12 @@ DECLARE_VK_HANDLE(pipeline) {
 };
 DECLARE_VK_HANDLE(pipeline_cache) {
     VkPipelineCache pipeline_cache;
+};
+
+
+DECLARE_VK_HANDLE(descriptor_set) {
+    VkDescriptorSet set;
+    VkDescriptorPool pool;
 };
 
 } // namespace ant::gal
