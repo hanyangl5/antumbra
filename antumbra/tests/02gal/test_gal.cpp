@@ -171,7 +171,7 @@ TEST_CASE("test gal command pool") {
         cmd_desc.queue_type = gal_queue_type::graphcis;
         cmd_desc.command_pool = cmd_pool;
         cmd_desc.b_secondary = false;
-        result = gal::allocate_command_list(context, &cmd_desc, &cmd);
+        result = gal::get_command_list(context, &cmd_desc, &cmd);
         REQUIRE(result == gal::gal_error_code::SUC);
         result = gal::reset_command_pool(context, cmd_pool);
         REQUIRE(result == gal::gal_error_code::SUC);
@@ -267,7 +267,7 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
 
 TEST_CASE("test pso cache vk") {
     ant::str teststr = "\n\
-        // shader from GPUOpen/Cauldron src\DX12\shaders\TAASharpenerCS.hlsl\n\
+        // shader from GPUOpen/Cauldron src/DX12/shaders/TAASharpenerCS.hlsl\n\
         Texture2D<float4> TAABuffer;\n\
 RWTexture2D<float4> HDR;\n\
 RWTexture2D<float4> History;\n\
@@ -524,7 +524,7 @@ TEST_CASE("test buffer") {
         cmd_desc.command_pool = cmd_pool;
         cmd_desc.b_secondary = false;
         cmd_desc.queue_type = gal_queue_type::graphcis;
-        result = gal::allocate_command_list(context, &cmd_desc, &cmd);
+        result = gal::get_command_list(context, &cmd_desc, &cmd);
         REQUIRE(result == gal::gal_error_code::SUC);
 
         REQUIRE(gal_error_code::SUC == gal::cmd_begin(cmd));
