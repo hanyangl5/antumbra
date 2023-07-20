@@ -4,6 +4,5 @@ add_subdirectory(framework)
 # add_subdirectory(scene_editor)
 add_subdirectory(third_party)
 # add_subdirectory(tools)
-if(NOT APPLE)
-    add_subdirectory(tests)
-endif()
+
+add_subdirectory(tests)
