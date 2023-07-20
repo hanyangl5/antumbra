@@ -360,9 +360,9 @@ void CS_MAIN(uint3 globalID : SV_DispatchThreadID, uint3 localID : SV_GroupThrea
     pipe_desc.desc = comp_pipe_desc;
     pipe_desc.pipeline_cache = pso_cache;
     gal::gal_pipeline comp_pipe{};
-    BENCHMARK("create pipeline without cache") {
+    //BENCHMARK("create pipeline without cache") {
         result = gal::create_compute_pipeline(context, &pipe_desc, &comp_pipe);
-    };
+    //};
 
     REQUIRE(result == gal_error_code::SUC);
     u64 size;
@@ -385,9 +385,9 @@ void CS_MAIN(uint3 globalID : SV_DispatchThreadID, uint3 localID : SV_GroupThrea
     pipe_desc1.desc = comp_pipe_desc1;
     pipe_desc1.pipeline_cache = pso_cache1;
     gal::gal_pipeline comp_pipe1{};
-    BENCHMARK("create pipeline with cache") {
+    //BENCHMARK("create pipeline with cache") {
         result = gal::create_compute_pipeline(context, &pipe_desc1, &comp_pipe1);
-    };
+    //};
     REQUIRE(result == gal_error_code::SUC);
 
     result = gal::destroy_pipeline_cache(context, pso_cache);

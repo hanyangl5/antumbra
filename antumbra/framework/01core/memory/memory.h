@@ -39,10 +39,9 @@ template <typename T> void afree(T *ptr, memory_pool *pool = nullptr) {
     if (!ptr) {
         return;
     }
-    if (std::is_scalar<T>::value && std::is_void<T>::value) {
+    if constexpr (!std::is_scalar<T>::value && !std::is_same<T, void>::value) {
         ptr->~T();
     }
-
     if (pool == nullptr) {
         free(ptr);
     } else {
