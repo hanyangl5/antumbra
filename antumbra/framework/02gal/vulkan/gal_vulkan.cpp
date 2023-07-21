@@ -1546,13 +1546,8 @@ gal_error_code vk_destroy_descriptorpool() {
     return gal_error_code::SUC;
 }
 
-// bit size can be computed by constexpr expression
-struct gal_descriptor_set_desc {
-    gal_rootsignature root_signature;
-    std::variant<u32, gal_descriptor_set_update_freq> set_index;
-};
 
-gal_error_code vk_get_descriptorset(gal_context context, gal_descriptor_set_desc *desc, u32 set_count,
+gal_error_code vk_get_descriptor_set(gal_context context, gal_descriptor_set_desc *desc, u32 set_count,
                                     gal_descriptor_set **sets) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_rootsignature *vk_rs = reinterpret_cast<vk_rootsignature *>(desc->root_signature);
@@ -1575,11 +1570,25 @@ gal_error_code vk_get_descriptorset(gal_context context, gal_descriptor_set_desc
     }
     ant::vector<VkDescriptorSetLayout> set_layouts(&stack_memory);
     std::fill(set_layouts.begin(), set_layouts.end(), vk_rs->set_layouts[std::get<u32>(desc->set_index)]);
+
     vk_descriptorpool_desc dp_desc{};
     dp_desc.numDescriptorSets = set_count;
-    dp_desc.flags;
-    dp_desc.pPoolSizes = vk_rs->mPoolSizes[set_index];
-    dp_desc.numPoolSizes = vk_rs->mPoolSizeCount[set_index];
+    if (set_index == static_cast<u32>(gal_descriptor_set_update_freq::BINDLESS)) {
+        dp_desc.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+    }
+    vk_rs->set_layouts;
+    //    Container::FixedArray<VkDescriptorType, 5> types{
+    //    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_SAMPLER,
+    //    VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE};
+    //auto stack_memory = Memory::GetStackMemoryResource(1024);
+    //Container::Array<VkDescriptorPoolSize> pool_sizes(&stack_memory);
+    //for (auto type : types) {
+    //    pool_sizes.push_back(VkDescriptorPoolSize{type, 2048});
+    //}
+
+    dp_desc.pPoolSizes = vk_rs->descriptor_pool_size[set_index].pool_sizes;
+    dp_desc.numPoolSizes = vk_rs->descriptor_pool_size[set_index].pool_size_count;
+
     VkDescriptorPool pool = VK_NULL_HANDLE;
     gal_error_code res = vk_create_descriptorpool(context, &dp_desc, &pool);
     if (res != gal_error_code::SUC) {
@@ -1677,6 +1686,22 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
             return gal_error_code::ERR;
         }
     }
+
+    // vector
+    ant::hash_map<VkDescriptorType, u32> pool_sizes(&stack_memory);
+
+    // fill descriptorpool sizes;
+    for (auto &resource : refl->m_resources) {
+        if (resource.resource_type == ShaderResourceType::RESOURCE) {
+            pool_sizes[utils_to_vk_descriptor_type(resource.descriptor_type)]++;
+            resource.set;
+            binding.descriptorType = ;
+            binding.stageFlags = stages;
+            bindings[binding_offsets[set_index_map[resource.set]]++] = std::move(binding);
+        }
+    }
+    vk_rs->descriptor_pool_size[]
+
     VkPipelineLayoutCreateInfo plci{};
     plci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     plci.pNext = nullptr;
@@ -1690,6 +1715,8 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
     if (result != VK_SUCCESS) {
         return gal_error_code::ERR;
     }
+
+
     *root_signature = vk_rs;
 
     return gal_error_code::SUC;

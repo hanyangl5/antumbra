@@ -801,4 +801,9 @@ DECLARE_GAL_HANDLE(gal_descriptor_set){
 
 enum class gal_descriptor_set_update_freq { NONE, PER_FRAME, PER_BATCH, PER_DRAW, BINDLESS };
 
+// bit size can be computed by constexpr expression
+struct gal_descriptor_set_desc {
+    gal_rootsignature root_signature;
+    std::variant<u32, gal_descriptor_set_update_freq> set_index;
+};
 } // namespace ant::gal

@@ -108,8 +108,12 @@ DECLARE_VK_HANDLE(rootsignature) {
     VkPipelineLayout pipeline_layout;
     ant::fixed_array<VkDescriptorSetLayout, MAX_DESCRIPTOR_SET_COUNT> set_layouts;
 
-    VkDescriptorPoolSize mPoolSizes[MAX_DESCRIPTOR_SET_COUNT][1024];
-    u8 mPoolSizeCount[MAX_DESCRIPTOR_SET_COUNT];
+    struct pool_size_desc {
+        VkDescriptorPoolSize *pool_sizes;
+        u32 pool_size_count;
+    };
+
+    ant::fixed_array<pool_size_desc, MAX_DESCRIPTOR_SET_COUNT> descriptor_pool_size;
 };
 
 
