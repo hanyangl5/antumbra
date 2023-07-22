@@ -1541,7 +1541,8 @@ gal_error_code vk_get_descriptor_set(gal_context context, gal_descriptor_set_des
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_rootsignature *vk_rs = reinterpret_cast<vk_rootsignature *>(desc->root_signature);
     //vk_descriptor_set *vk_ds = ant::memory::alloc<ant::gal::vk_descriptor_set>(nullptr);
-    u32 set_index = std::get<u32>(desc->set_index);
+
+    u32 set_index = desc->set.index;
     if (set_index > MAX_DESCRIPTOR_SET_COUNT) {
         return gal_error_code::ERR;
     }
@@ -1561,7 +1562,7 @@ gal_error_code vk_get_descriptor_set(gal_context context, gal_descriptor_set_des
     }
     ant::vector<VkDescriptorSetLayout> set_layouts(&stack_memory);
     set_layouts.resize(set_count);
-    std::fill(set_layouts.begin(), set_layouts.end(), vk_rs->set_layouts[std::get<u32>(desc->set_index)]);
+    std::fill(set_layouts.begin(), set_layouts.end(), vk_rs->set_layouts[desc->set.index]);
     vk_descriptor_pool_desc dp_desc{};
     dp_desc.numDescriptorSets = set_count;
     dp_desc.flags =
@@ -1591,10 +1592,12 @@ gal_error_code vk_get_descriptor_set(gal_context context, gal_descriptor_set_des
 
     vk_dp->pool = pool;
     vk_dp->ref_count = set_count;
+    vk_dp->descriptor_set_update_template = vk_rs->descriptor_set_update_template[set_index];
 
     for (u32 i = 0; i < set_count; i++) {
         vk_ds[i].set = vk_sets[i];
         vk_ds[i].pool = vk_dp;
+        vk_ds[i].set_index = set_index;
         sets[i] = &vk_ds[i];
     }
     return gal_error_code::SUC;
@@ -1623,9 +1626,21 @@ gal_error_code vk_free_descriptor_set(gal_context context, gal_descriptor_set se
     return gal_error_code::SUC;
 }
 
-//gal_error_code vk_update_descriptor_set(gal_context, gal_descriptor_set set) {
-//
-//}
+gal_error_code vk_update_descriptor_set(gal_context context, gal_descriptor_set_update_desc *update_desc,
+                                        gal_descriptor_set set) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
+    vk_descriptor_set *vk_ds = reinterpret_cast<vk_descriptor_set *>(set);
+
+    VkDescriptorUpdateData *descriptor_updates;
+    
+    for (u32 i = 0; i < update_desc->count; i++) {
+        update_desc->updates[i];
+    }
+
+    vkUpdateDescriptorSetWithTemplate(vk_ctx->device, vk_ds->set, vk_ds->pool->descriptor_set_update_template,
+                                      descriptor_updates);
+    return gal_error_code::SUC;
+}
 
 gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_desc *desc,
                                        gal_rootsignature *root_signature) {
@@ -1652,19 +1667,19 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
     ant::vector<VkDescriptorSetLayoutBinding> bindings(&stack_memory);
     //ant::vector<u32> binding_prefix_sum(refl->sets.size(), &stack_memory);
     ant::vector<u32> binding_offsets(refl->sets.size(), &stack_memory);
-    u32 binding_count = 0;
+    u32 total_binding_count = 0;
     ant::map<u32, u32> set_index_map(&stack_memory);
     for (u32 i = 0; i < refl->sets.size(); i++) {
         u32 set_index = (refl->sets[i] >> 16) & 0x0000ffff; // first 16bit
         u32 set_binding_count = refl->sets[i] & 0x0000ffff; // last 16bit
 
         set_index_map.insert({set_index, i});
-        binding_offsets[i] = binding_count;
-        binding_count += set_binding_count;
+        binding_offsets[i] = total_binding_count;
+        total_binding_count += set_binding_count;
         //binding_prefix_sum[i] = set_binding_count;
     }
 
-    bindings.resize(binding_count);
+    bindings.resize(total_binding_count);
 
     ant::vector<VkPushConstantRange> push_constants(&stack_memory);
     VkShaderStageFlags stages = util_to_vk_shader_stage_flags(desc->shader->stages());
@@ -1678,13 +1693,12 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
             binding.descriptorType = utils_to_vk_descriptor_type(resource.descriptor_type);
             binding.stageFlags = stages;
             bindings[binding_offsets[set_index_map[resource.set]]++] = std::move(binding);
-            if (resource.set == 2) {
-                return gal_error_code::ERR;
-            }
         } else if (resource.resource_type == ShaderResourceType::PUSH_CONSTANT) {
             push_constants.emplace_back(VkPushConstantRange{stages, 0, 0});
         }
     }
+
+    // binding offsets is prefix sum now
 
     VkResult result = VK_SUCCESS;
 
@@ -1749,6 +1763,60 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
     result = vkCreatePipelineLayout(vk_ctx->device, &plci, nullptr, &vk_rs->pipeline_layout);
     if (result != VK_SUCCESS) {
         return gal_error_code::ERR;
+    }
+
+    // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/vkUpdateDescriptorSetWithTemplate.html
+    ant::vector<VkDescriptorUpdateTemplateEntry> descriptor_update_template_entries(&stack_memory);
+    descriptor_update_template_entries.resize(total_binding_count);
+
+    u32 offsets = 0;
+
+    //auto get_offset = [](VkDescriptorType type) -> u32 {
+    //    return sizeof(VkDescriptorUpdateData);
+    //    //if (type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER || type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
+    //    //    return sizeof(VkDescriptorBufferInfo);
+    //    //} else if (type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ||
+    //    //           type == VK_DESCRIPTOR_TYPE_SAMPLER) {
+    //    //    return sizeof(VkDescriptorImageInfo);
+    //    //} else {
+    //    //    return 0;
+    //    //}
+    //};
+
+    for (int i = 0; i < bindings.size(); i++) {
+        descriptor_update_template_entries[i].dstBinding = bindings[i].binding;
+        descriptor_update_template_entries[i].descriptorType = bindings[i].descriptorType;
+        descriptor_update_template_entries[i].descriptorCount = bindings[i].descriptorCount;
+        descriptor_update_template_entries[i].dstArrayElement = 0;
+        descriptor_update_template_entries[i].offset = offsets;
+        descriptor_update_template_entries[i].stride = bindings[i].descriptorCount == 1 ? 0 : bindings[i].binding;
+        offsets += bindings[i].descriptorCount * sizeof(VkDescriptorUpdateData); // more memory footprint but more flexible
+    }
+
+    for (u32 i = 0; i < refl->sets.size(); i++) {
+        u32 set_index = (refl->sets[i] >> 16) & 0x0000ffff; // first 16bit
+
+        VkDescriptorUpdateTemplateCreateInfo dsut_ci{};
+
+        dsut_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO;
+        dsut_ci.pNext = nullptr;
+        dsut_ci.flags = 0;
+        dsut_ci.templateType = VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET;
+        dsut_ci.descriptorUpdateEntryCount =
+            (i == 0) ? binding_offsets[i] : (binding_offsets[i] - binding_offsets[i - 1]);
+        dsut_ci.pDescriptorUpdateEntries =
+            descriptor_update_template_entries.data() + ((i == 0) ? 0 : binding_offsets[i - 1]);
+        dsut_ci.descriptorSetLayout = vk_rs->set_layouts[set_index];
+
+        dsut_ci.pipelineBindPoint = utils_to_vk_pipeline_bind_point(desc->type); // ignored by given templateType
+        dsut_ci.pipelineLayout = vk_rs->pipeline_layout;                         // ignored by given templateType
+        dsut_ci.set = set_index;                                                 // ignored by given templateType
+
+        result = vkCreateDescriptorUpdateTemplate(vk_ctx->device, &dsut_ci, nullptr,
+                                                  &vk_rs->descriptor_set_update_template[set_index]);
+        if (result != VK_SUCCESS) {
+            return gal_error_code::ERR;
+        }
     }
 
     *root_signature = vk_rs;

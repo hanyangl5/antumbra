@@ -104,6 +104,7 @@ DECLARE_VK_HANDLE(shader_program) {
 DECLARE_VK_HANDLE(rootsignature) {
     VkPipelineLayout pipeline_layout;
     ant::fixed_array<VkDescriptorSetLayout, MAX_DESCRIPTOR_SET_COUNT> set_layouts;
+    ant::fixed_array<VkDescriptorUpdateTemplate, MAX_DESCRIPTOR_SET_COUNT> descriptor_set_update_template;
 
     struct vk_pool_size_desc {
         VkDescriptorPoolSize *pool_sizes;
@@ -118,8 +119,11 @@ DECLARE_VK_HANDLE(pipeline_cache) { VkPipelineCache pipeline_cache; };
 
 struct vk_descriptor_pool {
     VkDescriptorPool pool;
-    //std::atomic<u32> ref_count;
+    //std::atomic<u32> ref_count; // TODO(hyl5): consider the thread safety
     u32 ref_count = 0;
+    // precompute the descriptor set update template when create pipeline layout, require vulkan 1.1
+    // https://github.com/SakuraEngine/SakuraEngine/blob/main/modules/runtime/src/cgpu/vulkan/cgpu_vulkan.c
+    VkDescriptorUpdateTemplate descriptor_set_update_template; 
 };
 
 struct vk_descriptor_pool_desc {
@@ -132,6 +136,13 @@ struct vk_descriptor_pool_desc {
 DECLARE_VK_HANDLE(descriptor_set) {
     VkDescriptorSet set;
     vk_descriptor_pool *pool;
+};
+
+// https://github.com/SakuraEngine/SakuraEngine/blob/main/modules/runtime/include/cgpu/backend/vulkan/cgpu_vulkan.h#L429
+union VkDescriptorUpdateData {
+    VkDescriptorImageInfo image_info;
+    VkDescriptorBufferInfo buffer_info;
+    VkBufferView buffer_view;
 };
 
 } // namespace ant::gal

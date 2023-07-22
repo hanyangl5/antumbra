@@ -26,7 +26,6 @@ inline void read_resource_size(const spirv_cross::Compiler &compiler, const spir
     const auto &spirv_type = compiler.get_type_from_variable(resource.id);
 
     size_t array_size = 1;
-
     shader_resource.size = static_cast<u32>(compiler.get_declared_struct_size_runtime_array(spirv_type, array_size));
 }
 
@@ -253,7 +252,7 @@ void compiled_shader_group::create_pipeline_reflection() {
         return;
     }
 
-    m_pipeline_reflection = ant::memory::alloc<pipeline_reflection>();
+    m_pipeline_reflection = ant::memory::alloc<pipeline_reflection>(nullptr);
 
     if (m_b_same_root_signature) {
         // we only need to set from one shader beacuse all shader in one shader group share the same root signature

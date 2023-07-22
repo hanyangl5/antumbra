@@ -1,5 +1,6 @@
 
 #include "test_gal.h"
+
 using namespace ant;
 using namespace ant::gal;
 TEST_CASE("test context initialization") {
@@ -464,7 +465,7 @@ TEST_CASE("test compute vk") {
     sg.release();
 }
 
-TEST_CASE("test buffer") {
+TEST_CASE("buffer test") {
     auto command_test = [](gal::gal_api api) {
         ant::gal::gal_command_pool cmd_pool{};
         gal::gal_context context = initialize(api);
@@ -585,5 +586,108 @@ TEST_CASE("test buffer") {
     };
     command_test(gal_api::VULKAN);
 }
+#define DECLARE_VK_HANDLE(name) 
 
-TEST_CASE("descriptor set") {}
+struct vk_buffer : public gal_buffer_T {
+    VkBuffer m_buffer;
+};
+TEST_CASE("descriptor set") {
+    ant::str test_cs = "\
+#define UPDATE_FREQ_NONE space0\n\
+#define UPDATE_FREQ_PER_FRAME space1\n\
+#define UPDATE_FREQ_PER_BATCH space2\n\
+#define UPDATE_FREQ_PER_DRAW space3\n\
+#define UPDATE_FREQ_BINDLESS space4\n\
+#define CBUFFER(NAME, FREQ) cbuffer NAME : register(FREQ)\n\
+#define RES(TYPE, NAME, FREQ) TYPE NAME : register(FREQ)\n\
+RES(RWStructuredBuffer<uint>, sbuffer, UPDATE_FREQ_NONE);// dxc will generate a counter buffer \n\
+RES(SamplerState, spl, UPDATE_FREQ_BINDLESS);\n\
+        [numthreads(8, 8, 1)]\n\
+void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
+{\n\
+    sbuffer[0]=5; \n\
+    sbuffer[7]=3; \n\
+}";
+    gal_error_code result;
+    using namespace ant::gal;
+    // compile shader from source
+    gal::gal_context context = initialize(gal_api::VULKAN);
+    shader_compiler sc;
+    shader_source_blob source;
+    source.set(test_cs.data(), test_cs.size());
+
+    shader_compile_desc desc;
+    desc.entry = "CS_MAIN";
+    desc.optimization_level = shader_optimization_level::NONE;
+    desc.target_api = shader_blob_type::SPIRV;
+    desc.target_profile = shader_target_profile::CS_6_0;
+
+    gal::gal_shader_program sp{};
+    gal::compiled_shader_group sg{};
+    gal::shader_gourp_source_desc sg_desc{};
+
+    sg_desc.desc_comp = &desc;
+    sg.set_from_source(&source, &sg_desc);
+
+    // root signature
+    gal::gal_rootsignature rs{};
+    gal::gal_rootsignature_desc rs_desc{};
+    rs_desc.shader = &sg;
+    rs_desc.type = gal_pipeline_type::COMPUTE;
+    result = gal::create_rootsignature(context, &rs_desc, &rs);
+    REQUIRE(result == gal_error_code::SUC);
+
+    // create shader program
+    gal::gal_shader_program_desc sp_desc{};
+    sp_desc.shader_group = &sg;
+
+    result = gal::create_shader_program(context, &sp_desc, &sp);
+    REQUIRE(result == gal_error_code::SUC);
+
+    // create pso
+    gal_compute_pipeline_desc comp_pipe_desc{};
+    comp_pipe_desc.root_signature = rs;
+    comp_pipe_desc.shader = sp;
+
+    gal_pipeline_desc pipe_desc{};
+    pipe_desc.desc = comp_pipe_desc;
+
+    gal::gal_pipeline comp_pipe{};
+    result = gal::create_compute_pipeline(context, &pipe_desc, &comp_pipe);
+    REQUIRE(result == gal_error_code::SUC);
+
+
+    gal_descriptor_set ds{};
+    gal_descriptor_set_desc ds_desc{};
+    ds_desc.root_signature = rs;
+    ds_desc.set.freq = gal_descriptor_set_update_freq::NONE;
+
+    gal::gal_buffer buf{};
+gal_buffer_desc buf_desc;
+buf_desc.descriptor_types = gal_descriptor_type::RW_BUFFER;
+buf_desc.memory_flags = gal_memory_flag::GPU_DEDICATED;
+buf_desc.size = 1024;
+buf_desc.initial_state = gal_resource_state::RW_BUFFER;
+buf_desc.flags = gal_buffer_flag::OWN_MEMORY;
+result = gal::create_buffer(context, &buf_desc, &buf);
+
+
+    result = gal::get_descriptor_set(context, &ds_desc, 1, &ds);
+    REQUIRE(result == gal_error_code::SUC);
+
+    gal_descriptor_upate_desc buf_descriptor_update_desc;
+    buf_descriptor_update_desc.buffer.buffer = buf;
+    buf_descriptor_update_desc.buffer.offset = 0;
+    buf_descriptor_update_desc.buffer.range = 1024;
+
+    gal_descriptor_set_update_desc ds_update_desc{};
+    ds_update_desc.updates = &buf_descriptor_update_desc;
+
+    result = gal::update_descriptor_set(context, &ds_update_desc, ds);
+    REQUIRE(result == gal_error_code::SUC);
+    result = gal::destroy_pipeline(context, comp_pipe);
+    REQUIRE(result == gal_error_code::SUC);
+    result = gal::destroy_rootsignature(context, rs);
+    REQUIRE(result == gal_error_code::SUC);
+    sg.release();
+}

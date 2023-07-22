@@ -99,7 +99,10 @@ __GAL_HELPER_MACRO__(gal_error_code, destroy_pipeline, gal_context context, gal_
 // consume the descriptor_set from pool
 __GAL_HELPER_MACRO__(gal_error_code, get_descriptor_set, gal_context context, gal_descriptor_set_desc *desc, u32 set_count, gal_descriptor_set *sets);
 __GAL_HELPER_MACRO__(gal_error_code, free_descriptor_set, gal_context context, gal_descriptor_set set, bool free_all_pool);
-__GAL_HELPER_MACRO__(gal_error_code, create_rootsignature, gal_context context, gal_rootsignature_desc* desc, gal_rootsignature* root_signature);
+
+__GAL_HELPER_MACRO__(gal_error_code, update_descriptor_set, gal_context context,
+                     gal_descriptor_set_update_desc *update_desc, gal_descriptor_set set);
+    __GAL_HELPER_MACRO__(gal_error_code, create_rootsignature, gal_context context, gal_rootsignature_desc* desc, gal_rootsignature* root_signature);
 __GAL_HELPER_MACRO__(gal_error_code, destroy_rootsignature, gal_context context, gal_rootsignature root_signature);
 // sync
 __GAL_HELPER_MACRO__(gal_error_code, create_fence, gal_context context, gal_fence* fence);

@@ -659,6 +659,7 @@ struct gal_pipeline_cache_desc {
 // struct to consume descriptor_set
 
 struct gal_rootsignature_desc {
+    gal_pipeline_type type; //  determin the pipeline 
     compiled_shader_group *shader;
 };
 
@@ -793,6 +794,78 @@ enum class gal_descriptor_set_update_freq { NONE, PER_FRAME, PER_BATCH, PER_DRAW
 // bit size can be computed by constexpr expression
 struct gal_descriptor_set_desc {
     gal_rootsignature root_signature;
-    std::variant<u32, gal_descriptor_set_update_freq> set_index;
+    union SetIndex{
+        u32 index;
+        gal_descriptor_set_update_freq freq;
+    } set;
 };
+
+struct buffer_descriptor_update_desc {
+    gal_buffer buffer;
+    u32 range;
+    u32 offset;
+};
+
+struct texture_descriptor_update_desc {
+
+};
+
+struct sampler_descriptor_update_desc {
+
+};
+
+union gal_descriptor_upate_desc {
+    buffer_descriptor_update_desc buffer;
+    texture_descriptor_update_desc texture;
+    sampler_descriptor_update_desc sampler;
+};
+
+struct gal_descriptor_set_update_desc {
+
+    gal_descriptor_upate_desc *updates;
+    u32 count;
+    /// User can either set name of descriptor or index (index in pRootSignature->pDescriptors array)
+    /// Name of descriptor
+    //const char *pName;
+    ///// Number of array entries to update (array size of ppTextures/ppBuffers/...)
+    //uint32_t mCount : 31;
+    ///// Dst offset into the array descriptor (useful for updating few entries in a large array)
+    //// Example: to update 6th entry in a bindless texture descriptor, mArrayOffset will be 6 and mCount will be 1)
+    //uint32_t mArrayOffset : 20;
+    //// Index in pRootSignature->pDescriptors array - Cache index using getDescriptorIndexFromName to avoid using string checks at runtime
+    //uint32_t mIndex : 10;
+    //uint32_t mBindByIndex : 1;
+
+    //// Range to bind (buffer offset, size)
+    //DescriptorDataRange *pRanges;
+
+    //// Binds stencil only descriptor instead of color/depth
+    //bool mBindStencilResource : 1;
+
+    //union {
+    //    struct {
+    //        // When binding UAV, control the mip slice to to bind for UAV (example - generating mipmaps in a compute shader)
+    //        uint16_t mUAVMipSlice;
+    //        // Binds entire mip chain as array of UAV
+    //        bool mBindMipChain;
+    //    };
+    //    struct {
+    //        // Bind MTLIndirectCommandBuffer along with the MTLBuffer
+    //        const char *pICBName;
+    //        uint32_t mICBIndex;
+    //        bool mBindICB;
+    //    };
+    //};
+    /// Array of resources containing descriptor handles or constant to be used in ring buffer memory - DescriptorRange can hold only one resource type array
+    //union {
+    //    /// Array of texture descriptors (srv and uav textures)
+    //    gal_texture *textures;
+    //    /// Array of sampler descriptors
+    //    gal_sampler *samplers;
+    //    /// Array of buffer descriptors (srv, uav and cbv buffers)
+    //    gal_buffer *buffers;
+    //};
+    //void *data;
+};
+
 } // namespace ant::gal
