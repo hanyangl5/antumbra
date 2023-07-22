@@ -1623,9 +1623,9 @@ gal_error_code vk_free_descriptor_set(gal_context context, gal_descriptor_set se
     return gal_error_code::SUC;
 }
 
-gal_error_code vk_update_descriptor_set(gal_context, gal_descriptor_set set) {
-
-}
+//gal_error_code vk_update_descriptor_set(gal_context, gal_descriptor_set set) {
+//
+//}
 
 gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_desc *desc,
                                        gal_rootsignature *root_signature) {
