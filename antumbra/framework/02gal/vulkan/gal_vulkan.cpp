@@ -1512,20 +1512,9 @@ gal_error_code vk_destroy_pipeline(gal_context context, gal_pipeline pipeline) {
     return gal_error_code::SUC;
 }
 
-struct vk_descriptorpool {
-    VkDescriptorPool pool;
-};
-
-struct vk_descriptorpool_desc {
-    u32 numDescriptorSets;
-    VkDescriptorPoolCreateFlags flags;
-    const VkDescriptorPoolSize *pPoolSizes;
-    u32 numPoolSizes;
-};
-
 // we don't expose descriptor pool creation in gal
 // A descriptor pool maintains a pool of descriptors, from which descriptor sets are allocated. Descriptor pools are externally synchronized, meaning that the application must not allocate and/or free descriptor sets from the same pool in multiple threads simultaneously.
-gal_error_code vk_create_descriptorpool(gal_context context, vk_descriptorpool_desc *desc, VkDescriptorPool *pool) {
+gal_error_code vk_create_descriptor_pool(gal_context context, vk_descriptor_pool_desc *desc, VkDescriptorPool *pool) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     VkDescriptorPoolCreateInfo descriptor_pool_ci{};
     descriptor_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -1535,26 +1524,23 @@ gal_error_code vk_create_descriptorpool(gal_context context, vk_descriptorpool_d
     descriptor_pool_ci.flags = desc->flags;
     descriptor_pool_ci.maxSets = desc->numDescriptorSets;
 
-    VkResult result = (vkCreateDescriptorPool(vk_ctx->device, &descriptor_pool_ci, nullptr, pool));
+    VkResult result = vkCreateDescriptorPool(vk_ctx->device, &descriptor_pool_ci, nullptr, pool);
     if (result != VK_SUCCESS) {
         return gal_error_code::ERR;
     }
     return gal_error_code::SUC;
 }
-gal_error_code vk_destroy_descriptorpool() {
-    //vkDestroyDescriptorPool();
+gal_error_code vk_destroy_descriptor_pool(gal_context context, vk_descriptor_pool *pool) {
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
+    vkDestroyDescriptorPool(vk_ctx->device, pool->pool, nullptr);
     return gal_error_code::SUC;
 }
 
-
 gal_error_code vk_get_descriptor_set(gal_context context, gal_descriptor_set_desc *desc, u32 set_count,
-                                    gal_descriptor_set **sets) {
+                                     gal_descriptor_set *sets) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_rootsignature *vk_rs = reinterpret_cast<vk_rootsignature *>(desc->root_signature);
-    vk_descriptor_set *vk_ds = ant::memory::alloc<ant::gal::vk_descriptor_set>(nullptr);
-    if (!vk_ds) {
-        return gal_error_code::ERR;
-    }
+    //vk_descriptor_set *vk_ds = ant::memory::alloc<ant::gal::vk_descriptor_set>(nullptr);
     u32 set_index = std::get<u32>(desc->set_index);
     if (set_index > MAX_DESCRIPTOR_SET_COUNT) {
         return gal_error_code::ERR;
@@ -1562,35 +1548,33 @@ gal_error_code vk_get_descriptor_set(gal_context context, gal_descriptor_set_des
     if (!vk_rs->set_layouts[set_index]) {
         return gal_error_code::ERR;
     }
+    vk_descriptor_set *vk_ds =
+        (ant::gal::vk_descriptor_set *)ant::memory::amalloc(set_count * sizeof(ant::gal::vk_descriptor_set));
+    if (!vk_ds) {
+        return gal_error_code::ERR;
+    }
 
-    ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 128);
+    ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 2048);
     ant::vector<VkDescriptorSet> vk_sets(&stack_memory);
     for (u32 i = 0; i < set_count; i++) {
-        vk_sets.push_back(reinterpret_cast<vk_descriptor_set *>(sets[i])->set);
+        vk_sets.push_back(vk_ds[i].set);
     }
     ant::vector<VkDescriptorSetLayout> set_layouts(&stack_memory);
+    set_layouts.resize(set_count);
     std::fill(set_layouts.begin(), set_layouts.end(), vk_rs->set_layouts[std::get<u32>(desc->set_index)]);
-
-    vk_descriptorpool_desc dp_desc{};
+    vk_descriptor_pool_desc dp_desc{};
     dp_desc.numDescriptorSets = set_count;
+    dp_desc.flags =
+        VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; // TODO(hyl5): https://community.arm.com/arm-community-blogs/b/graphics-gaming-and-vr-blog/posts/vulkan-descriptor-and-buffer-management
     if (set_index == static_cast<u32>(gal_descriptor_set_update_freq::BINDLESS)) {
         dp_desc.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
     }
-    vk_rs->set_layouts;
-    //    Container::FixedArray<VkDescriptorType, 5> types{
-    //    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_SAMPLER,
-    //    VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE};
-    //auto stack_memory = Memory::GetStackMemoryResource(1024);
-    //Container::Array<VkDescriptorPoolSize> pool_sizes(&stack_memory);
-    //for (auto type : types) {
-    //    pool_sizes.push_back(VkDescriptorPoolSize{type, 2048});
-    //}
-
     dp_desc.pPoolSizes = vk_rs->descriptor_pool_size[set_index].pool_sizes;
     dp_desc.numPoolSizes = vk_rs->descriptor_pool_size[set_index].pool_size_count;
+    vk_descriptor_pool *vk_dp = ant::memory::alloc<vk_descriptor_pool>(nullptr);
 
     VkDescriptorPool pool = VK_NULL_HANDLE;
-    gal_error_code res = vk_create_descriptorpool(context, &dp_desc, &pool);
+    gal_error_code res = vk_create_descriptor_pool(context, &dp_desc, &pool);
     if (res != gal_error_code::SUC) {
         return gal_error_code::ERR;
     }
@@ -1604,18 +1588,45 @@ gal_error_code vk_get_descriptor_set(gal_context context, gal_descriptor_set_des
     if (result != VK_SUCCESS) {
         return gal_error_code::ERR;
     }
+
+    vk_dp->pool = pool;
+    vk_dp->ref_count = set_count;
+
     for (u32 i = 0; i < set_count; i++) {
-        reinterpret_cast<vk_descriptor_set *>(sets[i])->pool = pool;
+        vk_ds[i].set = vk_sets[i];
+        vk_ds[i].pool = vk_dp;
+        sets[i] = &vk_ds[i];
     }
     return gal_error_code::SUC;
 }
-gal_error_code vk_free_descriptorset(gal_context context) {
-    if (context) {
+gal_error_code vk_free_descriptor_set(gal_context context, gal_descriptor_set set, bool free_all_pool) {
+
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
+    vk_descriptor_set *vk_ds = reinterpret_cast<vk_descriptor_set *>(set);
+
+    // already freed
+    if (vk_ds->pool->ref_count == 0 || vk_ds->pool == nullptr) {
         return gal_error_code::ERR;
     }
-    //vkFreeDescriptorSets()
+
+    if (free_all_pool || --vk_ds->pool->ref_count == 0) {
+        vk_destroy_descriptor_pool(vk_ctx, vk_ds->pool);
+        ant::memory::afree(vk_ds->pool);
+        vk_ds->pool = nullptr;
+    } else {
+        VkResult result = vkFreeDescriptorSets(vk_ctx->device, vk_ds->pool->pool, 1, &vk_ds->set);
+        if (result != VK_SUCCESS) {
+            return gal_error_code::ERR;
+        }
+    }
+
     return gal_error_code::SUC;
 }
+
+gal_error_code vk_update_descriptor_set(gal_context, gal_descriptor_set set) {
+
+}
+
 gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_desc *desc,
                                        gal_rootsignature *root_signature) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
@@ -1642,12 +1653,12 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
     //ant::vector<u32> binding_prefix_sum(refl->sets.size(), &stack_memory);
     ant::vector<u32> binding_offsets(refl->sets.size(), &stack_memory);
     u32 binding_count = 0;
-    ant::map<int, int> set_index_map;
+    ant::map<u32, u32> set_index_map(&stack_memory);
     for (u32 i = 0; i < refl->sets.size(); i++) {
         u32 set_index = (refl->sets[i] >> 16) & 0x0000ffff; // first 16bit
         u32 set_binding_count = refl->sets[i] & 0x0000ffff; // last 16bit
 
-        set_index_map.insert({i, set_index});
+        set_index_map.insert({set_index, i});
         binding_offsets[i] = binding_count;
         binding_count += set_binding_count;
         //binding_prefix_sum[i] = set_binding_count;
@@ -1667,6 +1678,9 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
             binding.descriptorType = utils_to_vk_descriptor_type(resource.descriptor_type);
             binding.stageFlags = stages;
             bindings[binding_offsets[set_index_map[resource.set]]++] = std::move(binding);
+            if (resource.set == 2) {
+                return gal_error_code::ERR;
+            }
         } else if (resource.resource_type == ShaderResourceType::PUSH_CONSTANT) {
             push_constants.emplace_back(VkPushConstantRange{stages, 0, 0});
         }
@@ -1675,39 +1689,60 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
     VkResult result = VK_SUCCESS;
 
     for (u32 i = 0; i < set_count; i++) {
-        VkDescriptorSetLayoutCreateInfo &ci = set_layouts_ci[i];
+        u32 set_index = (refl->sets[i] >> 16) & 0x0000ffff; // first 16bit
+        VkDescriptorSetLayoutCreateInfo &ci = set_layouts_ci[set_index];
         ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ci.pNext = nullptr;
         ci.flags = 0;
         ci.bindingCount = (i == 0) ? binding_offsets[i] : (binding_offsets[i] - binding_offsets[i - 1]);
         ci.pBindings = bindings.data() + ((i == 0) ? 0 : binding_offsets[i - 1]);
-        result = vkCreateDescriptorSetLayout(vk_ctx->device, &ci, nullptr, &vk_rs->set_layouts[i]);
+        result = vkCreateDescriptorSetLayout(vk_ctx->device, &ci, nullptr, &vk_rs->set_layouts[set_index]);
         if (result != VK_SUCCESS) {
             return gal_error_code::ERR;
         }
     }
 
-    // vector
-    ant::hash_map<VkDescriptorType, u32> pool_sizes(&stack_memory);
-
-    // fill descriptorpool sizes;
+    // FIXME(hyl5): too many nested containers here
+    ant::vector<ant::hash_map<VkDescriptorType, u32>> pool_sizes(&stack_memory);
+    pool_sizes.resize(refl->sets.size());
+    // fill descriptor_pool sizes;
     for (auto &resource : refl->m_resources) {
         if (resource.resource_type == ShaderResourceType::RESOURCE) {
-            pool_sizes[utils_to_vk_descriptor_type(resource.descriptor_type)]++;
-            resource.set;
-            binding.descriptorType = ;
-            binding.stageFlags = stages;
-            bindings[binding_offsets[set_index_map[resource.set]]++] = std::move(binding);
+            pool_sizes[set_index_map[resource.set]][utils_to_vk_descriptor_type(resource.descriptor_type)]++;
         }
     }
-    vk_rs->descriptor_pool_size[]
+
+    for (auto &set : refl->sets) {
+        u32 set_index = (set >> 16) & 0x0000ffff; // first 16bit
+        // TODO(hyl5): don't forget to free
+        VkDescriptorPoolSize *vk_pool_sizes = static_cast<VkDescriptorPoolSize *>(
+            ant::memory::amalloc(pool_sizes[set_index_map[set_index]].size() * sizeof(VkDescriptorPoolSize)));
+        VkDescriptorPoolSize *p = vk_pool_sizes;
+        for (auto &size : pool_sizes[set_index_map[set_index]]) {
+            p->type = size.first;
+            p->descriptorCount = size.second;
+            p++;
+        }
+        vk_rs->descriptor_pool_size[set_index].pool_size_count =
+            static_cast<u32>(pool_sizes[set_index_map[set_index]].size());
+        vk_rs->descriptor_pool_size[set_index].pool_sizes = vk_pool_sizes;
+    }
+    ant::fixed_array<VkDescriptorSetLayout, MAX_DESCRIPTOR_SET_COUNT> layouts;
+    {
+        int i = 0;
+        for (auto &layout : vk_rs->set_layouts) {
+            if (layout != VK_NULL_HANDLE) {
+                layouts[i++] = layout;
+            }
+        }
+    }
 
     VkPipelineLayoutCreateInfo plci{};
     plci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     plci.pNext = nullptr;
     plci.flags = 0;
     plci.setLayoutCount = set_count;
-    plci.pSetLayouts = vk_rs->set_layouts.data();
+    plci.pSetLayouts = layouts.data();
     plci.pushConstantRangeCount = static_cast<u32>(push_constants.size());
     plci.pPushConstantRanges = push_constants.data();
 
@@ -1715,7 +1750,6 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
     if (result != VK_SUCCESS) {
         return gal_error_code::ERR;
     }
-
 
     *root_signature = vk_rs;
 
@@ -2145,7 +2179,7 @@ gal_error_code vk_cmd_bind_vertex_buffer(gal_command_list command, u32 vertex_bu
     vkCmdBindVertexBuffers(vk_cmd->m_command, 0, vertex_buffer_count, buffers.data(), vb_offsets.data());
     return gal_error_code::SUC;
 }
-gal_error_code vk_cmd_bind_descriptorset() {
+gal_error_code vk_cmd_bind_descriptor_set() {
     //vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
 
     //vkCmdBindDescriptorSets();

@@ -1193,21 +1193,21 @@
 //    //d3d12_context *d3d12_ctx;
 //    return gal_error_code::SUC;
 //}
-//gal_error_code d3d12_create_descriptorpool() {
+//gal_error_code d3d12_create_descriptor_pool() {
 //    //d3d12_context *d3d12_ctx;
 //    //d3d12_ctx->device->CreateDescriptorHeap();
 //    return gal_error_code::SUC;
 //}
-//gal_error_code d3d12_destroy_descriptorpool() {
+//gal_error_code d3d12_destroy_descriptor_pool() {
 //    //d3d12_context *d3d12_ctx;
 //
 //    return gal_error_code::SUC;
 //}
-//gal_error_code d3d12_consume_descriptorset() {
+//gal_error_code d3d12_consume_descriptor_set() {
 //    //d3d12_context *d3d12_ctx;
 //    return gal_error_code::SUC;
 //}
-//gal_error_code d3d12_free_descriptorset() {
+//gal_error_code d3d12_free_descriptor_set() {
 //    //d3d12_context *d3d12_ctx;
 //    return gal_error_code::SUC;
 //}
@@ -1309,7 +1309,7 @@
 //    //d3d12_cmd->command_list->IASetVertexBuffers();
 //    return gal_error_code::SUC;
 //}
-//gal_error_code d3d12_cmd_bind_descriptorset() {
+//gal_error_code d3d12_cmd_bind_descriptor_set() {
 //    //d3d12_context *d3d12_ctx;
 //    //d3d12_command_list *d3d12_cmd;
 //    return gal_error_code::SUC;

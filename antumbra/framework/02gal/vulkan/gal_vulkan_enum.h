@@ -1,16 +1,16 @@
 #pragma once
 
-#include <variant>
-#include <mutex>
 #include "../enum.h"
 #include "../gal.h"
+#include <atomic>
+#include <mutex>
+#include <variant>
 
 namespace ant::gal {
 
 #define DECLARE_VK_HANDLE(name) struct vk_##name : public gal_##name##_T
 
-
-DECLARE_VK_HANDLE(queue){
+DECLARE_VK_HANDLE(queue) {
     bool used = false;
     u32 queue_family_index = 0;
     VkQueue queue = VK_NULL_HANDLE;
@@ -30,7 +30,6 @@ DECLARE_VK_HANDLE(context) {
     f32 default_queue_property = 0.0f;
 };
 
-
 DECLARE_VK_HANDLE(buffer) {
     VkBuffer m_buffer;
     VmaAllocation m_allocation;
@@ -46,9 +45,7 @@ DECLARE_VK_HANDLE(texture) {
     VkImageView pVkSRVStencilDescriptor;
 };
 
-DECLARE_VK_HANDLE(sampler) {
-    VkSampler m_sampler;
-};
+DECLARE_VK_HANDLE(sampler) { VkSampler m_sampler; };
 
 DECLARE_VK_HANDLE(render_target) {
     VkImageView pVkDescriptor;
@@ -92,15 +89,15 @@ DECLARE_VK_HANDLE(swap_chain) {
 
 DECLARE_VK_HANDLE(command_pool) { VkCommandPool m_cmd_pool; };
 
-DECLARE_VK_HANDLE(command_list){ 
+DECLARE_VK_HANDLE(command_list) {
     gal_command_pool m_cmd_pool;
-    VkCommandBuffer m_command; 
+    VkCommandBuffer m_command;
     bool b_render_pass_bound;
 };
 
 DECLARE_VK_HANDLE(shader_program) {
     ant::fixed_array<VkShaderModule, gal_shader_stage_count> m_shader_modules;
-    ant::fixed_array<const char*, gal_shader_stage_count> m_entrys;
+    ant::fixed_array<const char *, gal_shader_stage_count> m_entrys;
     VkSpecializationInfo *m_specialization_info;
 };
 
@@ -108,26 +105,33 @@ DECLARE_VK_HANDLE(rootsignature) {
     VkPipelineLayout pipeline_layout;
     ant::fixed_array<VkDescriptorSetLayout, MAX_DESCRIPTOR_SET_COUNT> set_layouts;
 
-    struct pool_size_desc {
+    struct vk_pool_size_desc {
         VkDescriptorPoolSize *pool_sizes;
         u32 pool_size_count;
     };
 
-    ant::fixed_array<pool_size_desc, MAX_DESCRIPTOR_SET_COUNT> descriptor_pool_size;
+    ant::fixed_array<vk_pool_size_desc, MAX_DESCRIPTOR_SET_COUNT> descriptor_pool_size;
 };
 
+DECLARE_VK_HANDLE(pipeline) { VkPipeline pipeline; };
+DECLARE_VK_HANDLE(pipeline_cache) { VkPipelineCache pipeline_cache; };
 
-DECLARE_VK_HANDLE(pipeline) {
-    VkPipeline pipeline;
-};
-DECLARE_VK_HANDLE(pipeline_cache) {
-    VkPipelineCache pipeline_cache;
+struct vk_descriptor_pool {
+    VkDescriptorPool pool;
+    //std::atomic<u32> ref_count;
+    u32 ref_count = 0;
 };
 
+struct vk_descriptor_pool_desc {
+    u32 numDescriptorSets;
+    VkDescriptorPoolCreateFlags flags;
+    const VkDescriptorPoolSize *pPoolSizes;
+    u32 numPoolSizes;
+};
 
 DECLARE_VK_HANDLE(descriptor_set) {
     VkDescriptorSet set;
-    VkDescriptorPool pool;
+    vk_descriptor_pool *pool;
 };
 
 } // namespace ant::gal

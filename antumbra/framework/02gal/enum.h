@@ -32,8 +32,8 @@
 #endif
 #include "format.h"
 #include "framework/01core/memory/memory.h"
-#include "framework/01core/utils/utils.h"
 #include "framework/01core/platform/platform.h"
+#include "framework/01core/utils/utils.h"
 namespace ant::gal {
 struct compiled_shader_group;
 
@@ -351,7 +351,7 @@ enum class BlendConstant {
     ONE_MINUS_BLEND_FACTOR
 };
 
-//struct gal_descriptorpool_desc {
+//struct gal_descriptor_pool_desc {
 //};
 
 struct gal_blend_state_desc {
@@ -459,10 +459,9 @@ struct gal_queue_desc {
 };
 
 DECLARE_GAL_HANDLE(gal_queue) {
-    public :
+  public:
     gal_queue_type m_type;
 };
-
 
 DECLARE_GAL_HANDLE(gal_buffer) {
   public:
@@ -535,9 +534,7 @@ DECLARE_GAL_HANDLE(gal_sampler) {
 
 struct gal_fence_desc {};
 
-DECLARE_GAL_HANDLE(gal_fence) {
-  public:
-};
+DECLARE_GAL_HANDLE(gal_fence){public : };
 DECLARE_GAL_HANDLE(gal_semaphore){};
 
 struct gal_swap_chain_desc {
@@ -588,7 +585,7 @@ DECLARE_GAL_HANDLE(gal_rootsignature){
 };
 
 DECLARE_GAL_HANDLE(gal_pipeline_cache){
-    
+
 };
 
 struct gal_compute_pipeline_desc {
@@ -626,13 +623,13 @@ DECLARE_GAL_HANDLE(gal_pipeline) {
     gal_pipeline_desc m_desc;
     gal_pipeline_type m_type;
 };
-DECLARE_GAL_HANDLE(gal_command_list) { 
+DECLARE_GAL_HANDLE(gal_command_list){
     //gal_queue queue;
     //gal_queue_type m_queue_type;
 
 };
 
-DECLARE_GAL_HANDLE(gal_descriptorpool){};
+DECLARE_GAL_HANDLE(gal_descriptor_pool){};
 
 struct gal_pipeline_cache_desc {
     //void *ptr;
@@ -659,9 +656,7 @@ struct gal_pipeline_cache_desc {
 //    u32 mMaxRaysCount;
 //};
 
-// struct to consume descriptorset
-
-struct gal_descriptorset_desc {};
+// struct to consume descriptor_set
 
 struct gal_rootsignature_desc {
     compiled_shader_group *shader;
@@ -674,8 +669,8 @@ struct gal_command_pool_desc {
     bool b_transient;
 };
 
-DECLARE_GAL_HANDLE(gal_command_pool) { 
-    //gal_queue_type queue_type; 
+DECLARE_GAL_HANDLE(gal_command_pool) {
+    //gal_queue_type queue_type;
     gal_queue queue;
 };
 
@@ -688,11 +683,7 @@ struct gal_command_list_desc {
 
 struct gal_renderpass_begin_desc {};
 
-enum class queue_op {
-    UNDEFINED,
-    RELEASE,
-    ACQUIRE
-};
+enum class queue_op { UNDEFINED, RELEASE, ACQUIRE };
 
 struct gal_buffer_barrier {
     gal_buffer buffer;
@@ -793,11 +784,9 @@ struct gal_queue_submit_desc {
 struct read_range {
     u64 offset;
     u64 size;
-} ;
-
-DECLARE_GAL_HANDLE(gal_descriptor_set){
-
 };
+
+DECLARE_GAL_HANDLE(gal_descriptor_set){ u32 set_index; };
 
 enum class gal_descriptor_set_update_freq { NONE, PER_FRAME, PER_BATCH, PER_DRAW, BINDLESS };
 

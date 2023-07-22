@@ -135,9 +135,9 @@ TEST_CASE("test gal swapchain") {
         desc.format = gal_texture_format::R8G8B8A8_UNORM;
         desc.image_count = 3;
         desc.clear_value.value = gal_clear_value::rgb{0.0f, 0.0f, 0.0f, 1.0f};
-        #ifdef WIN32
+#ifdef WIN32
         desc.hwnd_window = ant::get_hwnd_window(window);
-        #endif
+#endif
         gal::gal_error_code result = gal::create_swap_chain(context, &desc, &sc);
         REQUIRE(result == gal::gal_error_code::SUC);
         result = gal::destroy_swap_chain(context, sc);
@@ -206,13 +206,15 @@ RES(Texture2D<float>, tex1, UPDATE_FREQ_PER_FRAME);\n\
 RES(SamplerState, spl, UPDATE_FREQ_PER_FRAME);\n\
 RES(RWTexture2D<float2>, tex2, UPDATE_FREQ_PER_FRAME);\n\
 RES(RWTexture2D<float2>, tex_arr[4], UPDATE_FREQ_PER_FRAME);\n\
+RES(RWTexture2D<float2>, tex_bindless1, UPDATE_FREQ_BINDLESS);\n\
+RES(RWTexture2D<float2>, tex_bindless2[4], UPDATE_FREQ_BINDLESS);\n\
 [numthreads(8, 8, 1)]\n\
 void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
 {\n\
     float color = tex1.SampleLevel(spl, float2(thread_id.xy), 0);\n\
     tex2[thread_id.xy] = color;\n\
 }";
-
+    gal_error_code result;
     using namespace ant::gal;
     // compile shader from source
     gal::gal_context context = initialize(gal_api::VULKAN);
@@ -237,13 +239,14 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
     gal::gal_rootsignature rs{};
     gal::gal_rootsignature_desc rs_desc{};
     rs_desc.shader = &sg;
-    gal::create_rootsignature(context, &rs_desc, &rs);
+    result = gal::create_rootsignature(context, &rs_desc, &rs);
+    REQUIRE(result == gal_error_code::SUC);
 
     // create shader program
     gal::gal_shader_program_desc sp_desc{};
     sp_desc.shader_group = &sg;
 
-    gal_error_code result = gal::create_shader_program(context, &sp_desc, &sp);
+    result = gal::create_shader_program(context, &sp_desc, &sp);
     REQUIRE(result == gal_error_code::SUC);
 
     // create pso
@@ -361,7 +364,7 @@ void CS_MAIN(uint3 globalID : SV_DispatchThreadID, uint3 localID : SV_GroupThrea
     pipe_desc.pipeline_cache = pso_cache;
     gal::gal_pipeline comp_pipe{};
     //BENCHMARK("create pipeline without cache") {
-        result = gal::create_compute_pipeline(context, &pipe_desc, &comp_pipe);
+    result = gal::create_compute_pipeline(context, &pipe_desc, &comp_pipe);
     //};
 
     REQUIRE(result == gal_error_code::SUC);
@@ -386,7 +389,7 @@ void CS_MAIN(uint3 globalID : SV_DispatchThreadID, uint3 localID : SV_GroupThrea
     pipe_desc1.pipeline_cache = pso_cache1;
     gal::gal_pipeline comp_pipe1{};
     //BENCHMARK("create pipeline with cache") {
-        result = gal::create_compute_pipeline(context, &pipe_desc1, &comp_pipe1);
+    result = gal::create_compute_pipeline(context, &pipe_desc1, &comp_pipe1);
     //};
     REQUIRE(result == gal_error_code::SUC);
 
@@ -583,7 +586,4 @@ TEST_CASE("test buffer") {
     command_test(gal_api::VULKAN);
 }
 
-
-TEST_CASE("descriptor set") {
-
-}
+TEST_CASE("descriptor set") {}
