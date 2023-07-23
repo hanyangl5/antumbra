@@ -586,11 +586,7 @@ TEST_CASE("buffer test") {
     };
     command_test(gal_api::VULKAN);
 }
-#define DECLARE_VK_HANDLE(name) 
 
-struct vk_buffer : public gal_buffer_T {
-    VkBuffer m_buffer;
-};
 TEST_CASE("descriptor set") {
     ant::str test_cs = "\
 #define UPDATE_FREQ_NONE space0\n\
@@ -600,13 +596,20 @@ TEST_CASE("descriptor set") {
 #define UPDATE_FREQ_BINDLESS space4\n\
 #define CBUFFER(NAME, FREQ) cbuffer NAME : register(FREQ)\n\
 #define RES(TYPE, NAME, FREQ) TYPE NAME : register(FREQ)\n\
-RES(RWStructuredBuffer<uint>, sbuffer, UPDATE_FREQ_NONE);// dxc will generate a counter buffer \n\
-RES(SamplerState, spl, UPDATE_FREQ_BINDLESS);\n\
-        [numthreads(8, 8, 1)]\n\
+CBUFFER(cbuf1, UPDATE_FREQ_NONE)\n\
+{\n\
+    float4 a;\n\
+    float b;\n\
+};\n\
+RES(StructuredBuffer<uint>, sbuffer, UPDATE_FREQ_NONE);\n\
+RES(SamplerState, spl, UPDATE_FREQ_PER_FRAME);\n\
+RES(Texture2D<float>, tex1, UPDATE_FREQ_PER_FRAME);\n\
+RES(RWTexture2D<float2>, tex2, UPDATE_FREQ_PER_FRAME);\n\
+[numthreads(8, 8, 1)]\n\
 void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
 {\n\
-    sbuffer[0]=5; \n\
-    sbuffer[7]=3; \n\
+    float color = tex1.SampleLevel(spl, float2(thread_id.xy), 0);\n\
+    tex2[thread_id.xy] = color;\n\
 }";
     gal_error_code result;
     using namespace ant::gal;
@@ -618,7 +621,7 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
 
     shader_compile_desc desc;
     desc.entry = "CS_MAIN";
-    desc.optimization_level = shader_optimization_level::NONE;
+    desc.optimization_level = shader_optimization_level::O0;
     desc.target_api = shader_blob_type::SPIRV;
     desc.target_profile = shader_target_profile::CS_6_0;
 
@@ -660,30 +663,60 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
     gal_descriptor_set ds{};
     gal_descriptor_set_desc ds_desc{};
     ds_desc.root_signature = rs;
-    ds_desc.set.freq = gal_descriptor_set_update_freq::NONE;
+    ds_desc.set.freq = gal_descriptor_set_update_freq::PER_FRAME;
 
-    gal::gal_buffer buf{};
-gal_buffer_desc buf_desc;
-buf_desc.descriptor_types = gal_descriptor_type::RW_BUFFER;
-buf_desc.memory_flags = gal_memory_flag::GPU_DEDICATED;
-buf_desc.size = 1024;
-buf_desc.initial_state = gal_resource_state::RW_BUFFER;
-buf_desc.flags = gal_buffer_flag::OWN_MEMORY;
-result = gal::create_buffer(context, &buf_desc, &buf);
+    gal::gal_sampler spl{};
+    gal::gal_texture tex{};
+    
+    gal_texture_desc texture_desc{};
+    texture_desc.width = 256;
+    texture_desc.height = 256;
+    texture_desc.depth = 1;
+    texture_desc.mip_level = 1;
+    texture_desc.array_size = 1;
+    texture_desc.format = gal_texture_format::R8G8B8A8_UNORM;
+    texture_desc.dimension = gal_texture_dimension::_2D;
+    texture_desc.descriptor_types = gal_descriptor_type::TEXTURE | gal_descriptor_type::RW_TEXTURE;
+    texture_desc.initial_state = gal_resource_state::RW_TEXTURE;
+    texture_desc.memory_flags = gal_memory_flag::GPU_DEDICATED;
+    texture_desc.sample_count = gal_texture_sample_count::SAMPLE_COUNT_1;
+    result = gal::create_texture(context, &texture_desc, &tex);
 
+    gal_sampler_desc sampler_desc{};
+    sampler_desc.min_filter = gal_sampler_filter_mode::LINEAR;
+    sampler_desc.mag_filter = gal_sampler_filter_mode::LINEAR;
+    sampler_desc.mip_mode = gal_sampler_mip_mode::LINEAR;
+    sampler_desc.address_mode_u = gal_sampler_address_mode::CLAMP;
+    sampler_desc.address_mode_v = gal_sampler_address_mode::CLAMP;
+    sampler_desc.address_mode_w = gal_sampler_address_mode::CLAMP;
+    sampler_desc.min_lod = 0.0f;
+    sampler_desc.max_lod = 1.0f;
+    sampler_desc.max_anisotropy = 1.0f;
+    sampler_desc.compare_mode = gal_compare_mode::NEVER;
+    sampler_desc.mip_lod_bias = 0.0f;
+    result = gal::create_sampler(context, &sampler_desc, &spl);
 
     result = gal::get_descriptor_set(context, &ds_desc, 1, &ds);
     REQUIRE(result == gal_error_code::SUC);
 
-    gal_descriptor_upate_desc buf_descriptor_update_desc;
-    buf_descriptor_update_desc.buffer.buffer = buf;
-    buf_descriptor_update_desc.buffer.offset = 0;
-    buf_descriptor_update_desc.buffer.range = 1024;
-
+    gal_descriptor_upate_desc buf_descriptor_update_desc[3];
+    buf_descriptor_update_desc[0].desc.s.sampler = spl;
+    buf_descriptor_update_desc[0].type = gal_descriptor_type::SAMPLER;
+    buf_descriptor_update_desc[0].name = "spl";
+    buf_descriptor_update_desc[1].desc.t.texture = tex;
+    buf_descriptor_update_desc[1].type = gal_descriptor_type::TEXTURE;
+    buf_descriptor_update_desc[1].name = "tex1";
+    buf_descriptor_update_desc[2].desc.t.texture = tex;
+    buf_descriptor_update_desc[2].type = gal_descriptor_type::RW_TEXTURE;
+    buf_descriptor_update_desc[2].name = "tex2";
+    
     gal_descriptor_set_update_desc ds_update_desc{};
-    ds_update_desc.updates = &buf_descriptor_update_desc;
-
+    ds_update_desc.updates = &buf_descriptor_update_desc[0];
+    ds_update_desc.count = 3;
     result = gal::update_descriptor_set(context, &ds_update_desc, ds);
+
+
+
     REQUIRE(result == gal_error_code::SUC);
     result = gal::destroy_pipeline(context, comp_pipe);
     REQUIRE(result == gal_error_code::SUC);

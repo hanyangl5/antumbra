@@ -618,6 +618,51 @@ gal_error_code vk_create_texture(gal_context context, gal_texture_desc *desc, ga
             return gal_error_code::ERR;
         }
     }
+
+    VkImageViewCreateInfo image_view_ci{};
+    image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    image_view_ci.pNext = nullptr;
+    image_view_ci.flags = 0;
+    image_view_ci.image = vk_tex->m_image;
+    image_view_ci.viewType = utils_to_vk_image_view_type(desc->dimension);
+    VkFormat format = galtextureformat_to_vkformat(desc->format);
+    image_view_ci.format = format;
+    image_view_ci.components.r = VK_COMPONENT_SWIZZLE_R;
+    image_view_ci.components.g = VK_COMPONENT_SWIZZLE_G;
+    image_view_ci.components.b = VK_COMPONENT_SWIZZLE_B;
+    image_view_ci.components.a = VK_COMPONENT_SWIZZLE_A;
+    image_view_ci.subresourceRange.aspectMask = util_vk_determine_aspect_mask(format, true);
+    // TODO(hyl5): support multiple view
+    image_view_ci.subresourceRange.baseMipLevel = 0;
+    image_view_ci.subresourceRange.levelCount = desc->mip_level;
+    image_view_ci.subresourceRange.baseArrayLayer = 0;
+    image_view_ci.subresourceRange.layerCount = desc->array_size;
+    // create srv
+    VkImageView view;
+    if ((desc->descriptor_types & gal_descriptor_type::TEXTURE) != gal_descriptor_type::UNDEFINED ||
+        (desc->descriptor_types & gal_descriptor_type::RW_TEXTURE) != gal_descriptor_type::UNDEFINED) {
+        VkResult result = vkCreateImageView(vk_ctx->device, &image_view_ci, nullptr, &view);
+        if (result != VK_SUCCESS) {
+            return gal_error_code::ERR;
+        }
+        vk_tex->m_view = view;
+    }
+    // create srv
+    //if ((desc->descriptor_types & gal_descriptor_type::TEXTURE) != gal_descriptor_type::UNDEFINED) {
+    //    VkResult result = vkCreateImageView(vk_ctx->device, &image_view_ci, nullptr, &vk_tex->srv);
+    //    if (result != VK_SUCCESS) {
+    //        return gal_error_code::ERR;
+    //    }
+    //}
+    //// create uav
+    //if ((desc->descriptor_types & gal_descriptor_type::RW_TEXTURE) != gal_descriptor_type::UNDEFINED) {
+    //    VkResult result = vkCreateImageView(vk_ctx->device, &image_view_ci, nullptr, &vk_tex->uav);
+    //    if (result != VK_SUCCESS) {
+    //        return gal_error_code::ERR;
+    //    }
+    //}
+    //
+
     *texture = vk_tex;
     vk_tex->m_desc = *desc;
     return gal_error_code::SUC;
@@ -1592,7 +1637,7 @@ gal_error_code vk_get_descriptor_set(gal_context context, gal_descriptor_set_des
 
     vk_dp->pool = pool;
     vk_dp->ref_count = set_count;
-    vk_dp->descriptor_set_update_template = vk_rs->descriptor_set_update_template[set_index];
+    vk_dp->root_signature = vk_rs;
 
     for (u32 i = 0; i < set_count; i++) {
         vk_ds[i].set = vk_sets[i];
@@ -1631,14 +1676,58 @@ gal_error_code vk_update_descriptor_set(gal_context context, gal_descriptor_set_
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_descriptor_set *vk_ds = reinterpret_cast<vk_descriptor_set *>(set);
 
-    VkDescriptorUpdateData *descriptor_updates;
-    
+    ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 1024);
+    ant::vector<VkDescriptorUpdateData> descriptor_updates(&stack_memory);
+    descriptor_updates.resize(update_desc->count);
     for (u32 i = 0; i < update_desc->count; i++) {
-        update_desc->updates[i];
+        VkDescriptorUpdateData update_data;
+        gal_descriptor_upate_desc &t_update_data = update_desc->updates[i];
+
+        vk_rootsignature *vk_rs = reinterpret_cast<vk_rootsignature *>(vk_ds->pool->root_signature);
+        auto iter = vk_rs->resource_map.find(t_update_data.name);
+        if (iter == vk_rs->resource_map.end()) {
+            return gal_error_code::ERR;
+        }
+        u32 set_bind_bind = iter->second;
+        u32 bind_order = (set_bind_bind & 0x7E0000) >> 17;
+        //u32 bind_index = (set_bind_bind & (64 << 23));
+        //u32 set_index = (set_bind_bind >> 29) & 0xF;
+        u32 set_index = (set_bind_bind & 0xE0000000) >> 29;
+        if (set_index != vk_ds->set_index) {
+            return gal_error_code::ERR;
+        }
+        switch (update_desc->updates[i].type) {
+        case gal_descriptor_type::CONSTANT_BUFFER:
+        case gal_descriptor_type::RW_BUFFER:
+            update_data.buffer_info.buffer = reinterpret_cast<vk_buffer *>(t_update_data.desc.b.buffer)->m_buffer;
+            update_data.buffer_info.offset = 0;
+            update_data.buffer_info.range = VK_WHOLE_SIZE;
+            break;
+        // case gal_descriptor_type::TEXEL_BUFFER: TODO(hyl5):
+        case gal_descriptor_type::TEXTURE: {
+            vk_texture *vk_tex = reinterpret_cast<vk_texture *>(t_update_data.desc.t.texture);
+            update_data.image_info.imageLayout = util_to_vk_image_layout(gal_resource_state::TEXTURE);
+            update_data.image_info.imageView = vk_tex->m_view;
+        } break;
+        case gal_descriptor_type::RW_TEXTURE: {
+
+            vk_texture *vk_tex = reinterpret_cast<vk_texture *>(t_update_data.desc.t.texture);
+            update_data.image_info.imageLayout = util_to_vk_image_layout(gal_resource_state::RW_TEXTURE);
+            update_data.image_info.imageView = vk_tex->m_view;
+        } break;
+        case gal_descriptor_type::SAMPLER:
+            update_data.image_info.sampler = reinterpret_cast<vk_sampler *>(t_update_data.desc.s.sampler)->m_sampler;
+            break;
+        default:
+            return gal_error_code::ERR;
+        }
+        descriptor_updates[bind_order] = std::move(update_data);
     }
 
-    vkUpdateDescriptorSetWithTemplate(vk_ctx->device, vk_ds->set, vk_ds->pool->descriptor_set_update_template,
-                                      descriptor_updates);
+    vkUpdateDescriptorSetWithTemplate(vk_ctx->device, vk_ds->set,
+                                      reinterpret_cast<vk_rootsignature *>(vk_ds->pool->root_signature)
+                                          ->descriptor_set_update_template[vk_ds->set_index],
+                                      descriptor_updates.data());
     return gal_error_code::SUC;
 }
 
@@ -1692,7 +1781,12 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
             binding.descriptorCount = resource.array_size;
             binding.descriptorType = utils_to_vk_descriptor_type(resource.descriptor_type);
             binding.stageFlags = stages;
-            bindings[binding_offsets[set_index_map[resource.set]]++] = std::move(binding);
+            bindings[binding_offsets[set_index_map[resource.set]]] = std::move(binding);
+            vk_rs->resource_map[resource.name.c_str()] =
+                (resource.set << 29) | (resource.reg << 23) |
+                 (binding_offsets[set_index_map[resource.set]] << 17); // TODO(hyl5): remove hardcoded number
+            
+            binding_offsets[set_index_map[resource.set]]++;
         } else if (resource.resource_type == ShaderResourceType::PUSH_CONSTANT) {
             push_constants.emplace_back(VkPushConstantRange{stages, 0, 0});
         }
@@ -1790,7 +1884,8 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
         descriptor_update_template_entries[i].dstArrayElement = 0;
         descriptor_update_template_entries[i].offset = offsets;
         descriptor_update_template_entries[i].stride = bindings[i].descriptorCount == 1 ? 0 : bindings[i].binding;
-        offsets += bindings[i].descriptorCount * sizeof(VkDescriptorUpdateData); // more memory footprint but more flexible
+        offsets +=
+            bindings[i].descriptorCount * sizeof(VkDescriptorUpdateData); // more memory footprint but more flexible
     }
 
     for (u32 i = 0; i < refl->sets.size(); i++) {

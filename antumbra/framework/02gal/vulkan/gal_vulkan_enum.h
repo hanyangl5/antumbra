@@ -38,11 +38,17 @@ DECLARE_VK_HANDLE(buffer) {
 DECLARE_VK_HANDLE(texture) {
     VkImage m_image;
     VmaAllocation m_allocation;
-    VkImageView pVkSRVDescriptor;
+    //VkImageView pVkSRVDescriptor;
+    ///// Opaque handle used by shaders for doing read/write operations on the texture
+    //VkImageView pVkUAVDescriptors;
+    ///// Opaque handle used by shaders for doing read/write operations on the texture
+    //VkImageView pVkSRVStencilDescriptor;
+    //VkImageView srv;
     /// Opaque handle used by shaders for doing read/write operations on the texture
-    VkImageView *pVkUAVDescriptors;
+    //VkImageView uav;
     /// Opaque handle used by shaders for doing read/write operations on the texture
-    VkImageView pVkSRVStencilDescriptor;
+    //VkImageView pVkSRVStencilDescriptor;
+    VkImageView m_view;
 };
 
 DECLARE_VK_HANDLE(sampler) { VkSampler m_sampler; };
@@ -111,7 +117,9 @@ DECLARE_VK_HANDLE(rootsignature) {
         u32 pool_size_count;
     };
 
-    ant::fixed_array<vk_pool_size_desc, MAX_DESCRIPTOR_SET_COUNT> descriptor_pool_size;
+    ant::fixed_array<vk_pool_size_desc, MAX_DESCRIPTOR_SET_COUNT> descriptor_pool_size;                      // an unordered_map
+    ant::hash_map<ant::str, u32> resource_map; // 3bit set index(0-8), 6 bit binding index(0-64), 6 bit binding order(0-64), 17 bit empty
+    // FIXME(hyl5): resource_map is not controlled by pmr
 };
 
 DECLARE_VK_HANDLE(pipeline) { VkPipeline pipeline; };
@@ -123,7 +131,7 @@ struct vk_descriptor_pool {
     u32 ref_count = 0;
     // precompute the descriptor set update template when create pipeline layout, require vulkan 1.1
     // https://github.com/SakuraEngine/SakuraEngine/blob/main/modules/runtime/src/cgpu/vulkan/cgpu_vulkan.c
-    VkDescriptorUpdateTemplate descriptor_set_update_template; 
+    gal_rootsignature root_signature;
 };
 
 struct vk_descriptor_pool_desc {

@@ -127,7 +127,7 @@ void compiled_shader::create_shader_reflection_from_spirv() {
             compiler.get_decoration(input.id, spv::DecorationLocation); // location is the binding point for inputs
         resource.resource_type = ShaderResourceType::INPUT;
         resource.used_stages = stage;
-        resource.name = std::move(input.name);
+        resource.name = input.name;
         //spirv_cross::SPIRType type = compiler.get_type(input.type_id);
         //resource.size = (type.width / 8) * type.vecsize;
         read_resource_vec_size(compiler, input, resource);
@@ -143,7 +143,7 @@ void compiled_shader::create_shader_reflection_from_spirv() {
             compiler.get_decoration(input.id, spv::DecorationLocation); // location is the binding point for inputs
         resource.resource_type = ShaderResourceType::OUTPUT;
         resource.used_stages = stage;
-        resource.name = std::move(input.name);
+        resource.name = input.name;
         //spirv_cross::SPIRType type = compiler.get_type(input.type_id);
         //resource.size = (type.width / 8) * type.vecsize;
         read_resource_vec_size(compiler, input, resource);
@@ -159,7 +159,7 @@ void compiled_shader::create_shader_reflection_from_spirv() {
         resource.resource_type = ShaderResourceType::PUSH_CONSTANT;
         spirv_cross::SPIRType type = compiler.get_type(input.type_id);
         resource.size = static_cast<u32>(compiler.get_declared_struct_size(type));
-        resource.name = std::move(input.name);
+        resource.name = input.name;
         m_reflection->resources.emplace(std::move(resource.name), std::move(resource));
     }
 
@@ -170,7 +170,7 @@ void compiled_shader::create_shader_reflection_from_spirv() {
         resource.descriptor_type = gal_descriptor_type::CONSTANT_BUFFER;
         resource.resource_type = ShaderResourceType::RESOURCE;
         resource.used_stages = stage;
-        resource.name = std::move(input.name);
+        resource.name = input.name;
 
         resource.set = compiler.get_decoration(input.id, spv::DecorationDescriptorSet);
         used_sets[resource.set]++;
@@ -186,7 +186,7 @@ void compiled_shader::create_shader_reflection_from_spirv() {
         resource.descriptor_type = gal_descriptor_type::RW_BUFFER;
         resource.resource_type = ShaderResourceType::RESOURCE;
         resource.used_stages = stage;
-        resource.name = std::move(input.name);
+        resource.name = input.name;
 
         resource.set = compiler.get_decoration(input.id, spv::DecorationDescriptorSet);
         used_sets[resource.set]++;
@@ -202,7 +202,7 @@ void compiled_shader::create_shader_reflection_from_spirv() {
         resource.descriptor_type = gal_descriptor_type::TEXTURE;
         resource.resource_type = ShaderResourceType::RESOURCE;
         resource.used_stages = stage;
-        resource.name = std::move(input.name);
+        resource.name = input.name;
 
         resource.set = compiler.get_decoration(input.id, spv::DecorationDescriptorSet);
         used_sets[resource.set]++;
@@ -218,7 +218,7 @@ void compiled_shader::create_shader_reflection_from_spirv() {
         resource.descriptor_type = gal_descriptor_type::RW_TEXTURE;
         resource.resource_type = ShaderResourceType::RESOURCE;
         resource.used_stages = stage;
-        resource.name = std::move(input.name);
+        resource.name = input.name;
 
         resource.set = compiler.get_decoration(input.id, spv::DecorationDescriptorSet);
         used_sets[resource.set]++;
@@ -233,7 +233,7 @@ void compiled_shader::create_shader_reflection_from_spirv() {
         resource.descriptor_type = gal_descriptor_type::SAMPLER;
         resource.resource_type = ShaderResourceType::RESOURCE;
         resource.used_stages = stage;
-        resource.name = std::move(input.name);
+        resource.name = input.name;
         resource.set = compiler.get_decoration(input.id, spv::DecorationDescriptorSet);
         used_sets[resource.set]++;
         resource.reg = compiler.get_decoration(input.id, spv::DecorationBinding);
@@ -264,8 +264,15 @@ void compiled_shader_group::create_pipeline_reflection() {
         //m_pipeline_reflection->m_resources =
         //    ant::vector<std::pair<const char *, ShaderResource>>(refl->resources.begin(), refl->resources.end());
 
-        std::transform(refl->resources.begin(), refl->resources.end(),
-                       std::back_inserter(m_pipeline_reflection->m_resources), [](const auto &p) { return p.second; });
+        //std::transform(refl->resources.begin(), refl->resources.end(),
+        //               std::back_inserter(m_pipeline_reflection->m_resources), [](const auto &p) { return p.second; });
+        //
+        m_pipeline_reflection->m_resources.reserve(refl->resources.size());
+        for (auto &[name, res] : refl->resources) {
+            m_pipeline_reflection->m_resources.push_back(res);
+            m_pipeline_reflection->m_resources.back().name = name;
+        }
+
         m_pipeline_reflection->sets = std::move((refl->sets));
         return;
     }

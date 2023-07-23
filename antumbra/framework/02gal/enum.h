@@ -802,22 +802,26 @@ struct gal_descriptor_set_desc {
 
 struct buffer_descriptor_update_desc {
     gal_buffer buffer;
-    u32 range;
-    u32 offset;
+    //u32 range;
+    //u32 offset;
 };
 
 struct texture_descriptor_update_desc {
-
+    gal_texture texture;
 };
 
 struct sampler_descriptor_update_desc {
-
+    gal_sampler sampler;
 };
 
-union gal_descriptor_upate_desc {
-    buffer_descriptor_update_desc buffer;
-    texture_descriptor_update_desc texture;
-    sampler_descriptor_update_desc sampler;
+struct gal_descriptor_upate_desc {
+    union {
+        buffer_descriptor_update_desc b;
+        texture_descriptor_update_desc t;
+        sampler_descriptor_update_desc s;
+    } desc;
+    gal_descriptor_type type;
+    const char *name;
 };
 
 struct gal_descriptor_set_update_desc {
