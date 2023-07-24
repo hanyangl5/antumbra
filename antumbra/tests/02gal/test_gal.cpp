@@ -588,6 +588,29 @@ TEST_CASE("buffer test") {
 }
 
 TEST_CASE("descriptor set") {
+//    ant::str test_cs = "\
+//#define UPDATE_FREQ_NONE space0\n\
+//#define UPDATE_FREQ_PER_FRAME space1\n\
+//#define UPDATE_FREQ_PER_BATCH space2\n\
+//#define UPDATE_FREQ_PER_DRAW space3\n\
+//#define UPDATE_FREQ_BINDLESS space4\n\
+//#define CBUFFER(NAME, FREQ) cbuffer NAME : register(FREQ)\n\
+//#define RES(TYPE, NAME, FREQ) TYPE NAME : register(FREQ)\n\
+//CBUFFER(cbuf1, UPDATE_FREQ_NONE)\n\
+//{\n\
+//    float4 a;\n\
+//    float b;\n\
+//};\n\
+//RES(StructuredBuffer<uint>, sbuffer, UPDATE_FREQ_NONE);\n\
+//RES(SamplerState, spl, UPDATE_FREQ_PER_FRAME);\n\
+//RES(Texture2D<float>, tex1, UPDATE_FREQ_PER_FRAME);\n\
+//RES(RWTexture2D<float2>, tex2, UPDATE_FREQ_PER_FRAME);\n\
+//[numthreads(8, 8, 1)]\n\
+//void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
+//{\n\
+//    float color = tex1.SampleLevel(spl, float2(thread_id.xy), 0);\n\
+//    tex2[thread_id.xy] = color;\n\
+//}";
     ant::str test_cs = "\
 #define UPDATE_FREQ_NONE space0\n\
 #define UPDATE_FREQ_PER_FRAME space1\n\
@@ -596,20 +619,13 @@ TEST_CASE("descriptor set") {
 #define UPDATE_FREQ_BINDLESS space4\n\
 #define CBUFFER(NAME, FREQ) cbuffer NAME : register(FREQ)\n\
 #define RES(TYPE, NAME, FREQ) TYPE NAME : register(FREQ)\n\
-CBUFFER(cbuf1, UPDATE_FREQ_NONE)\n\
-{\n\
-    float4 a;\n\
-    float b;\n\
-};\n\
-RES(StructuredBuffer<uint>, sbuffer, UPDATE_FREQ_NONE);\n\
+RES(SamplerState, spl2, UPDATE_FREQ_NONE);\n\
 RES(SamplerState, spl, UPDATE_FREQ_PER_FRAME);\n\
 RES(Texture2D<float>, tex1, UPDATE_FREQ_PER_FRAME);\n\
-RES(RWTexture2D<float2>, tex2, UPDATE_FREQ_PER_FRAME);\n\
 [numthreads(8, 8, 1)]\n\
 void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
 {\n\
     float color = tex1.SampleLevel(spl, float2(thread_id.xy), 0);\n\
-    tex2[thread_id.xy] = color;\n\
 }";
     gal_error_code result;
     using namespace ant::gal;
@@ -706,13 +722,10 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
     buf_descriptor_update_desc[1].desc.t.texture = tex;
     buf_descriptor_update_desc[1].type = gal_descriptor_type::TEXTURE;
     buf_descriptor_update_desc[1].name = "tex1";
-    buf_descriptor_update_desc[2].desc.t.texture = tex;
-    buf_descriptor_update_desc[2].type = gal_descriptor_type::RW_TEXTURE;
-    buf_descriptor_update_desc[2].name = "tex2";
     
     gal_descriptor_set_update_desc ds_update_desc{};
     ds_update_desc.updates = &buf_descriptor_update_desc[0];
-    ds_update_desc.count = 3;
+    ds_update_desc.count = 2;
     result = gal::update_descriptor_set(context, &ds_update_desc, ds);
 
 

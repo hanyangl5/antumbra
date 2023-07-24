@@ -1680,7 +1680,7 @@ gal_error_code vk_update_descriptor_set(gal_context context, gal_descriptor_set_
     ant::vector<VkDescriptorUpdateData> descriptor_updates(&stack_memory);
     descriptor_updates.resize(update_desc->count);
     for (u32 i = 0; i < update_desc->count; i++) {
-        VkDescriptorUpdateData update_data;
+        VkDescriptorUpdateData update_data{};
         gal_descriptor_upate_desc &t_update_data = update_desc->updates[i];
 
         vk_rootsignature *vk_rs = reinterpret_cast<vk_rootsignature *>(vk_ds->pool->root_signature);
@@ -1782,16 +1782,19 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
             binding.descriptorType = utils_to_vk_descriptor_type(resource.descriptor_type);
             binding.stageFlags = stages;
             bindings[binding_offsets[set_index_map[resource.set]]] = std::move(binding);
-            vk_rs->resource_map[resource.name.c_str()] =
-                (resource.set << 29) | (resource.reg << 23) |
-                 (binding_offsets[set_index_map[resource.set]] << 17); // TODO(hyl5): remove hardcoded number
-            
             binding_offsets[set_index_map[resource.set]]++;
         } else if (resource.resource_type == ShaderResourceType::PUSH_CONSTANT) {
             push_constants.emplace_back(VkPushConstantRange{stages, 0, 0});
         }
     }
 
+    ant::fixed_array<u32, MAX_DESCRIPTOR_SET_COUNT> set_binding_offsets{};
+    for (auto &resource : refl->m_resources) {
+        vk_rs->resource_map[resource.name.c_str()] =
+            (resource.set << 29) | (resource.reg << 23) |
+            (set_binding_offsets[resource.set]++ << 17); // TODO(hyl5): remove hardcoded number
+
+    }
     // binding offsets is prefix sum now
 
     VkResult result = VK_SUCCESS;
@@ -1876,18 +1879,33 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
     //    //    return 0;
     //    //}
     //};
+    set_binding_offsets.fill(0); // reset the arr
+    u32 i = 0;
+    for (auto &resource : refl->m_resources) {
+        if (resource.resource_type == ShaderResourceType::RESOURCE) {
+            VkDescriptorSetLayoutBinding binding{};
+            binding.binding = resource.reg;
+            binding.descriptorCount = resource.array_size;
+            binding.descriptorType = utils_to_vk_descriptor_type(resource.descriptor_type);
+            binding.stageFlags = stages;
+            bindings[binding_offsets[set_index_map[resource.set]]] = std::move(binding);
+            binding_offsets[set_index_map[resource.set]]++;
 
-    for (int i = 0; i < bindings.size(); i++) {
-        descriptor_update_template_entries[i].dstBinding = bindings[i].binding;
-        descriptor_update_template_entries[i].descriptorType = bindings[i].descriptorType;
-        descriptor_update_template_entries[i].descriptorCount = bindings[i].descriptorCount;
-        descriptor_update_template_entries[i].dstArrayElement = 0;
-        descriptor_update_template_entries[i].offset = offsets;
-        descriptor_update_template_entries[i].stride = bindings[i].descriptorCount == 1 ? 0 : bindings[i].binding;
-        offsets +=
-            bindings[i].descriptorCount * sizeof(VkDescriptorUpdateData); // more memory footprint but more flexible
+            descriptor_update_template_entries[i].dstBinding = resource.reg;
+            descriptor_update_template_entries[i].descriptorType = utils_to_vk_descriptor_type(resource.descriptor_type);
+            descriptor_update_template_entries[i].descriptorCount = resource.array_size;
+            descriptor_update_template_entries[i].dstArrayElement = 0;
+            descriptor_update_template_entries[i].offset = set_binding_offsets[resource.set;
+            descriptor_update_template_entries[i].stride =
+                0; //bindings[i].descriptorCount == 1 ? 0 : bindings[i].binding;
+            offsets +=
+                bindings[i].descriptorCount * sizeof(VkDescriptorUpdateData); // more memory footprint but more flexible
+
+
+            i++;
+        } else if (resource.resource_type == ShaderResourceType::PUSH_CONSTANT) {
+        }
     }
-
     for (u32 i = 0; i < refl->sets.size(); i++) {
         u32 set_index = (refl->sets[i] >> 16) & 0x0000ffff; // first 16bit
 
