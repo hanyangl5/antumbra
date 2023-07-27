@@ -1906,7 +1906,7 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
         } else if (resource.resource_type == ShaderResourceType::PUSH_CONSTANT) {
         }
     }
-    for (u32 i = 0; i < refl->sets.size(); i++) {
+    for (i = 0; i < refl->sets.size(); i++) {
         u32 set_index = (refl->sets[i] >> 16) & 0x0000ffff; // first 16bit
 
         VkDescriptorUpdateTemplateCreateInfo dsut_ci{};
