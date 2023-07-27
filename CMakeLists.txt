@@ -19,7 +19,9 @@ if(WIN32)
 endif()
 #option(BUILD_WITH_DEBUG_LAYER "enable debug layer(require vulkan sdk installed)" ON) 
 
+add_subdirectory(third_party)
 add_subdirectory(antumbra)
+add_subdirectory(tests)
 
 find_package(Doxygen)
 
