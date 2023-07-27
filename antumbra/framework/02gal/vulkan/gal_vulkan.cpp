@@ -1895,7 +1895,7 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
             descriptor_update_template_entries[i].descriptorType = utils_to_vk_descriptor_type(resource.descriptor_type);
             descriptor_update_template_entries[i].descriptorCount = resource.array_size;
             descriptor_update_template_entries[i].dstArrayElement = 0;
-            descriptor_update_template_entries[i].offset = set_binding_offsets[resource.set;
+            descriptor_update_template_entries[i].offset = set_binding_offsets[resource.set];
             descriptor_update_template_entries[i].stride =
                 0; //bindings[i].descriptorCount == 1 ? 0 : bindings[i].binding;
             offsets +=
