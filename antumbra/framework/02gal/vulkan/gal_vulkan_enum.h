@@ -6,7 +6,7 @@
 #include <mutex>
 #include <variant>
 
-namespace ant::gal {
+namespace ante::gal {
 
 #define DECLARE_VK_HANDLE(name) struct vk_##name : public gal_##name##_T
 
@@ -26,7 +26,7 @@ DECLARE_VK_HANDLE(context) {
     //vk_queue graphics_queue;
     //vk_queue compute_queue;
     //vk_queue transfer_queue;
-    ant::fixed_array<vk_queue, 3> queues;
+    ante::fixed_array<vk_queue, 3> queues;
     f32 default_queue_property = 0.0f;
 };
 
@@ -85,12 +85,12 @@ DECLARE_VK_HANDLE(semaphore) {
     bool b_signaled;
 };
 DECLARE_VK_HANDLE(swap_chain) {
-    ant::fixed_array<gal_render_target, MAX_SWAPCHAIN_IMAGES> &get_render_targets() { return m_render_targets; }
+    ante::fixed_array<gal_render_target, MAX_SWAPCHAIN_IMAGES> &get_render_targets() { return m_render_targets; }
     VkSwapchainKHR m_swap_chain = VK_NULL_HANDLE;
     VkSurfaceKHR m_surface = VK_NULL_HANDLE;
     VkSurfaceFormatKHR optimal_surface_format{};
-    ant::fixed_array<VkImage, MAX_SWAPCHAIN_IMAGES> swap_chain_images{};
-    ant::fixed_array<VkImageView, MAX_SWAPCHAIN_IMAGES> swap_chain_image_views{};
+    ante::fixed_array<VkImage, MAX_SWAPCHAIN_IMAGES> swap_chain_images{};
+    ante::fixed_array<VkImageView, MAX_SWAPCHAIN_IMAGES> swap_chain_image_views{};
 };
 
 DECLARE_VK_HANDLE(command_pool) { VkCommandPool m_cmd_pool; };
@@ -102,23 +102,23 @@ DECLARE_VK_HANDLE(command_list) {
 };
 
 DECLARE_VK_HANDLE(shader_program) {
-    ant::fixed_array<VkShaderModule, gal_shader_stage_count> m_shader_modules;
-    ant::fixed_array<const char *, gal_shader_stage_count> m_entrys;
+    ante::fixed_array<VkShaderModule, gal_shader_stage_count> m_shader_modules;
+    ante::fixed_array<const char *, gal_shader_stage_count> m_entrys;
     VkSpecializationInfo *m_specialization_info;
 };
 
 DECLARE_VK_HANDLE(rootsignature) {
     VkPipelineLayout pipeline_layout;
-    ant::fixed_array<VkDescriptorSetLayout, MAX_DESCRIPTOR_SET_COUNT> set_layouts;
-    ant::fixed_array<VkDescriptorUpdateTemplate, MAX_DESCRIPTOR_SET_COUNT> descriptor_set_update_template;
+    ante::fixed_array<VkDescriptorSetLayout, MAX_DESCRIPTOR_SET_COUNT> set_layouts;
+    ante::fixed_array<VkDescriptorUpdateTemplate, MAX_DESCRIPTOR_SET_COUNT> descriptor_set_update_template;
 
     struct vk_pool_size_desc {
         VkDescriptorPoolSize *pool_sizes;
         u32 pool_size_count;
     };
 
-    ant::fixed_array<vk_pool_size_desc, MAX_DESCRIPTOR_SET_COUNT> descriptor_pool_size;                      // an unordered_map
-    ant::hash_map<ant::str, u32> resource_map; // 3bit set index(0-8), 6 bit binding index(0-64), 6 bit binding order(0-64), 17 bit empty
+    ante::fixed_array<vk_pool_size_desc, MAX_DESCRIPTOR_SET_COUNT> descriptor_pool_size;                      // an unordered_map
+    ante::hash_map<ante::str, u32> resource_map; // 3bit set index(0-8), 6 bit binding index(0-64), 6 bit binding order(0-64), 17 bit empty
     // FIXME(hyl5): resource_map is not controlled by pmr
 };
 
@@ -153,4 +153,4 @@ union VkDescriptorUpdateData {
     VkBufferView buffer_view;
 };
 
-} // namespace ant::gal
+} // namespace ante::gal

@@ -13,7 +13,7 @@
 
 // project headers
 
-namespace ant {
+namespace ante {
 
 using str = std::pmr::string;
 using wstr = std::pmr::wstring;
@@ -24,4 +24,4 @@ template <typename T> using hash_set = std::pmr::unordered_set<T>;
 template <typename Key, typename Val> using map = std::pmr::map<Key, Val>;
 template <typename Key, typename Val> using hash_map = std::pmr::unordered_map<Key, Val>;
 
-} // namespace ant
+} // namespace ante

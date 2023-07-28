@@ -4,14 +4,14 @@
 //#include "framework/01core/utils/utils.h"
 //#include <sstream>
 //
-//namespace ant {
+//namespace ante {
 //
 //template<typename T> inline void Read(std::istringstream &is, T &value)
 //{
 //    is.read(reinterpret_cast<char *>(&value), sizeof(T));
 //}
 //
-//inline void Read(std::istringstream &is, ant::str &value)
+//inline void Read(std::istringstream &is, ante::str &value)
 //{
 //    u64 size;
 //    Read(is, size);
@@ -19,7 +19,7 @@
 //    is.read(const_cast<char *>(value.data()), size);
 //}
 //
-//template<class T> inline void Read(std::istringstream &is, ant::set<T> &value)
+//template<class T> inline void Read(std::istringstream &is, ante::set<T> &value)
 //{
 //    u64 size;
 //    Read(is, size);
@@ -30,7 +30,7 @@
 //    }
 //}
 //
-//template<class T> inline void Read(std::istringstream &is, ant::vector<T> &value)
+//template<class T> inline void Read(std::istringstream &is, ante::vector<T> &value)
 //{
 //    u64 size;
 //    Read(is, size);
@@ -38,7 +38,7 @@
 //    is.read(reinterpret_cast<char *>(value.data()), value.size() * sizeof(T));
 //}
 //
-//template<class T, class S> inline void Read(std::istringstream &is, ant::vector<T, S> &value)
+//template<class T, class S> inline void Read(std::istringstream &is, ante::vector<T, S> &value)
 //{
 //    u64 size;
 //    Read(is, size);
@@ -52,7 +52,7 @@
 //    }
 //}
 //
-//template<class T, uint32_t N> inline void Read(std::istringstream &is, ant::fixed_array<T, N> &value)
+//template<class T, uint32_t N> inline void Read(std::istringstream &is, ante::fixed_array<T, N> &value)
 //{
 //    is.read(reinterpret_cast<char *>(value.data()), N * sizeof(T));
 //}
@@ -64,4 +64,4 @@
 //    Read(is, args...);
 //}
 //
-//}// namespace ant
+//}// namespace ante

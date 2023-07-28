@@ -1,8 +1,8 @@
 
 #include "test_gal.h"
 
-using namespace ant;
-using namespace ant::gal;
+using namespace ante;
+using namespace ante::gal;
 TEST_CASE("test context initialization") {
     auto context_initialization = [](gal::gal_api api) {
         gal::gal_context context = initialize(api);
@@ -119,13 +119,13 @@ TEST_CASE("test gal render target") {
 
 TEST_CASE("test gal swapchain") {
     auto swap_chain_creation = [](gal::gal_api api) {
-        ant::ant_window window;
-        ant::window_desc window_desc{};
+        ante::ant_window window;
+        ante::window_desc window_desc{};
         window_desc.b_vsync = true;
         window_desc.name = "test swapchain";
         window_desc.height = 256;
         window_desc.width = 256;
-        ant::create_window(&window_desc, &window);
+        ante::create_window(&window_desc, &window);
         gal::gal_context context = initialize(api);
         gal_swap_chain sc;
         gal_swap_chain_desc desc{};
@@ -137,7 +137,7 @@ TEST_CASE("test gal swapchain") {
         desc.image_count = 3;
         desc.clear_value.value = gal_clear_value::rgb{0.0f, 0.0f, 0.0f, 1.0f};
 #ifdef WIN32
-        desc.hwnd_window = ant::get_hwnd_window(window);
+        desc.hwnd_window = ante::get_hwnd_window(window);
 #endif
         gal::gal_error_code result = gal::create_swap_chain(context, &desc, &sc);
         REQUIRE(result == gal::gal_error_code::SUC);
@@ -145,7 +145,7 @@ TEST_CASE("test gal swapchain") {
         REQUIRE(result == gal::gal_error_code::SUC);
         destroy(context);
 
-        ant::destroy_window(window);
+        ante::destroy_window(window);
     };
     swap_chain_creation(gal::gal_api::VULKAN);
     //sampler_creation(gal::RenderApi::d3d12);
@@ -153,7 +153,7 @@ TEST_CASE("test gal swapchain") {
 
 TEST_CASE("test gal command pool") {
     auto command_test = [](gal::gal_api api) {
-        ant::gal::gal_command_pool cmd_pool{};
+        ante::gal::gal_command_pool cmd_pool{};
         gal::gal_context context = initialize(api);
 
         gal_queue gfx_queue{};
@@ -186,7 +186,7 @@ TEST_CASE("test gal command pool") {
 }
 
 TEST_CASE("test compute pipeline creation vk") {
-    ant::str test_cs = "\
+    ante::str test_cs = "\
 #define UPDATE_FREQ_NONE space0\n\
 #define UPDATE_FREQ_PER_FRAME space1\n\
 #define UPDATE_FREQ_PER_BATCH space2\n\
@@ -216,7 +216,7 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
     tex2[thread_id.xy] = color;\n\
 }";
     gal_error_code result;
-    using namespace ant::gal;
+    using namespace ante::gal;
     // compile shader from source
     gal::gal_context context = initialize(gal_api::VULKAN);
     shader_compiler sc;
@@ -270,7 +270,7 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
 }
 
 TEST_CASE("test pso cache vk") {
-    ant::str teststr = "\n\
+    ante::str teststr = "\n\
         // shader from GPUOpen/Cauldron src/DX12/shaders/TAASharpenerCS.hlsl\n\
         Texture2D<float4> TAABuffer;\n\
 RWTexture2D<float4> HDR;\n\
@@ -317,7 +317,7 @@ void CS_MAIN(uint3 globalID : SV_DispatchThreadID, uint3 localID : SV_GroupThrea
     History[globalID.xy] = float4(center, 1.0f);\n\
 }";
 
-    using namespace ant::gal;
+    using namespace ante::gal;
     // compile shader from source
     gal::gal_context context = initialize(gal_api::VULKAN);
     shader_compiler sc;
@@ -372,7 +372,7 @@ void CS_MAIN(uint3 globalID : SV_DispatchThreadID, uint3 localID : SV_GroupThrea
     u64 size;
     result = gal::get_pipeline_cache_data(context, pso_cache, &size, nullptr);
     REQUIRE(result == gal_error_code::SUC);
-    ant::vector<char> cache_data(size);
+    ante::vector<char> cache_data(size);
     result = gal::get_pipeline_cache_data(context, pso_cache, &size, cache_data.data());
     REQUIRE(result == gal_error_code::SUC);
     gal::gal_pipeline_cache pso_cache1{};
@@ -411,9 +411,9 @@ void CS_MAIN(uint3 globalID : SV_DispatchThreadID, uint3 localID : SV_GroupThrea
 TEST_CASE("test dispatch") {}
 
 TEST_CASE("test compute vk") {
-    ant::str test_cs = " [numthreads(8, 8, 1)] void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) {}";
+    ante::str test_cs = " [numthreads(8, 8, 1)] void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) {}";
 
-    using namespace ant::gal;
+    using namespace ante::gal;
     // compile shader from source
     gal::gal_context context = initialize(gal_api::VULKAN);
     shader_compiler sc;
@@ -467,7 +467,7 @@ TEST_CASE("test compute vk") {
 
 TEST_CASE("buffer test") {
     auto command_test = [](gal::gal_api api) {
-        ant::gal::gal_command_pool cmd_pool{};
+        ante::gal::gal_command_pool cmd_pool{};
         gal::gal_context context = initialize(api);
 
         gal_queue gfx_queue{};
@@ -481,7 +481,7 @@ TEST_CASE("buffer test") {
         gal_error_code result = gal::create_command_pool(context, &desc, &cmd_pool);
         REQUIRE(result == gal::gal_error_code::SUC);
 
-        ant::fixed_array<u8, 64> arr;
+        ante::fixed_array<u8, 64> arr;
         for (u8 i = 0; i < 64; i++) {
             arr[i] = i;
         }
@@ -521,7 +521,7 @@ TEST_CASE("buffer test") {
         download_buf_desc.size = arr.size();
         result = gal::create_buffer(context, &download_buf_desc, &download_buf);
         REQUIRE(result == gal::gal_error_code::SUC);
-        ant::fixed_array<u8, 64> dumped_arr;
+        ante::fixed_array<u8, 64> dumped_arr;
 
         gal_command_list cmd{};
         gal_command_list_desc cmd_desc{};
@@ -588,7 +588,7 @@ TEST_CASE("buffer test") {
 }
 
 TEST_CASE("descriptor set") {
-//    ant::str test_cs = "\
+//    ante::str test_cs = "\
 //#define UPDATE_FREQ_NONE space0\n\
 //#define UPDATE_FREQ_PER_FRAME space1\n\
 //#define UPDATE_FREQ_PER_BATCH space2\n\
@@ -611,7 +611,7 @@ TEST_CASE("descriptor set") {
 //    float color = tex1.SampleLevel(spl, float2(thread_id.xy), 0);\n\
 //    tex2[thread_id.xy] = color;\n\
 //}";
-    ant::str test_cs = "\
+    ante::str test_cs = "\
 #define UPDATE_FREQ_NONE space0\n\
 #define UPDATE_FREQ_PER_FRAME space1\n\
 #define UPDATE_FREQ_PER_BATCH space2\n\
@@ -628,7 +628,7 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
     float color = tex1.SampleLevel(spl, float2(thread_id.xy), 0);\n\
 }";
     gal_error_code result;
-    using namespace ant::gal;
+    using namespace ante::gal;
     // compile shader from source
     gal::gal_context context = initialize(gal_api::VULKAN);
     shader_compiler sc;

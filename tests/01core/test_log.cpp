@@ -7,10 +7,10 @@ TEST_CASE("log") {
     LOG_WARN("{}", "log test: warn");
     LOG_ERROR("{}", "log test: error");
 
-    SET_LOG_LEVEL(ant::Log::loglevel::info);
+    SET_LOG_LEVEL(ante::Log::loglevel::info);
     LOG_DEBUG("{}", "log test: debug");
     LOG_INFO("{}", "log test: info");
     LOG_WARN("{}", "log test: warn");
     LOG_ERROR("{}", "log test: error");
-    SET_LOG_LEVEL(ant::Log::loglevel::debug);
+    SET_LOG_LEVEL(ante::Log::loglevel::debug);
 }

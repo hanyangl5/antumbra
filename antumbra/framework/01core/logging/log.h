@@ -6,11 +6,11 @@
 #include "framework/01core/utils/utils.h"
 #include "framework/01core/memory/container.h"
 
-namespace ant {
-//inline ant::str HrToString(long hr) {
+namespace ante {
+//inline ante::str HrToString(long hr) {
 //    char s_str[64] = {};
 //    sprintf_s(s_str, "HRESULT of 0x%08X", static_cast<u32>(hr));
-//    return ant::str(s_str);
+//    return ante::str(s_str);
 //}
 
 class Log : public Singleton<Log> {
@@ -47,20 +47,20 @@ class Log : public Singleton<Log> {
     std::shared_ptr<spdlog::logger> m_logger;
 };
 
-#define LOG_DEBUG(...) ant::Log::get().debug("[" + ant::str(__FUNCTION__) + "] " + __VA_ARGS__);
+#define LOG_DEBUG(...) ante::Log::get().debug("[" + ante::str(__FUNCTION__) + "] " + __VA_ARGS__);
 
-#define LOG_INFO(...) ant::Log::get().info("[" + ant::str(__FUNCTION__) + "] " + __VA_ARGS__);
+#define LOG_INFO(...) ante::Log::get().info("[" + ante::str(__FUNCTION__) + "] " + __VA_ARGS__);
 
-#define LOG_WARN(...) ant::Log::get().warn("[" + ant::str(__FUNCTION__) + "] " + __VA_ARGS__);
+#define LOG_WARN(...) ante::Log::get().warn("[" + ante::str(__FUNCTION__) + "] " + __VA_ARGS__);
 
-#define LOG_ERROR(...) ant::Log::get().error("[" + ant::str(__FUNCTION__) + "] " + __VA_ARGS__);
+#define LOG_ERROR(...) ante::Log::get().error("[" + ante::str(__FUNCTION__) + "] " + __VA_ARGS__);
 
-#define LOG_FATAL(...) ant::Log::get().fatal("[" + ant::str(__FUNCTION__) + "] " + __VA_ARGS__);
+#define LOG_FATAL(...) ante::Log::get().fatal("[" + ante::str(__FUNCTION__) + "] " + __VA_ARGS__);
 
-//#define CHECK_VK_RESULT(res) ant::Log::get().CheckVulkanResult(res, __FUNCTION__, __LINE__);
+//#define CHECK_VK_RESULT(res) ante::Log::get().CheckVulkanResult(res, __FUNCTION__, __LINE__);
 //
-//#define CHECK_DX_RESULT(res) ant::Log::get().CheckDXResult(res, __FUNCTION__, __LINE__);
+//#define CHECK_DX_RESULT(res) ante::Log::get().CheckDXResult(res, __FUNCTION__, __LINE__);
 
-#define SET_LOG_LEVEL(level) ant::Log::get().SetLogLevel(level);
+#define SET_LOG_LEVEL(level) ante::Log::get().SetLogLevel(level);
 
-} // namespace ant
+} // namespace ante

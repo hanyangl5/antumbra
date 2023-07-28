@@ -29,7 +29,7 @@ inline void aligned_free(void *ptr) { free(ptr); }
 
 #include "framework/01core/utils/utils.h"
 
-namespace ant::memory {
+namespace ante::memory {
 
 extern bool b_enable_memory_tracking;
 
@@ -52,4 +52,4 @@ class allocator_base : public memory_pool {
     u64 m_size = 0;
 };
 
-} // namespace ant::memory
+} // namespace ante::memory

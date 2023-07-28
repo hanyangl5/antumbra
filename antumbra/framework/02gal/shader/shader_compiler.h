@@ -17,8 +17,8 @@
 #include "framework/02gal/enum.h"
 
 // enums
-// ant shader compiler
-namespace ant::gal {
+// antumbra shader compiler
+namespace ante::gal {
 
 enum class shader_optimization_level { NONE, O0, O1, O2, O3 };
 
@@ -221,7 +221,7 @@ enum class shader_blob_type { SPIRV, DXIL };
 //    ShaderOptimizationLevel optimization_level;
 //    shader_blob_type target_api;
 //    std::filesystem::path input_dir, output_dir;
-//    ant::vector<std::filesystem::path> shader_list;
+//    ante::vector<std::filesystem::path> shader_list;
 //    bool force_recompile{false};
 //};
 
@@ -234,11 +234,11 @@ struct shader_compile_desc {
     shader_optimization_level optimization_level;
     shader_blob_type target_api;
     //bool b_need_reflection;
-    ant::vector<std::filesystem::path> include_search_path;
-    ant::vector<std::filesystem::path> defines;
+    ante::vector<std::filesystem::path> include_search_path;
+    ante::vector<std::filesystem::path> defines;
 };
 
-//inline constexpr ant::fixed_array<char, 4> hsb_header{'h', 's', 'b', '1'};
+//inline constexpr ante::fixed_array<char, 4> hsb_header{'h', 's', 'b', '1'};
 
 //struct ShaderBinaryHeader {
 //    fixed_array<char, 4> header;
@@ -287,7 +287,7 @@ struct ShaderResource {
 
     // resource name
     // const char *name;
-    ant::str name;
+    ante::str name;
 
     // name size
     //u32 name_size;
@@ -318,8 +318,8 @@ struct shader_reflection {
     // single large allocation for names to reduce number of allocations
     char *pNamePool;
     VertexInput *pVertexInputs;
-    ant::hash_map<ant::str, ShaderResource> resources;
-    ant::vector<u32> sets;
+    ante::hash_map<ante::str, ShaderResource> resources;
+    ante::vector<u32> sets;
     ShaderVariable *pVariables;
 
     const char *entry;
@@ -331,16 +331,16 @@ struct shader_reflection {
     u32 mVariableCount;
 
     // Thread group size for compute shader
-    ant::fixed_array<u32, 3> work_group_size;
+    ante::fixed_array<u32, 3> work_group_size;
 
     //number of tessellation control point
     u32 tesc_control_point;
 };
 
 struct pipeline_reflection {
-    ant::vector<ShaderResource> m_resources;
-    ant::vector<u32> sets; // 16bit set count, 16 bit binding count;
-    //ant::vector<std::pair<const char*, ShaderResource>> m_resources;
+    ante::vector<ShaderResource> m_resources;
+    ante::vector<u32> sets; // 16bit set count, 16 bit binding count;
+    //ante::vector<std::pair<const char*, ShaderResource>> m_resources;
     //gal_shader_stage mShaderStages;
     // the individual stages reflection data.
     //shader_reflection mStageReflections[MAX_SHADER_STAGE_COUNT];
@@ -460,4 +460,4 @@ class shader_compiler : public Singleton<shader_compiler> {
     IDxcIncludeHandler *m_idxc_include_handler;
 };
 
-} // namespace ant::gal
+} // namespace ante::gal

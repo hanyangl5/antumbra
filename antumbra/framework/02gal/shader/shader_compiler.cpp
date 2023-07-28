@@ -12,7 +12,7 @@
 //};
 //} // namespace std
 
-namespace ant::gal {
+namespace ante::gal {
 
 //struct ShaderCompilationSetting {
 //    const std::filesystem::path path; // key to index the shader_text map
@@ -21,7 +21,7 @@ namespace ant::gal {
 //
 //struct FileNode {
 //    bool need_compile;
-//    ant::vector<std::filesystem::path> header_files;
+//    ante::vector<std::filesystem::path> header_files;
 //};
 //
 //static std::filesystem::path cached_project_dir = std::filesystem::temp_directory_path() / "horizon";
@@ -54,18 +54,18 @@ shader_compiler::shader_compiler() noexcept {
 shader_compiler::~shader_compiler() noexcept {}
 //// we read once to build dependency graph and cache
 //void IterateHeaderFiles(const std::filesystem::path &path,
-//                        ant::hash_map<std::filesystem::path, FileNode> &dependency_map) {
+//                        ante::hash_map<std::filesystem::path, FileNode> &dependency_map) {
 //    FileNode current_node;
-//    auto text = io::read_text_file(ant::str{path.string()});
+//    auto text = io::read_text_file(ante::str{path.string()});
 //    // we use last write time instead of md5, but that might not accurate
 //    //auto md5_value = md5(text);
 //    std::filesystem::file_time_type last_mod_time = std::filesystem::last_write_time(path);
-//    auto s_last_mod_time = ant::str{std::to_string(to_time_t(last_mod_time))};
+//    auto s_last_mod_time = ante::str{std::to_string(to_time_t(last_mod_time))};
 //    auto cached_path = cached_shader_dir / path.filename(); // FIXME(hylu): filename may conflict
 //    if (std::filesystem::exists(cached_path) && (io::read_text_file(cached_path) == s_last_mod_time)) {
 //        current_node.need_compile = false;
 //    } else {
-//        io::write_text_file(ant::str{cached_path.string()}, s_last_mod_time.data(),
+//        io::write_text_file(ante::str{cached_path.string()}, s_last_mod_time.data(),
 //                            s_last_mod_time.size() * sizeof(char));
 //    }
 //
@@ -85,8 +85,8 @@ shader_compiler::~shader_compiler() noexcept {}
 //}
 //
 //bool NeedCompile(const std::filesystem::path &current_node_path,
-//                 ant::hash_set<std::filesystem::path> &visited_vertices,
-//                ant::hash_map<std::filesystem::path, FileNode> &node_map) {
+//                 ante::hash_set<std::filesystem::path> &visited_vertices,
+//                ante::hash_map<std::filesystem::path, FileNode> &node_map) {
 //
 //    auto &current_node = node_map[current_node_path];
 //    if (visited_vertices.find(current_node_path) != visited_vertices.end()) {
@@ -109,7 +109,7 @@ shader_compiler::~shader_compiler() noexcept {}
 //    }
 //
 //    // shader text map, value contains shader blob and cache stat.
-//    Container::HashMap<std::filesystem::path, std::pair<ant::str, bool>> shader_texts(
+//    Container::HashMap<std::filesystem::path, std::pair<ante::str, bool>> shader_texts(
 //        settings.shader_list.size());
 //
 //    for (auto &path : settings.shader_list) {
@@ -134,8 +134,8 @@ shader_compiler::~shader_compiler() noexcept {}
 //            scs.args.optimization_level = settings.optimization_level;
 //            scs.args.target_api = settings.target_api;
 //            scs.args.include_path = settings.input_dir / "include";
-//            ant::str output_file_name = ant::str{path.filename().string()} + "." +
-//                                                 ant::str{pos->str().substr(0, 2)} + ".hsb"; // add api
+//            ante::str output_file_name = ante::str{path.filename().string()} + "." +
+//                                                 ante::str{pos->str().substr(0, 2)} + ".hsb"; // add api
 //            scs.args.out_file_path = settings.output_dir / output_file_name;
 //            scs.args.target_profile = GetShaderTargetProfile(pos->str().c_str(), settings.sm_version);
 //            shader_compilation_settings.push_back(std::move(scs));
@@ -190,7 +190,7 @@ compiled_shader *shader_compiler::compile(shader_source_blob *blob, shader_compi
         return nullptr;
     }
     ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 512);
-    ant::vector<LPCWSTR> args(&stack_memory);
+    ante::vector<LPCWSTR> args(&stack_memory);
 
     // entry point
     args.push_back(L"-E");
@@ -303,7 +303,7 @@ compiled_shader *shader_compiler::compile(shader_source_blob *blob, shader_compi
         return nullptr;
     }
 
-    compiled_shader *ret = ant::memory::alloc<compiled_shader>();
+    compiled_shader *ret = ante::memory::alloc<compiled_shader>();
     if (!ret) {
         LOG_ERROR("failed to create compiled shader");
         return nullptr;
@@ -328,7 +328,7 @@ compiled_shader *shader_compiler::compile(shader_source_blob *blob, shader_compi
     ret->m_type = desc->target_api;
 
     if (b_spv) {
-        ret->m_reflection = ant::memory::alloc<shader_reflection>();
+        ret->m_reflection = ante::memory::alloc<shader_reflection>();
         ret->create_shader_reflection();
     }
 
@@ -471,4 +471,4 @@ gal_shader_stage compiled_shader_group::stages() { return m_stage_flags; }
 
 pipeline_reflection *compiled_shader_group::reflection() { return m_pipeline_reflection; }
 
-} // namespace ant::gal
+} // namespace ante::gal

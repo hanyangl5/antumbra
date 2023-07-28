@@ -3,7 +3,7 @@
 #include "framework/01core/logging/log.h"
 #include "framework/01core/math/math.h"
 
-namespace ant::memory {
+namespace ante::memory {
 
 u64 calc_padding_with_header(uintptr_t ptr, uintptr_t alignment, u64 header_size) {
     uintptr_t p, a, modulo, padding, needed_space;
@@ -156,4 +156,4 @@ void stack_allocator::do_deallocate(void *ptr, [[maybe_unused]] u64 bytes, [[may
 }
 bool stack_allocator::do_is_equal(const std::pmr::memory_resource &other) const noexcept { return this == &other; }
 
-} // namespace ant::memory
+} // namespace ante::memory

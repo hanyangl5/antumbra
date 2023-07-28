@@ -7,7 +7,7 @@
 #include <magic_enum_iostream.hpp>
 #include <magic_enum_switch.hpp>
 
-namespace ant {
+namespace ante {
 namespace enum_refl = magic_enum;
 
-} // namespace ant
+} // namespace ante

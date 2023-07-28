@@ -8,7 +8,7 @@
 
 // project headers
 
-namespace ant {
+namespace ante {
 
 template <typename T> class Singleton {
   public:
@@ -26,4 +26,4 @@ template <typename T> class Singleton {
     }
 };
 
-} // namespace ant
+} // namespace ante

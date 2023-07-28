@@ -2,7 +2,7 @@
 
 #include "allocator2.h"
 
-namespace ant::memory {
+namespace ante::memory {
 
 enum class freelist_allocator_mode { LINK_LIST, RB_TREE };
 
@@ -29,4 +29,4 @@ class freelist_allocator final : public allocator_base {
     u64 m_offset = 0;
 };
 
-} // namespace ant::memory
+} // namespace ante::memory

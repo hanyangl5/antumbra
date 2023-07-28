@@ -55,7 +55,7 @@ typedef uint64_t uint64;
 #define THREAD_STACK_SIZE_ORBIS (64u * TF_KB)
 #endif
 
-namespace ant {
+namespace ante {
 
 struct WindowHandle {
     // TODO: Separate vulkan ext from choosing xlib vs xcb
@@ -77,4 +77,4 @@ struct WindowHandle {
     void *window; //hWnd
 #endif
 };
-} // namespace ant
+} // namespace ante

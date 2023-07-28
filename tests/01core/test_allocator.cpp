@@ -5,10 +5,10 @@
 #include "framework/01core/memory/allocators/linear_allocator.h"
 #include "framework/01core/memory/allocators/pool_allocator.h"
 #include "framework/01core/memory/allocators/stack_allocator.h"
-using namespace ant::memory;
-using namespace ant;
+using namespace ante::memory;
+using namespace ante;
 
-ant::fixed_array<u64, 10> allocation = {8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096};
+ante::fixed_array<u64, 10> allocation = {8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096};
 
 TEST_CASE("allocator_linear") {
     memory::linear_allocator pool(8192, 8);

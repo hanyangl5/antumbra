@@ -29,7 +29,7 @@
 #include "../gal.h"
 #include "gal_vulkan_enum.h"
 
-namespace ant::gal {
+namespace ante::gal {
 
 // TODO(hyl5): static or inline?
 
@@ -98,11 +98,11 @@ constexpr VkBufferUsageFlags util_to_vk_buffer_usage(gal_descriptor_type types) 
 
 constexpr VkImageType utils_to_vk_image_type(gal_texture_dimension dimension) {
     switch (dimension) {
-    case ant::gal::gal_texture_dimension::_1D:
+    case ante::gal::gal_texture_dimension::_1D:
         return VK_IMAGE_TYPE_1D;
-    case ant::gal::gal_texture_dimension::_2D:
+    case ante::gal::gal_texture_dimension::_2D:
         return VK_IMAGE_TYPE_2D;
-    case ant::gal::gal_texture_dimension::_3D:
+    case ante::gal::gal_texture_dimension::_3D:
         return VK_IMAGE_TYPE_3D;
     default:
         return VK_IMAGE_TYPE_MAX_ENUM;
@@ -111,22 +111,22 @@ constexpr VkImageType utils_to_vk_image_type(gal_texture_dimension dimension) {
 
 constexpr VkImageViewType utils_to_vk_image_view_type(gal_texture_dimension dimension) {
     switch (dimension) {
-    case ant::gal::gal_texture_dimension::_1D:
+    case ante::gal::gal_texture_dimension::_1D:
         return VK_IMAGE_VIEW_TYPE_1D;
-    case ant::gal::gal_texture_dimension::_2D:
+    case ante::gal::gal_texture_dimension::_2D:
         return VK_IMAGE_VIEW_TYPE_2D;
-    case ant::gal::gal_texture_dimension::_3D:
+    case ante::gal::gal_texture_dimension::_3D:
         return VK_IMAGE_VIEW_TYPE_3D;
-    case ant::gal::gal_texture_dimension::CUBE:
+    case ante::gal::gal_texture_dimension::CUBE:
         return VK_IMAGE_VIEW_TYPE_CUBE;
-    case ant::gal::gal_texture_dimension::_1D_ARRAY:
+    case ante::gal::gal_texture_dimension::_1D_ARRAY:
         return VK_IMAGE_VIEW_TYPE_1D_ARRAY;
-    case ant::gal::gal_texture_dimension::_2D_ARRAY:
+    case ante::gal::gal_texture_dimension::_2D_ARRAY:
         return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-    case ant::gal::gal_texture_dimension::CUBE_ARRAY:
+    case ante::gal::gal_texture_dimension::CUBE_ARRAY:
         return VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
-    case ant::gal::gal_texture_dimension::_2D_MS_ARRAY:
-    case ant::gal::gal_texture_dimension::_2D_MS:
+    case ante::gal::gal_texture_dimension::_2D_MS_ARRAY:
+    case ante::gal::gal_texture_dimension::_2D_MS:
         // TODO(hyl5): how ms map to vk?
         return VK_IMAGE_VIEW_TYPE_MAX_ENUM;
     default:
@@ -136,19 +136,19 @@ constexpr VkImageViewType utils_to_vk_image_view_type(gal_texture_dimension dime
 
 constexpr VkSampleCountFlagBits utils_to_vk_sample_count_flags(gal_texture_sample_count samples) {
     switch (samples) {
-    case ant::gal::gal_texture_sample_count::SAMPLE_COUNT_1:
+    case ante::gal::gal_texture_sample_count::SAMPLE_COUNT_1:
         return VK_SAMPLE_COUNT_1_BIT;
-    case ant::gal::gal_texture_sample_count::SAMPLE_COUNT_2:
+    case ante::gal::gal_texture_sample_count::SAMPLE_COUNT_2:
         return VK_SAMPLE_COUNT_2_BIT;
-    case ant::gal::gal_texture_sample_count::SAMPLE_COUNT_4:
+    case ante::gal::gal_texture_sample_count::SAMPLE_COUNT_4:
         return VK_SAMPLE_COUNT_4_BIT;
-    case ant::gal::gal_texture_sample_count::SAMPLE_COUNT_8:
+    case ante::gal::gal_texture_sample_count::SAMPLE_COUNT_8:
         return VK_SAMPLE_COUNT_8_BIT;
-    case ant::gal::gal_texture_sample_count::SAMPLE_COUNT_16:
+    case ante::gal::gal_texture_sample_count::SAMPLE_COUNT_16:
         return VK_SAMPLE_COUNT_16_BIT;
-    case ant::gal::gal_texture_sample_count::SAMPLE_COUNT_32:
+    case ante::gal::gal_texture_sample_count::SAMPLE_COUNT_32:
         return VK_SAMPLE_COUNT_32_BIT;
-    case ant::gal::gal_texture_sample_count::SAMPLE_COUNT_64:
+    case ante::gal::gal_texture_sample_count::SAMPLE_COUNT_64:
         return VK_SAMPLE_COUNT_64_BIT;
     default:
         return VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM;
@@ -1127,23 +1127,23 @@ constexpr VkSampleCountFlagBits util_to_vk_sample_count(gal_texture_sample_count
 }
 constexpr VkStencilOp utils_to_vk_stencil_op(gal_stencil_op op) {
     switch (op) {
-    case ant::gal::gal_stencil_op::UNDEFINED:
+    case ante::gal::gal_stencil_op::UNDEFINED:
         return VK_STENCIL_OP_KEEP;
-    case ant::gal::gal_stencil_op::KEEP:
+    case ante::gal::gal_stencil_op::KEEP:
         return VK_STENCIL_OP_KEEP;
-    case ant::gal::gal_stencil_op::SET_ZERO:
+    case ante::gal::gal_stencil_op::SET_ZERO:
         return VK_STENCIL_OP_ZERO;
-    case ant::gal::gal_stencil_op::REPLACE:
+    case ante::gal::gal_stencil_op::REPLACE:
         return VK_STENCIL_OP_REPLACE;
-    case ant::gal::gal_stencil_op::INVERT:
+    case ante::gal::gal_stencil_op::INVERT:
         return VK_STENCIL_OP_INVERT;
-    case ant::gal::gal_stencil_op::INCR:
+    case ante::gal::gal_stencil_op::INCR:
         return VK_STENCIL_OP_INCREMENT_AND_WRAP;
-    case ant::gal::gal_stencil_op::DECR:
+    case ante::gal::gal_stencil_op::DECR:
         return VK_STENCIL_OP_DECREMENT_AND_WRAP;
-    case ant::gal::gal_stencil_op::INCR_SAT:
+    case ante::gal::gal_stencil_op::INCR_SAT:
         return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
-    case ant::gal::gal_stencil_op::DECR_SAT:
+    case ante::gal::gal_stencil_op::DECR_SAT:
         return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
     default:
         return VK_STENCIL_OP_KEEP;
@@ -1186,9 +1186,9 @@ constexpr VkPipelineDepthStencilStateCreateInfo util_to_depth_desc(const gal_dep
 }
 constexpr VkPolygonMode utils_to_vk_fill_mode(gal_polygon_fill_mode mode) {
     switch (mode) {
-    case ant::gal::gal_polygon_fill_mode::SOLID:
+    case ante::gal::gal_polygon_fill_mode::SOLID:
         return VK_POLYGON_MODE_FILL;
-    case ant::gal::gal_polygon_fill_mode::WIREFRAME:
+    case ante::gal::gal_polygon_fill_mode::WIREFRAME:
         return VK_POLYGON_MODE_LINE;
     default:
         return VK_POLYGON_MODE_MAX_ENUM;
@@ -1197,13 +1197,13 @@ constexpr VkPolygonMode utils_to_vk_fill_mode(gal_polygon_fill_mode mode) {
 
 constexpr VkCullModeFlags utils_to_vk_culll_mode_flags(gal_cull_mode mode) {
     switch (mode) {
-    case ant::gal::gal_cull_mode::NONE:
+    case ante::gal::gal_cull_mode::NONE:
         return VK_CULL_MODE_NONE;
-    case ant::gal::gal_cull_mode::BACK:
+    case ante::gal::gal_cull_mode::BACK:
         return VK_CULL_MODE_BACK_BIT;
-    case ant::gal::gal_cull_mode::FRONT:
+    case ante::gal::gal_cull_mode::FRONT:
         return VK_CULL_MODE_FRONT_BIT;
-    case ant::gal::gal_cull_mode::BOTH:
+    case ante::gal::gal_cull_mode::BOTH:
         return VK_CULL_MODE_FRONT_AND_BACK;
     default:
         return VK_CULL_MODE_FLAG_BITS_MAX_ENUM;
@@ -1238,17 +1238,17 @@ constexpr VkShaderStageFlags util_to_vk_shader_stage_flags(gal_shader_stage stag
 }
 constexpr VkBlendOp utils_to_vk_blend_op(gal_blend_mode bm) {
     switch (bm) {
-    case ant::gal::gal_blend_mode::UNDEFINED:
+    case ante::gal::gal_blend_mode::UNDEFINED:
         return VK_BLEND_OP_MAX_ENUM;
-    case ant::gal::gal_blend_mode::ADD:
+    case ante::gal::gal_blend_mode::ADD:
         return VK_BLEND_OP_ADD;
-    case ant::gal::gal_blend_mode::SUBTRACT:
+    case ante::gal::gal_blend_mode::SUBTRACT:
         return VK_BLEND_OP_SUBTRACT;
-    case ant::gal::gal_blend_mode::REVERSE_SUBTRACT:
+    case ante::gal::gal_blend_mode::REVERSE_SUBTRACT:
         return VK_BLEND_OP_REVERSE_SUBTRACT;
-    case ant::gal::gal_blend_mode::MIN:
+    case ante::gal::gal_blend_mode::MIN:
         return VK_BLEND_OP_MIN;
-    case ant::gal::gal_blend_mode::MAX:
+    case ante::gal::gal_blend_mode::MAX:
         return VK_BLEND_OP_MAX;
     default:
         return VK_BLEND_OP_MAX_ENUM;
@@ -1256,31 +1256,31 @@ constexpr VkBlendOp utils_to_vk_blend_op(gal_blend_mode bm) {
 }
 constexpr VkBlendFactor utils_to_vk_blend_factor(BlendConstant bc) {
     switch (bc) {
-    case ant::gal::BlendConstant::ZERO:
+    case ante::gal::BlendConstant::ZERO:
         return VK_BLEND_FACTOR_ZERO;
-    case ant::gal::BlendConstant::ONE:
+    case ante::gal::BlendConstant::ONE:
         return VK_BLEND_FACTOR_ONE;
-    case ant::gal::BlendConstant::SRC_COLOR:
+    case ante::gal::BlendConstant::SRC_COLOR:
         return VK_BLEND_FACTOR_SRC_COLOR;
-    case ant::gal::BlendConstant::ONE_MINUS_SRC_COLOR:
+    case ante::gal::BlendConstant::ONE_MINUS_SRC_COLOR:
         return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
-    case ant::gal::BlendConstant::DST_COLOR:
+    case ante::gal::BlendConstant::DST_COLOR:
         return VK_BLEND_FACTOR_DST_COLOR;
-    case ant::gal::BlendConstant::ONE_MINUS_DST_COLOR:
+    case ante::gal::BlendConstant::ONE_MINUS_DST_COLOR:
         return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
-    case ant::gal::BlendConstant::SRC_ALPHA:
+    case ante::gal::BlendConstant::SRC_ALPHA:
         return VK_BLEND_FACTOR_SRC_ALPHA;
-    case ant::gal::BlendConstant::ONE_MINUS_SRC_ALPHA:
+    case ante::gal::BlendConstant::ONE_MINUS_SRC_ALPHA:
         return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-    case ant::gal::BlendConstant::DST_ALPHA:
+    case ante::gal::BlendConstant::DST_ALPHA:
         return VK_BLEND_FACTOR_DST_ALPHA;
-    case ant::gal::BlendConstant::ONE_MINUS_DST_ALPHA:
+    case ante::gal::BlendConstant::ONE_MINUS_DST_ALPHA:
         return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
-    case ant::gal::BlendConstant::SRC_ALPHA_SATURATE:
+    case ante::gal::BlendConstant::SRC_ALPHA_SATURATE:
         return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
-    case ant::gal::BlendConstant::BLEND_FACTOR:
+    case ante::gal::BlendConstant::BLEND_FACTOR:
         return VK_BLEND_FACTOR_CONSTANT_COLOR;
-    case ant::gal::BlendConstant::ONE_MINUS_BLEND_FACTOR:
+    case ante::gal::BlendConstant::ONE_MINUS_BLEND_FACTOR:
         return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
     default:
         return VK_BLEND_FACTOR_MAX_ENUM;
@@ -1348,9 +1348,9 @@ constexpr VkPipelineColorBlendStateCreateInfo util_to_blend_desc(const gal_blend
 
 constexpr VkFrontFace utils_to_vk_front_face(gal_front_face ff) {
     switch (ff) {
-    case ant::gal::gal_front_face::CCW:
+    case ante::gal::gal_front_face::CCW:
         return VkFrontFace::VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    case ant::gal::gal_front_face::CW:
+    case ante::gal::gal_front_face::CW:
         return VkFrontFace::VK_FRONT_FACE_CLOCKWISE;
     default:
         return VkFrontFace::VK_FRONT_FACE_MAX_ENUM;
@@ -1378,11 +1378,11 @@ constexpr VkPipelineRasterizationStateCreateInfo util_to_rasterizer_desc(const g
 
 constexpr VkPipelineBindPoint utils_to_vk_pipeline_bind_point(gal_pipeline_type type) {
     switch (type) {
-    case ant::gal::gal_pipeline_type::COMPUTE:
+    case ante::gal::gal_pipeline_type::COMPUTE:
         return VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_COMPUTE;
-    case ant::gal::gal_pipeline_type::GRAPHICS:
+    case ante::gal::gal_pipeline_type::GRAPHICS:
         return VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS;
-    case ant::gal::gal_pipeline_type::RAYTRACING:
+    case ante::gal::gal_pipeline_type::RAYTRACING:
         return VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR;
     default:
         return VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_MAX_ENUM;
@@ -1391,9 +1391,9 @@ constexpr VkPipelineBindPoint utils_to_vk_pipeline_bind_point(gal_pipeline_type 
 
 constexpr VkIndexType utils_to_vk_index_type(gal_index_type type) {
     switch (type) {
-    case ant::gal::gal_index_type::u32:
+    case ante::gal::gal_index_type::u32:
         return VkIndexType::VK_INDEX_TYPE_UINT32;
-    case ant::gal::gal_index_type::u16:
+    case ante::gal::gal_index_type::u16:
         return VkIndexType::VK_INDEX_TYPE_UINT16;
     default:
         return VkIndexType::VK_INDEX_TYPE_MAX_ENUM;
@@ -1569,4 +1569,4 @@ VkImageLayout util_to_vk_image_layout(gal_resource_state usage) {
     return VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
-} // namespace ant::gal
+} // namespace ante::gal

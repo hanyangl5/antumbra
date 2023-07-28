@@ -34,7 +34,7 @@
 #include "framework/01core/memory/memory.h"
 #include "framework/01core/platform/platform.h"
 #include "framework/01core/utils/utils.h"
-namespace ant::gal {
+namespace ante::gal {
 struct compiled_shader_group;
 
 inline constexpr u32 MAX_RESOURCE_NAME_LENGTH = 256;
@@ -525,7 +525,7 @@ struct gal_sampler_desc {
     f32 min_lod;
     f32 max_lod;
     f32 max_anisotropy;
-    ant::fixed_array<f32, 4> border_color;
+    ante::fixed_array<f32, 4> border_color;
 };
 DECLARE_GAL_HANDLE(gal_sampler) {
   public:
@@ -553,7 +553,7 @@ struct gal_swap_chain_desc {
 
 DECLARE_GAL_HANDLE(gal_swap_chain) {
     gal_swap_chain_desc m_desc;
-    ant::fixed_array<gal_render_target, MAX_SWAPCHAIN_IMAGES> m_render_targets;
+    ante::fixed_array<gal_render_target, MAX_SWAPCHAIN_IMAGES> m_render_targets;
 };
 
 //struct gal_shader_desc {
@@ -872,4 +872,4 @@ struct gal_descriptor_set_update_desc {
     //void *data;
 };
 
-} // namespace ant::gal
+} // namespace ante::gal

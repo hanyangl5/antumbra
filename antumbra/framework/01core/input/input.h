@@ -7,7 +7,7 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 #endif
-namespace ant {
+namespace ante {
 struct ant_window {
     GLFWwindow *m_window;
 };
@@ -57,4 +57,4 @@ HWND get_hwnd_window(ant_window window) { return glfwGetWin32Window(window.m_win
 //bool get_key_down();
 //};
 
-} // namespace ant
+} // namespace ante

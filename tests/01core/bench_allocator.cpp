@@ -8,8 +8,8 @@
 // #include "framework/01core/memory/allocators/pool_allocator.h"
 // #include "framework/01core/memory/allocators/stack_allocator.h"
 
-// using namespace ant::memory;
-// using namespace ant;
+// using namespace ante::memory;
+// using namespace ante;
 
 // const u64 A = static_cast<u64>(1e9);
 // const u64 B = static_cast<u64>(1e8);

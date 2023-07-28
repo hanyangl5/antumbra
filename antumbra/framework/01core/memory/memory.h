@@ -12,7 +12,7 @@
 #include "framework/01core/singleton/public_singleton.h"
 #include "framework/01core/utils/utils.h"
 
-namespace ant::memory {
+namespace ante::memory {
 
 inline void ant_enable_memory_tracking() { b_enable_memory_tracking = true; }
 inline void ant_disable_memory_tracking() { b_enable_memory_tracking = false; }
@@ -52,4 +52,4 @@ template <typename T> void afree(T *ptr, memory_pool *pool = nullptr) {
 #define ACQUIRE_STACK_MEMORY_RESOURCE(name, bytes)                                                                     \
     char __stack_memory__[bytes];                                                                                      \
     std::pmr::monotonic_buffer_resource name((void *)__stack_memory__, bytes);
-} // namespace ant::memory
+} // namespace ante::memory

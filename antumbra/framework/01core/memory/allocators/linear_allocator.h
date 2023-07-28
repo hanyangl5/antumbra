@@ -2,7 +2,7 @@
 
 #include "allocator2.h"
 
-namespace ant::memory {
+namespace ante::memory {
 
 // The Linear Allocator is an efficient memory management tool characterized by its simplicity and speed.
 // It operates by incrementing a pointer within a pre-allocated memory block during allocation.
@@ -26,4 +26,4 @@ class linear_allocator final : public allocator_base {
     u64 m_offset = 0;
 };
 
-} // namespace ant::memory
+} // namespace ante::memory

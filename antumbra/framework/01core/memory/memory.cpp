@@ -1,6 +1,6 @@
 #include "memory.h"
 
-namespace ant::memory {
+namespace ante::memory {
 
 void *amalloc(u64 size, memory_pool *pool) {
     void *ptr;
@@ -40,4 +40,4 @@ void *aaligned_alloc(u64 alignment, u64 size, memory_pool *pool) {
 //    return mi_calloc(num, size);
 //}
 
-} // namespace ant::memory
+} // namespace ante::memory

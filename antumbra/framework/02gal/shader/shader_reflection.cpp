@@ -5,7 +5,7 @@
 
 #include "framework/01core/memory/memory.h"
 
-namespace ant::gal {
+namespace ante::gal {
 
 inline void read_resource_vec_size(const spirv_cross::Compiler &compiler, const spirv_cross::Resource &resource,
                                    ShaderResource &shader_resource) {
@@ -119,7 +119,7 @@ void compiled_shader::create_shader_reflection_from_spirv() {
     // count += (u32)resources.acceleration_structures.size(); // raytracing structures
 
     ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 128);
-    ant::hash_map<u32, u32> used_sets(&stack_memory);
+    ante::hash_map<u32, u32> used_sets(&stack_memory);
     // stage inputs
     for (auto &input : resources.stage_inputs) {
         ShaderResource resource;
@@ -252,7 +252,7 @@ void compiled_shader_group::create_pipeline_reflection() {
         return;
     }
 
-    m_pipeline_reflection = ant::memory::alloc<pipeline_reflection>(nullptr);
+    m_pipeline_reflection = ante::memory::alloc<pipeline_reflection>(nullptr);
 
     if (m_b_same_root_signature) {
         // we only need to set from one shader beacuse all shader in one shader group share the same root signature
@@ -262,7 +262,7 @@ void compiled_shader_group::create_pipeline_reflection() {
         refl = m_comp ? const_cast<shader_reflection *>(m_comp->reflection()) : nullptr;
 
         //m_pipeline_reflection->m_resources =
-        //    ant::vector<std::pair<const char *, ShaderResource>>(refl->resources.begin(), refl->resources.end());
+        //    ante::vector<std::pair<const char *, ShaderResource>>(refl->resources.begin(), refl->resources.end());
 
         //std::transform(refl->resources.begin(), refl->resources.end(),
         //               std::back_inserter(m_pipeline_reflection->m_resources), [](const auto &p) { return p.second; });
@@ -433,4 +433,4 @@ void compiled_shader_group::create_pipeline_reflection() {
 //    afree(pReflection->pVariables);
 //}
 
-} // namespace ant::gal
+} // namespace ante::gal

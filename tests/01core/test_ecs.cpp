@@ -11,7 +11,7 @@ TEST_CASE("ecs") {
     };
 
     struct Walking {};
-    ant::ecs::world ecs;
+    ante::ecs::world ecs;
 
     // Create an entity with name Bob
     auto bob = ecs.entity("Bob")

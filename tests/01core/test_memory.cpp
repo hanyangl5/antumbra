@@ -6,36 +6,36 @@
 #include "framework/01core/memory/allocators/pool_allocator.h"
 #include "framework/01core/memory/allocators/stack_allocator.h"
 #include "framework/01core/memory/smart_ptr.h"
-using namespace ant::memory;
-using namespace ant;
+using namespace ante::memory;
+using namespace ante;
 TEST_CASE("malloc") {
 
     struct A {
         char e[4];
     };
-    void *pa = ant::memory::alloc<A>(nullptr);
+    void *pa = ante::memory::alloc<A>(nullptr);
     REQUIRE(pa != nullptr);
-    ant::memory::afree(pa);
+    ante::memory::afree(pa);
 
-    void *pb = ant::memory::amalloc(sizeof(A));
+    void *pb = ante::memory::amalloc(sizeof(A));
     REQUIRE(pb != nullptr);
-    ant::memory::afree(pb);
+    ante::memory::afree(pb);
 }
 
 TEST_CASE("memory") { ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 1024); }
 
 TEST_CASE("container") {
-    ant::str str = "test string";
+    ante::str str = "test string";
     REQUIRE(str.length() == 11);
 
-    ant::vector<i32> vec;
+    ante::vector<i32> vec;
 
     for (u32 i = 0; i < 5; i++) {
         vec.push_back(i);
         REQUIRE(vec.back() == static_cast<i32>(i));
         REQUIRE(static_cast<u32>(vec.size()) == i + 1);
     }
-    ant::fixed_array<i32, 5> arr{1, 2, 3, 4, 5};
+    ante::fixed_array<i32, 5> arr{1, 2, 3, 4, 5};
     REQUIRE(arr.size() == 5);
 }
 

@@ -27,7 +27,7 @@
     class_name &operator=(const class_name &) = default;                                                               \
     class_name &operator=(class_name &&) = default;
 
-namespace ant {
+namespace ante {
 
 using u8 = uint8_t;
 using u16 = uint16_t;
@@ -75,9 +75,9 @@ template <typename T> void hash_combine(u64 &seed, const T &v) {
 }
 
 //// require c++20
-// ant::str to_string(std::filesystem::file_time_type const &ftime) {
+// ante::str to_string(std::filesystem::file_time_type const &ftime) {
 //     std::time_t cftime = std::chrono::system_clock::to_time_t(std::chrono::file_clock::to_sys(ftime));
-//     ant::str str = std::asctime(std::localtime(&cftime));
+//     ante::str str = std::asctime(std::localtime(&cftime));
 //     str.pop_back(); // rm the trailing '\n' put by `asctime`
 //     return str;
 // }
@@ -115,4 +115,4 @@ constexpr u64 operator"" _kb(unsigned long long value) { return static_cast<u64>
 constexpr u64 operator"" _mb(unsigned long long value) { return static_cast<u64>(value * 1024 * 1024); }
 
 template <typename T> T align_up(T a, T size) { return ((a + size - 1) & (~(size - 1))); }
-} // namespace ant
+} // namespace ante

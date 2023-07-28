@@ -1,7 +1,7 @@
 #pragma once
 
 #include <sol/sol.hpp>
-namespace ant {
+namespace ante {
 
 // REGISTER CLASS/STRUCT:
 // (member var, all/public/private)

@@ -26,7 +26,7 @@ SOFTWARE.
 
 #include "framework/01core/utils/utils.h"
 
-namespace ant::gal {
+namespace ante::gal {
 
 enum class gal_texture_format {
     UNDEFINED = 0,
@@ -7418,4 +7418,4 @@ constexpr uint32_t PixelCountOfBlock(gal_texture_format fmt) {
 }
 
 
-} // namespace ant::gal
+} // namespace ante::gal

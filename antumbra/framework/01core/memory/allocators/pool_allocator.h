@@ -2,7 +2,7 @@
 
 #include "allocator2.h"
 
-namespace ant::memory {
+namespace ante::memory {
 
 // The pool_allocator is a memory management object that allocates memory in chunks from a predefined memory pool.
 // It is designed to be efficient in situations where the same size of memory block is frequently allocated and deallocated.
@@ -31,4 +31,4 @@ class pool_allocator final : public allocator_base {
     // u64 m_offset = 0;
 };
 
-} // namespace ant::memory
+} // namespace ante::memory

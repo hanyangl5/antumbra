@@ -12,7 +12,7 @@
 // // project headers
 // #include "framework/01core/utils/utils.h"
 
-// namespace ant {
+// namespace ante {
 
 // using namespace std::chrono_literals;
 
@@ -43,4 +43,4 @@
 //     using namespace std::chrono_literals;
 //     call_func_with_interval(1h, func, args...);
 // }
-// } // namespace ant
+// } // namespace ante
