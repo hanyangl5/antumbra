@@ -1863,9 +1863,10 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
     }
 
     // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/vkUpdateDescriptorSetWithTemplate.html
-    ant::vector<VkDescriptorUpdateTemplateEntry> descriptor_update_template_entries(&stack_memory);
-    descriptor_update_template_entries.resize(total_binding_count);
-
+    //ant::vector<VkDescriptorUpdateTemplateEntry> descriptor_update_template_entries(&stack_memory);
+    //descriptor_update_template_entries.resize(total_binding_count);
+    ant::vector<ant::vector<VkDescriptorUpdateTemplateEntry>> descriptor_update_template_entries(&stack_memory);
+    descriptor_update_template_entries.resize(refl->sets.size());
     u32 offsets = 0;
 
     //auto get_offset = [](VkDescriptorType type) -> u32 {
@@ -1879,34 +1880,29 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
     //    //    return 0;
     //    //}
     //};
+
+
     set_binding_offsets.fill(0); // reset the arr
-    u32 i = 0;
     for (auto &resource : refl->m_resources) {
         if (resource.resource_type == ShaderResourceType::RESOURCE) {
-            VkDescriptorSetLayoutBinding binding{};
-            binding.binding = resource.reg;
-            binding.descriptorCount = resource.array_size;
-            binding.descriptorType = utils_to_vk_descriptor_type(resource.descriptor_type);
-            binding.stageFlags = stages;
-            bindings[binding_offsets[set_index_map[resource.set]]] = std::move(binding);
-            binding_offsets[set_index_map[resource.set]]++;
+            u32 set_order = set_index_map[resource.set];
 
-            descriptor_update_template_entries[i].dstBinding = resource.reg;
-            descriptor_update_template_entries[i].descriptorType = utils_to_vk_descriptor_type(resource.descriptor_type);
-            descriptor_update_template_entries[i].descriptorCount = resource.array_size;
-            descriptor_update_template_entries[i].dstArrayElement = 0;
-            descriptor_update_template_entries[i].offset = set_binding_offsets[resource.set];
-            descriptor_update_template_entries[i].stride =
-                0; //bindings[i].descriptorCount == 1 ? 0 : bindings[i].binding;
-            offsets +=
-                bindings[i].descriptorCount * sizeof(VkDescriptorUpdateData); // more memory footprint but more flexible
+            VkDescriptorUpdateTemplateEntry entry{};
 
+            entry.dstBinding =
+                resource.reg;
+            entry.descriptorType =
+                utils_to_vk_descriptor_type(resource.descriptor_type);
+            entry.descriptorCount = resource.array_size;
+            entry.dstArrayElement = 0;
+            entry.offset = set_binding_offsets[set_order]++;
+            entry.stride =0; //bindings[i].descriptorCount == 1 ? 0 : bindings[i].binding;
+            offsets += sizeof(VkDescriptorUpdateData); // more memory footprint but more flexible
 
-            i++;
-        } else if (resource.resource_type == ShaderResourceType::PUSH_CONSTANT) {
+            descriptor_update_template_entries[set_order].push_back(std::move(entry));
         }
     }
-    for (i = 0; i < refl->sets.size(); i++) {
+    for (u32 i = 0; i < refl->sets.size(); i++) {
         u32 set_index = (refl->sets[i] >> 16) & 0x0000ffff; // first 16bit
 
         VkDescriptorUpdateTemplateCreateInfo dsut_ci{};
@@ -1917,8 +1913,8 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
         dsut_ci.templateType = VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET;
         dsut_ci.descriptorUpdateEntryCount =
             (i == 0) ? binding_offsets[i] : (binding_offsets[i] - binding_offsets[i - 1]);
-        dsut_ci.pDescriptorUpdateEntries =
-            descriptor_update_template_entries.data() + ((i == 0) ? 0 : binding_offsets[i - 1]);
+        dsut_ci.pDescriptorUpdateEntries = descriptor_update_template_entries[set_index_map[set_index]].data();
+           // descriptor_update_template_entries.data() + ((i == 0) ? 0 : binding_offsets[i - 1]);
         dsut_ci.descriptorSetLayout = vk_rs->set_layouts[set_index];
 
         dsut_ci.pipelineBindPoint = utils_to_vk_pipeline_bind_point(desc->type); // ignored by given templateType
