@@ -4,32 +4,32 @@
 //
 //#include "framework/01core/memory/container.h"
 //
-//namespace ant {
+//namespace ante {
 //
 //template<typename T> inline void Write(std::ostringstream &os, const T &value)
 //{
 //    os.write(reinterpret_cast<const char *>(&value), sizeof(T));
 //}
 //
-//inline void Write(std::ostringstream &os, const ant::str &value)
+//inline void Write(std::ostringstream &os, const ante::str &value)
 //{
 //    Write(os, value.size());
 //    os.write(value.data(), value.size());
 //}
 //
-//template<class T> inline void Write(std::ostringstream &os, const ant::set<T> &value)
+//template<class T> inline void Write(std::ostringstream &os, const ante::set<T> &value)
 //{
 //    Write(os, value.size());
 //    for (const T &item : value) { os.write(reinterpret_cast<const char *>(&item), sizeof(T)); }
 //}
 //
-//template<class T> inline void Write(std::ostringstream &os, const ant::vector<T> &value)
+//template<class T> inline void Write(std::ostringstream &os, const ante::vector<T> &value)
 //{
 //    Write(os, value.size());
 //    os.write(reinterpret_cast<const char *>(value.data()), value.size() * sizeof(T));
 //}
 //
-//template<class T, class S> inline void Write(std::ostringstream &os, const ant::map<T, S> &value)
+//template<class T, class S> inline void Write(std::ostringstream &os, const ante::map<T, S> &value)
 //{
 //    Write(os, value.size());
 //
@@ -39,7 +39,7 @@
 //    }
 //}
 //
-//template<class T, uint32_t N> inline void Write(std::ostringstream &os, const ant::fixed_array<T, N> &value)
+//template<class T, uint32_t N> inline void Write(std::ostringstream &os, const ante::fixed_array<T, N> &value)
 //{
 //    os.write(reinterpret_cast<const char *>(value.data()), N * sizeof(T));
 //}
@@ -51,4 +51,4 @@
 //
 //    Write(os, args...);
 //}
-//}// namespace ant
+//}// namespace ante

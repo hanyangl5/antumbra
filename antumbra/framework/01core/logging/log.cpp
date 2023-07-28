@@ -4,7 +4,6 @@
 
 // third party libraries
 #ifdef WIN32
-
 #include <Windows.h>
 #endif // WIN32
 
@@ -12,7 +11,7 @@
 
 // project headers
 
-namespace ant {
+namespace ante {
 
 Log::Log() noexcept {
     m_logger = spdlog::stdout_color_mt("antlog");
@@ -45,20 +44,19 @@ Log::~Log() noexcept {
 
 void Log::SetLogLevel(loglevel level) noexcept {
     switch (level) {
-    case ant::Log::loglevel::debug:
+    case ante::Log::loglevel::debug:
         spdlog::set_level(spdlog::level::debug);
         break;
-    case ant::Log::loglevel::info:
+    case ante::Log::loglevel::info:
         spdlog::set_level(spdlog::level::info);
         break;
-    case ant::Log::loglevel::warn:
+    case ante::Log::loglevel::warn:
         spdlog::set_level(spdlog::level::warn);
         break;
-    case ant::Log::loglevel::error:
+    case ante::Log::loglevel::error:
         spdlog::set_level(spdlog::level::err);
         break;
-    case ant::Log::loglevel::fatal:
-
+    case ante::Log::loglevel::fatal:
         spdlog::set_level(spdlog::level::critical);
         break;
     default:
@@ -66,4 +64,4 @@ void Log::SetLogLevel(loglevel level) noexcept {
     }
 }
 
-} // namespace ant
+} // namespace ante

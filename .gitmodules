@@ -1,92 +1,59 @@
-[submodule "antumbra/third_party/stb"]
-	path = antumbra/third_party/stb
-	url = https://github.com/nothings/stb
-
-[submodule "antumbra/third_party/json"]
-	path = antumbra/third_party/json
+[submodule "third_party/json"]
+	path = third_party/json
 	url = https://github.com/nlohmann/json
-
-[submodule "antumbra/third_party/flecs"]
-	path = antumbra/third_party/flecs
+[submodule "third_party/flecs"]
+	path = third_party/flecs
 	url = https://github.com/SanderMertens/flecs
-
-[submodule "antumbra/third_party/Catch2"]
-	path = antumbra/third_party/Catch2
+[submodule "third_party/Catch2"]
+	path = third_party/Catch2
 	url = https://github.com/catchorg/Catch2
-
-[submodule "antumbra/third_party/glm"]
-	path = antumbra/third_party/glm
+[submodule "third_party/glm"]
+	path = third_party/glm
 	url = https://github.com/g-truc/glm
-
-[submodule "antumbra/third_party/spdlog"]
-	path = antumbra/third_party/spdlog
+[submodule "third_party/spdlog"]
+	path = third_party/spdlog
 	url = https://github.com/gabime/spdlog
-
-
-[submodule "antumbra/third_party/SPIRV-Cross"]
-	path = antumbra/third_party/SPIRV-Cross
+[submodule "third_party/SPIRV-Cross"]
+	path = third_party/SPIRV-Cross
 	url = https://github.com/KhronosGroup/SPIRV-Cross
-
-
-[submodule "antumbra/third_party/mimalloc"]
-	path = antumbra/third_party/mimalloc
+[submodule "third_party/mimalloc"]
+	path = third_party/mimalloc
 	url = https://github.com/microsoft/mimalloc
-
-
-[submodule "antumbra/third_party/DirectXTK12"]
-	path = antumbra/third_party/DirectXTK12
+[submodule "third_party/DirectXTK12"]
+	path = third_party/DirectXTK12
 	url = https://github.com/microsoft/DirectXTK12
-
-
-[submodule "antumbra/third_party/VulkanMemoryAllocator"]
-	path = antumbra/third_party/VulkanMemoryAllocator
+[submodule "third_party/VulkanMemoryAllocator"]
+	path = third_party/VulkanMemoryAllocator
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
-
-[submodule "antumbra/third_party/D3D12MemoryAllocator"]
-	path = antumbra/third_party/D3D12MemoryAllocator
+[submodule "third_party/D3D12MemoryAllocator"]
+	path = third_party/D3D12MemoryAllocator
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator
-
-[submodule "antumbra/third_party/tracy"]
-	path = antumbra/third_party/tracy
+[submodule "third_party/tracy"]
+	path = third_party/tracy
 	url = https://github.com/wolfpld/tracy.git
-# [submodule "antumbra/third_party/pybind11"]
-# 	path = antumbra/third_party/pybind11
-# 	url = https://github.com/pybind/pybind11
-	
-[submodule "antumbra/third_party/Vulkan-Headers"]
-	path = antumbra/third_party/Vulkan-Headers
+[submodule "third_party/Vulkan-Headers"]
+	path = third_party/Vulkan-Headers
 	url = https://github.com/KhronosGroup/Vulkan-Headers.git
-# [submodule "antumbra/third_party/volk"]
-# 	path = antumbra/third_party/volk
-# 	url = https://github.com/zeux/volk.git
-[submodule "antumbra/third_party/glfw"]
-	path = antumbra/third_party/glfw
-	url = https://github.com/glfw/glfw.git
-[submodule "antumbra/third_party/sol2"]
-	path = antumbra/third_party/sol2
+
+[submodule "third_party/sol2"]
+	path = third_party/sol2
 	url = https://github.com/ThePhD/sol2.git
-
-# [submodule "antumbra/third_party/JoltPhysics"]
-# 	path = antumbra/third_party/JoltPhysics
-# 	url = https://github.com/jrouwe/JoltPhysics.git
-
-[submodule "antumbra/third_party/tinygltf"]
-	path = antumbra/third_party/tinygltf
+[submodule "third_party/tinygltf"]
+	path = third_party/tinygltf
 	url = https://github.com/syoyo/tinygltf.git
-
-[submodule "antumbra/third_party/Lua"]
-	path = antumbra/third_party/Lua
-	url = https://github.com/walterschell/Lua.git
-[submodule "antumbra/third_party/lua"]
-	path = antumbra/third_party/lua
+# [submodule "third_party/Lua"]
+# 	path = third_party/Lua
+# 	url = https://github.com/walterschell/Lua.git
+[submodule "third_party/lua"]
+	path = third_party/lua
 	url = https://github.com/lua/lua.git
-
-[submodule "antumbra/third_party/magic_enum"]
-	path = antumbra/third_party/magic_enum
+[submodule "third_party/magic_enum"]
+	path = third_party/magic_enum
 	url = https://github.com/Neargye/magic_enum.git
-[submodule "antumbra/third_party/antumbralibs"]
-	path = antumbra/third_party/antumbralibs
+[submodule "third_party/antumbralibs"]
+	path = third_party/antumbralibs
 	url = https://github.com/hanyangl5/antumbralibs
-# [submodule "antumbra/third_party/protobuf"]
-# 	path = antumbra/third_party/protobuf
-# 	url = https://github.com/protocolbuffers/protobuf.git
+
+[submodule "third_party/glfw"]
+	path = third_party/glfw
+	url = https://github.com/hyl5-org/glfw.git

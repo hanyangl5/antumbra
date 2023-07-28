@@ -4,13 +4,13 @@
 #include <type_traits>
 #include <utility>
 
-namespace ant::memory {
+namespace ante::memory {
 
 template <typename T> class unique_ptr;
 
 template <class _Ty, class... _Types, std::enable_if_t<!std::is_array_v<_Ty>, int> = 0>
 constexpr unique_ptr<_Ty> make_unique(_Types &&..._Args, memory_pool *pool = nullptr) { // make a unique_ptr
-    return unique_ptr<_Ty>(ant::memory::alloc<_Ty>(std::forward<_Types>(_Args)..., pool), pool);
+    return unique_ptr<_Ty>(ante::memory::alloc<_Ty>(std::forward<_Types>(_Args)..., pool), pool);
 }
 
 //template <class _Ty, std::enable_if_t<std::is_array_v<_Ty> && std::extent_v<_Ty> == 0, int> = 0>
@@ -29,14 +29,14 @@ template <typename T> class unique_ptr {
     memory_pool *allocator = nullptr;
 
   public:
-    unique_ptr() noexcept : {}
+    unique_ptr() noexcept {}
     // Explicit constructor
     explicit unique_ptr(T *data, memory_pool *pool) noexcept : data(data), allocator(pool) {}
     ~unique_ptr() noexcept { afree(data, allocator); }
 
     unique_ptr(std::nullptr_t) noexcept {}
     unique_ptr &operator=(std::nullptr_t) noexcept {
-        reset();
+        //reset(); // TODO(hyl5): complete reset
         return *this;
     }
 
@@ -79,4 +79,4 @@ template <typename T> class unique_ptr {
     }
 };
 
-} // namespace ant::memory
+} // namespace ante::memory

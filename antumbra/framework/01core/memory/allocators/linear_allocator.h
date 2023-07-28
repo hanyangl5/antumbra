@@ -2,7 +2,7 @@
 
 #include "allocator2.h"
 
-namespace ant::memory {
+namespace ante::memory {
 
 // The Linear Allocator is an efficient memory management tool characterized by its simplicity and speed.
 // It operates by incrementing a pointer within a pre-allocated memory block during allocation.
@@ -14,7 +14,7 @@ namespace ant::memory {
 class linear_allocator final : public allocator_base {
   public:
     linear_allocator(u64 pool_size, u64 alignment = alignof(std::max_align_t)) noexcept;
-    ~linear_allocator() noexcept;
+    virtual ~linear_allocator() noexcept;
     void *do_allocate(u64 bytes, u64 alignment = alignof(std::max_align_t)) override;
     void do_deallocate(void *ptr, u64 bytes, u64 alignment = alignof(std::max_align_t)) override;
     bool do_is_equal(const std::pmr::memory_resource &other) const noexcept override;
@@ -26,4 +26,4 @@ class linear_allocator final : public allocator_base {
     u64 m_offset = 0;
 };
 
-} // namespace ant::memory
+} // namespace ante::memory

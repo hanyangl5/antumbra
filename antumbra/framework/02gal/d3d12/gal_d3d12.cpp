@@ -9,7 +9,7 @@
 //
 //#define ANT_DX12_API_VERSION D3D_FEATURE_LEVEL_12_1
 //
-//namespace ant::gal {
+//namespace ante::gal {
 //
 //struct d3d12_context {
 //    IDXGIFactory6 *factory = nullptr;
@@ -986,7 +986,7 @@
 //
 //gal_error_code d3d12_create_buffer(gal_context context, gal_buffer_desc *desc, gal_buffer *buffer) {
 //    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(context);
-//    *buffer = reinterpret_cast<gal_handle>(new ant::gal::d3d12_buffer);
+//    *buffer = reinterpret_cast<gal_handle>(new ante::gal::d3d12_buffer);
 //    d3d12_buffer *d3d12_buf = reinterpret_cast<d3d12_buffer *>(*buffer);
 //
 //    CD3DX12_RESOURCE_DESC buffer_desc =
@@ -1068,7 +1068,7 @@
 //        return gal_error_code::SUC;
 //    return gal_error_code::SUC;
 //    //    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(context);
-//    //*sampler = reinterpret_cast<gal_handle>(new ant::gal::d3d12_sampler);
+//    //*sampler = reinterpret_cast<gal_handle>(new ante::gal::d3d12_sampler);
 //    //d3d12_buffer *d3d12_spl = reinterpret_cast<d3d12_buffer *>(*sampler);
 //    //// d3d12_context *d3d12_ctx;
 //    //d3d12_ctx->device->CreateSampler();
@@ -1193,21 +1193,21 @@
 //    //d3d12_context *d3d12_ctx;
 //    return gal_error_code::SUC;
 //}
-//gal_error_code d3d12_create_descriptorpool() {
+//gal_error_code d3d12_create_descriptor_pool() {
 //    //d3d12_context *d3d12_ctx;
 //    //d3d12_ctx->device->CreateDescriptorHeap();
 //    return gal_error_code::SUC;
 //}
-//gal_error_code d3d12_destroy_descriptorpool() {
+//gal_error_code d3d12_destroy_descriptor_pool() {
 //    //d3d12_context *d3d12_ctx;
 //
 //    return gal_error_code::SUC;
 //}
-//gal_error_code d3d12_consume_descriptorset() {
+//gal_error_code d3d12_consume_descriptor_set() {
 //    //d3d12_context *d3d12_ctx;
 //    return gal_error_code::SUC;
 //}
-//gal_error_code d3d12_free_descriptorset() {
+//gal_error_code d3d12_free_descriptor_set() {
 //    //d3d12_context *d3d12_ctx;
 //    return gal_error_code::SUC;
 //}
@@ -1309,7 +1309,7 @@
 //    //d3d12_cmd->command_list->IASetVertexBuffers();
 //    return gal_error_code::SUC;
 //}
-//gal_error_code d3d12_cmd_bind_descriptorset() {
+//gal_error_code d3d12_cmd_bind_descriptor_set() {
 //    //d3d12_context *d3d12_ctx;
 //    //d3d12_command_list *d3d12_cmd;
 //    return gal_error_code::SUC;
@@ -1427,4 +1427,4 @@
 //    return gal_error_code::SUC;
 //}
 //#endif
-//} // namespace ant::gal
+//} // namespace ante::gal

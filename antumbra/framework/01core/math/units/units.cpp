@@ -7,7 +7,7 @@
 // project headers
 #include "framework/01core/math/math.h"
 
-namespace ant {
+namespace ante {
 
 f32 operator""_cm(long double x) { return static_cast<f32>(x / 100.0); }
 
@@ -25,4 +25,4 @@ f32 operator""_rad(long double x) { return static_cast<f32>(x); }
 
 f32 operator""_deg(long double x) { return static_cast<f32>(x * math::_PI / 180.0f); }
 
-} // namespace ant
+} // namespace ante

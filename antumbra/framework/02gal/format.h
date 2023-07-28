@@ -26,7 +26,7 @@ SOFTWARE.
 
 #include "framework/01core/utils/utils.h"
 
-namespace ant::gal {
+namespace ante::gal {
 
 enum class gal_texture_format {
     UNDEFINED = 0,
@@ -6584,7 +6584,7 @@ constexpr gal_texture_format ToUNORM(gal_texture_format fmt) {
     }
 }
 
-constexpr char *gal_tf_name(gal_texture_format fmt) {
+constexpr const char *gal_tf_name(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::UNDEFINED:
         return "UNDEFINED";
@@ -7418,4 +7418,4 @@ constexpr uint32_t PixelCountOfBlock(gal_texture_format fmt) {
 }
 
 
-} // namespace ant::gal
+} // namespace ante::gal

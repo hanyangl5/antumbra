@@ -1,5 +1,5 @@
 #pragma once
 
-namespace ant::color {
+namespace ante::color {
 enum class predefined_color {  };
 }

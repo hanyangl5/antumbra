@@ -2,8 +2,8 @@
 
 #include <flecs.h>
 
-namespace ant {
+namespace ante {
 
 namespace ecs = flecs;
 
-} // namespace ant
+} // namespace ante

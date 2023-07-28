@@ -76,7 +76,9 @@ __GAL_HELPER_MACRO__(gal_error_code, destroy_swap_chain, gal_context context, ga
 //__GAL_HELPER_MACRO__(gal_error_code, create_shader, gal_context context, gal_shader_desc *desc, gal_shader *_shader);
 //__GAL_HELPER_MACRO__(gal_error_code, destroy_shader, gal_context context, gal_shader _shader);
 __GAL_HELPER_MACRO__(gal_error_code, create_shader_program, gal_context context, gal_shader_program_desc *desc, gal_shader_program *shader_program);
-//__GAL_HELPER_MACRO__(gal_error_code, destroy_shader, gal_context context, gal_shader _shader);
+
+__GAL_HELPER_MACRO__(gal_error_code, destroy_shader_program, gal_context context, gal_shader_program shader_program);
+    //__GAL_HELPER_MACRO__(gal_error_code, destroy_shader, gal_context context, gal_shader _shader);
 //gal_error_code vk_create_shader_program(gal_context context, gal_shader_program_desc *desc,
 //                                        gal_shader_program *_shader_program)
 
@@ -95,12 +97,14 @@ __GAL_HELPER_MACRO__(gal_error_code, create_compute_pipeline, gal_context contex
 //                     gal_raytracing_pipeline_desc *desc, gal_pipeline *pipeline);
 
 __GAL_HELPER_MACRO__(gal_error_code, destroy_pipeline, gal_context context, gal_pipeline pipeline);
-//__GAL_HELPER_MACRO__(gal_error_code, create_descriptorpool);
-__GAL_HELPER_MACRO__(gal_error_code, destroy_descriptorpool);
-// consume the descriptorset from pool
-__GAL_HELPER_MACRO__(gal_error_code, consume_descriptorset);
-__GAL_HELPER_MACRO__(gal_error_code, free_descriptorset);
-__GAL_HELPER_MACRO__(gal_error_code, create_rootsignature, gal_context context, gal_rootsignature_desc* desc, gal_rootsignature* root_signature);
+
+// consume the descriptor_set from pool
+__GAL_HELPER_MACRO__(gal_error_code, get_descriptor_set, gal_context context, gal_descriptor_set_desc *desc, u32 set_count, gal_descriptor_set *sets);
+__GAL_HELPER_MACRO__(gal_error_code, free_descriptor_set, gal_context context, gal_descriptor_set set, bool free_all_pool);
+
+__GAL_HELPER_MACRO__(gal_error_code, update_descriptor_set, gal_context context,
+                     gal_descriptor_set_update_desc *update_desc, gal_descriptor_set set);
+    __GAL_HELPER_MACRO__(gal_error_code, create_rootsignature, gal_context context, gal_rootsignature_desc* desc, gal_rootsignature* root_signature);
 __GAL_HELPER_MACRO__(gal_error_code, destroy_rootsignature, gal_context context, gal_rootsignature root_signature);
 // sync
 __GAL_HELPER_MACRO__(gal_error_code, create_fence, gal_context context, gal_fence* fence);
@@ -113,7 +117,7 @@ __GAL_HELPER_MACRO__(gal_error_code, destroy_semaphore, gal_context context, gal
 __GAL_HELPER_MACRO__(gal_error_code, create_command_pool, gal_context context, gal_command_pool_desc *desc, gal_command_pool *command_pool);
 __GAL_HELPER_MACRO__(gal_error_code, reset_command_pool, gal_context context, gal_command_pool command_pool);
 __GAL_HELPER_MACRO__(gal_error_code, destroy_command_pool, gal_context context, gal_command_pool command_pool);
-__GAL_HELPER_MACRO__(gal_error_code, allocate_command_list, gal_context context, gal_command_list_desc *desc, gal_command_list *command);
+__GAL_HELPER_MACRO__(gal_error_code, get_command_list, gal_context context, gal_command_list_desc *desc, gal_command_list *command);
 __GAL_HELPER_MACRO__(gal_error_code, free_command_list, gal_context context, gal_command_list command);
 
 __GAL_HELPER_MACRO__(gal_error_code, add_queue, gal_context context, gal_queue_desc *desc, gal_queue *queue);
@@ -141,14 +145,14 @@ __GAL_HELPER_MACRO__(gal_error_code, cmd_draw_indexed_instanced, gal_command_lis
 //__GAL_HELPER_MACRO__(gal_error_code, cmd_draw_indirect_indexed_instanced);
 //__GAL_HELPER_MACRO__(gal_error_code, cmd_draw_mesh_task);
 //__GAL_HELPER_MACRO__(gal_error_code, cmd_draw_indirect_mesh_task);
-__GAL_HELPER_MACRO__(gal_error_code, cmd_copy_texture);
+__GAL_HELPER_MACRO__(gal_error_code, cmd_copy_texture, gal_command_list command);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_copy_buffer, gal_command_list command, gal_buffer src, gal_buffer dst, u64 src_offset, u64 dst_offset, u64 size);
-__GAL_HELPER_MACRO__(gal_error_code, cmd_fill_buffer);
-__GAL_HELPER_MACRO__(gal_error_code, cmd_fill_texture);
-__GAL_HELPER_MACRO__(gal_error_code, cmd_upload_buffer);
-__GAL_HELPER_MACRO__(gal_error_code, cmd_upload_texture);
+__GAL_HELPER_MACRO__(gal_error_code, cmd_fill_buffer, gal_command_list command);
+__GAL_HELPER_MACRO__(gal_error_code, cmd_fill_texture, gal_command_list command);
+__GAL_HELPER_MACRO__(gal_error_code, cmd_upload_buffer, gal_command_list command);
+__GAL_HELPER_MACRO__(gal_error_code, cmd_upload_texture, gal_command_list command);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_update_subresources, gal_command_list command, gal_texture dst, gal_buffer src, u32 subresource_count, gal_texture_subresource_desc *descs);
-__GAL_HELPER_MACRO__(gal_error_code, cmd_copy_texture_to_buffer);
+__GAL_HELPER_MACRO__(gal_error_code, cmd_copy_texture_to_buffer, gal_command_list command);
 
 __GAL_HELPER_MACRO__(gal_error_code, queue_submit, gal_queue queue, gal_queue_submit_desc *desc);
 

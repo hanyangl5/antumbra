@@ -32,9 +32,9 @@
 #endif
 #include "format.h"
 #include "framework/01core/memory/memory.h"
+#include "framework/01core/platform/platform.h"
 #include "framework/01core/utils/utils.h"
-
-namespace ant::gal {
+namespace ante::gal {
 struct compiled_shader_group;
 
 inline constexpr u32 MAX_RESOURCE_NAME_LENGTH = 256;
@@ -82,7 +82,7 @@ enum class gal_api { UNDEFINED, VULKAN, D3D12 };
     struct name##_T
 
 // declare gal handle
-inline constexpr nullptr_t gal_null = nullptr;
+inline constexpr std::nullptr_t gal_null = nullptr;
 
 struct gal_desc {
     // gal optional feature
@@ -351,7 +351,8 @@ enum class BlendConstant {
     ONE_MINUS_BLEND_FACTOR
 };
 
-struct gal_descriptorpool_desc {};
+//struct gal_descriptor_pool_desc {
+//};
 
 struct gal_blend_state_desc {
     /// Source blend factor per render target.
@@ -458,10 +459,9 @@ struct gal_queue_desc {
 };
 
 DECLARE_GAL_HANDLE(gal_queue) {
-    public :
+  public:
     gal_queue_type m_type;
 };
-
 
 DECLARE_GAL_HANDLE(gal_buffer) {
   public:
@@ -525,7 +525,7 @@ struct gal_sampler_desc {
     f32 min_lod;
     f32 max_lod;
     f32 max_anisotropy;
-    ant::fixed_array<f32, 4> border_color;
+    ante::fixed_array<f32, 4> border_color;
 };
 DECLARE_GAL_HANDLE(gal_sampler) {
   public:
@@ -534,9 +534,7 @@ DECLARE_GAL_HANDLE(gal_sampler) {
 
 struct gal_fence_desc {};
 
-DECLARE_GAL_HANDLE(gal_fence) {
-  public:
-};
+DECLARE_GAL_HANDLE(gal_fence){public : };
 DECLARE_GAL_HANDLE(gal_semaphore){};
 
 struct gal_swap_chain_desc {
@@ -544,6 +542,7 @@ struct gal_swap_chain_desc {
 #ifdef WIN32
     HWND hwnd_window;
 #endif
+    WindowHandle mWindowHandle;
     bool b_present;
     u32 image_count;
     u32 width;
@@ -554,7 +553,7 @@ struct gal_swap_chain_desc {
 
 DECLARE_GAL_HANDLE(gal_swap_chain) {
     gal_swap_chain_desc m_desc;
-    ant::fixed_array<gal_render_target, MAX_SWAPCHAIN_IMAGES> m_render_targets;
+    ante::fixed_array<gal_render_target, MAX_SWAPCHAIN_IMAGES> m_render_targets;
 };
 
 //struct gal_shader_desc {
@@ -581,9 +580,13 @@ DECLARE_GAL_HANDLE(gal_shader_program) {
     //shader::pipeline_reflection *pReflection;
 };
 
-DECLARE_GAL_HANDLE(gal_rootsignature){};
+DECLARE_GAL_HANDLE(gal_rootsignature){
 
-DECLARE_GAL_HANDLE(gal_pipeline_cache){};
+};
+
+DECLARE_GAL_HANDLE(gal_pipeline_cache){
+
+};
 
 struct gal_compute_pipeline_desc {
     //gal_shader_program *shader;
@@ -620,13 +623,13 @@ DECLARE_GAL_HANDLE(gal_pipeline) {
     gal_pipeline_desc m_desc;
     gal_pipeline_type m_type;
 };
-DECLARE_GAL_HANDLE(gal_command_list) { 
+DECLARE_GAL_HANDLE(gal_command_list){
     //gal_queue queue;
     //gal_queue_type m_queue_type;
 
 };
 
-DECLARE_GAL_HANDLE(gal_descriptorpool){};
+DECLARE_GAL_HANDLE(gal_descriptor_pool){};
 
 struct gal_pipeline_cache_desc {
     //void *ptr;
@@ -653,11 +656,10 @@ struct gal_pipeline_cache_desc {
 //    u32 mMaxRaysCount;
 //};
 
-// struct to consume descriptorset
-
-struct gal_descriptorset_desc {};
+// struct to consume descriptor_set
 
 struct gal_rootsignature_desc {
+    gal_pipeline_type type; //  determin the pipeline 
     compiled_shader_group *shader;
 };
 
@@ -668,8 +670,8 @@ struct gal_command_pool_desc {
     bool b_transient;
 };
 
-DECLARE_GAL_HANDLE(gal_command_pool) { 
-    //gal_queue_type queue_type; 
+DECLARE_GAL_HANDLE(gal_command_pool) {
+    //gal_queue_type queue_type;
     gal_queue queue;
 };
 
@@ -682,11 +684,7 @@ struct gal_command_list_desc {
 
 struct gal_renderpass_begin_desc {};
 
-enum class queue_op {
-    UNDEFINED,
-    RELEASE,
-    ACQUIRE
-};
+enum class queue_op { UNDEFINED, RELEASE, ACQUIRE };
 
 struct gal_buffer_barrier {
     gal_buffer buffer;
@@ -787,7 +785,91 @@ struct gal_queue_submit_desc {
 struct read_range {
     u64 offset;
     u64 size;
-} ;
+};
 
+DECLARE_GAL_HANDLE(gal_descriptor_set){ u32 set_index; };
 
-} // namespace ant::gal
+enum class gal_descriptor_set_update_freq { NONE, PER_FRAME, PER_BATCH, PER_DRAW, BINDLESS };
+
+// bit size can be computed by constexpr expression
+struct gal_descriptor_set_desc {
+    gal_rootsignature root_signature;
+    union {
+        u32 index;
+        gal_descriptor_set_update_freq freq;
+    } set;
+};
+
+struct buffer_descriptor_update_desc {
+    gal_buffer buffer;
+    //u32 range;
+    //u32 offset;
+};
+
+struct texture_descriptor_update_desc {
+    gal_texture texture;
+};
+
+struct sampler_descriptor_update_desc {
+    gal_sampler sampler;
+};
+
+struct gal_descriptor_upate_desc {
+    union {
+        buffer_descriptor_update_desc b;
+        texture_descriptor_update_desc t;
+        sampler_descriptor_update_desc s;
+    } desc;
+    gal_descriptor_type type;
+    const char *name;
+};
+
+struct gal_descriptor_set_update_desc {
+
+    gal_descriptor_upate_desc *updates;
+    u32 count;
+    /// User can either set name of descriptor or index (index in pRootSignature->pDescriptors array)
+    /// Name of descriptor
+    //const char *pName;
+    ///// Number of array entries to update (array size of ppTextures/ppBuffers/...)
+    //uint32_t mCount : 31;
+    ///// Dst offset into the array descriptor (useful for updating few entries in a large array)
+    //// Example: to update 6th entry in a bindless texture descriptor, mArrayOffset will be 6 and mCount will be 1)
+    //uint32_t mArrayOffset : 20;
+    //// Index in pRootSignature->pDescriptors array - Cache index using getDescriptorIndexFromName to avoid using string checks at runtime
+    //uint32_t mIndex : 10;
+    //uint32_t mBindByIndex : 1;
+
+    //// Range to bind (buffer offset, size)
+    //DescriptorDataRange *pRanges;
+
+    //// Binds stencil only descriptor instead of color/depth
+    //bool mBindStencilResource : 1;
+
+    //union {
+    //    struct {
+    //        // When binding UAV, control the mip slice to to bind for UAV (example - generating mipmaps in a compute shader)
+    //        uint16_t mUAVMipSlice;
+    //        // Binds entire mip chain as array of UAV
+    //        bool mBindMipChain;
+    //    };
+    //    struct {
+    //        // Bind MTLIndirectCommandBuffer along with the MTLBuffer
+    //        const char *pICBName;
+    //        uint32_t mICBIndex;
+    //        bool mBindICB;
+    //    };
+    //};
+    /// Array of resources containing descriptor handles or constant to be used in ring buffer memory - DescriptorRange can hold only one resource type array
+    //union {
+    //    /// Array of texture descriptors (srv and uav textures)
+    //    gal_texture *textures;
+    //    /// Array of sampler descriptors
+    //    gal_sampler *samplers;
+    //    /// Array of buffer descriptors (srv, uav and cbv buffers)
+    //    gal_buffer *buffers;
+    //};
+    //void *data;
+};
+
+} // namespace ante::gal

@@ -8,7 +8,7 @@
 // project headers
 #include "framework/01core/utils/utils.h"
 
-namespace ant {
+namespace ante {
 
 // length
 
@@ -32,4 +32,4 @@ f32 operator"" _rad(long double);
 
 f32 operator"" _deg(long double);
 
-} // namespace ant
+} // namespace ante

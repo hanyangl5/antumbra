@@ -6,7 +6,7 @@
 // enum included at last
 #include "enum.h"
 
-namespace ant::gal {
+namespace ante::gal {
 
 // intailize gal_context, load function pointer
 [[nodiscard]] gal_error_code init_gal(gal_api api, gal_context *context);
@@ -17,4 +17,4 @@ namespace ant::gal {
 #undef GAL_FUNCTION_DECLARE
 #endif // !GAL_FUNCTION_DECLARE
 
-} // namespace ant::gal
+} // namespace ante::gal

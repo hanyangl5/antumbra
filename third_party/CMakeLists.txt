@@ -40,14 +40,20 @@ add_library(${PROJECT_NAME} third_party_dummy.cpp TracyClient.cpp)
 
 set(ANT_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/antumbralibs)
 set(VK_LIB_PATH ${ANT_LIB_PATH}/vulkan)
-set(DXC_LIB_PATH ${ANT_LIB_PATH}/dxc_2023_03_01 CACHE INTERNAL "dxc lib path")
 
-find_library(DXC_LIBRARY dxcompiler PATHS ${DXC_LIB_PATH}/lib/x64)
+if(WIN32)
+    set(DXC_LIB_PATH ${ANT_LIB_PATH}/dxc_2023_03_01/windows CACHE INTERNAL "dxc lib path")
+    find_library(DXC_LIBRARY dxcompiler PATHS ${DXC_LIB_PATH}/lib/x64)
+elseif(APPLE OR LINUX)
+    set(DXC_LIB_PATH ${ANT_LIB_PATH}/dxc_2023_03_01/linux CACHE INTERNAL "dxc lib path")
+    find_library(DXC_LIBRARY dxcompiler PATHS ${DXC_LIB_PATH}/lib)
+endif()
+
+
 if(DXC_LIBRARY)
     message("found dxcompiler in ${DXC_LIB_PATH}")
-    target_include_directories(${PROJECT_NAME} PUBLIC ${DXC_LIB_PATH}/inc)
+    target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${DXC_LIB_PATH}/include)
     target_link_libraries(${PROJECT_NAME} PUBLIC ${DXC_LIBRARY})
-    link_directories(${DXC_LIB_PATH}/bin/x64)
 else()
     message("dxcompiler not found")
 endif()
@@ -62,7 +68,11 @@ if(ANTUMBRA_BUILD_VK)
     else()
         target_include_directories(${PROJECT_NAME} PUBLIC
         Vulkan-Headers/include)
-        find_library(Vulkan_LIBRARY NAMES vulkan-1 PATHS ${VK_LIB_PATH}/windows) 
+        if(WIN32)
+            find_library(Vulkan_LIBRARY NAMES vulkan-1 PATHS ${VK_LIB_PATH}/windows) 
+        elseif(LINUX)
+            find_library(Vulkan_LIBRARY NAMES vulkan PATHS ${VK_LIB_PATH}/linux) 
+        endif()
         if (Vulkan_LIBRARY)
             message("using bundled vulkan in ${VK_LIB_PATH}")
             target_link_libraries(${PROJECT_NAME} PUBLIC ${Vulkan_LIBRARY})
@@ -79,7 +89,7 @@ if(ANTUMBRA_BUILD_D3D12)
 endif()
 
 # add include dirs
-target_include_directories(${PROJECT_NAME} PUBLIC
+target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC
     spdlog/include
     glm/glm
     glfw/include
@@ -95,7 +105,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 
 if(ANTUMBRA_BUILD_D3D12)
-    target_include_directories(${PROJECT_NAME} PUBLIC
+    target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC
         D3D12MemoryAllocator/include
         DirectXTK12/Inc
         DirectXTK12/Src

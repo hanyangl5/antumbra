@@ -2,6 +2,5 @@ add_subdirectory(framework)
 # add_subdirectory(render_pipeline)
 # add_subdirectory(samples)
 # add_subdirectory(scene_editor)
-add_subdirectory(third_party)
 # add_subdirectory(tools)
-add_subdirectory(tests)
+

@@ -3,7 +3,7 @@
 #include "framework/01core/logging/log.h"
 #include "framework/01core/math/math.h"
 
-namespace ant::memory {
+namespace ante::memory {
 
 pool_allocator::pool_allocator(u64 pool_size, u64 chunk_size, u64 alignment) noexcept {
 
@@ -107,4 +107,4 @@ void pool_allocator::do_deallocate(void *ptr, [[maybe_unused]] u64 bytes, [[mayb
 }
 bool pool_allocator::do_is_equal(const std::pmr::memory_resource &other) const noexcept { return this == &other; }
 
-} // namespace ant::memory
+} // namespace ante::memory

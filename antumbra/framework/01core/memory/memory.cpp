@@ -1,13 +1,13 @@
 #include "memory.h"
 
-namespace ant::memory {
+namespace ante::memory {
 
 void *amalloc(u64 size, memory_pool *pool) {
     void *ptr;
     if (pool == nullptr) {
         ptr = malloc(size);
     } else {
-        ptr = pool->allocate(size, 0);
+        ptr = pool->allocate(size, alignof(std::max_align_t));
     }
     if (ptr == nullptr) {
         if (b_enable_memory_tracking) {
@@ -40,4 +40,4 @@ void *aaligned_alloc(u64 alignment, u64 size, memory_pool *pool) {
 //    return mi_calloc(num, size);
 //}
 
-} // namespace ant::memory
+} // namespace ante::memory

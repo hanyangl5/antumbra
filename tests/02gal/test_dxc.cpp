@@ -5,9 +5,9 @@
 
 #include <iostream>
 
-using namespace ant;
+using namespace ante;
 
-ant::str test_fs = "\
+ante::str test_fs = "\
     struct PSInput {\
         float4 color : COLOR;\
     };\
@@ -15,7 +15,7 @@ ant::str test_fs = "\
     float4 PSMain(PSInput input) : SV_TARGET {\
         return input.color;\
     }";
-ant::str test_cs = "\
+ante::str test_cs = "\
 #define UPDATE_FREQ_NONE space0\n\
 #define UPDATE_FREQ_PER_FRAME space1\n\
 #define UPDATE_FREQ_PER_BATCH space2\n\
@@ -44,7 +44,7 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
 }";
 
 TEST_CASE("compile single shader ") {
-    using namespace ant::gal;
+    using namespace ante::gal;
     shader_compiler sc;
     shader_source_blob source;
     source.set(test_fs.data(), test_fs.size());
@@ -64,7 +64,7 @@ TEST_CASE("compile single shader ") {
 }
 
 TEST_CASE("shader reflection test") {
-    using namespace ant::gal;
+    using namespace ante::gal;
     shader_compiler sc;
     shader_source_blob source;
     source.set(test_cs.data(), test_cs.size());
@@ -84,7 +84,7 @@ TEST_CASE("shader reflection test") {
 }
 
 TEST_CASE("shader group from source test") {
-    //using namespace ant::gal;
+    //using namespace ante::gal;
     //shader_compiler sc;
     //shader_source_blob source;
     //source.set(test_cs.data(), test_cs.size());

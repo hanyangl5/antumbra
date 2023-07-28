@@ -2,7 +2,7 @@
 
 #include "allocator2.h"
 
-namespace ant::memory {
+namespace ante::memory {
 
 // The stack_allocator class provides a memory allocation strategy that is based on a stack.
 // It allocates memory in a last-in, first-out (LIFO) order. This means that the last block of memory
@@ -12,7 +12,7 @@ namespace ant::memory {
 class stack_allocator final : public allocator_base {
   public:
     stack_allocator(u64 pool_size, u64 alignment = alignof(std::max_align_t)) noexcept;
-    ~stack_allocator() noexcept;
+    virtual ~stack_allocator() noexcept;
     void *do_allocate(u64 bytes, u64 alignment = alignof(std::max_align_t)) override;
     void do_deallocate(void *ptr, u64 bytes, u64 alignment = alignof(std::max_align_t)) override;
     bool do_is_equal(const std::pmr::memory_resource &other) const noexcept override;
@@ -33,4 +33,4 @@ class stack_allocator final : public allocator_base {
     static constexpr u32 header_size = sizeof(stack_allocator_header);
 };
 
-} // namespace ant::memory
+} // namespace ante::memory

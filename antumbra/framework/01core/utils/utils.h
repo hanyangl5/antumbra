@@ -1,32 +1,43 @@
 #pragma once
 
 // standard libraries
+#include <atomic>
 #include <chrono>
+#include <cstddef>
 #include <ctime>
 #include <type_traits>
-
+#ifdef _MSC_VER 
+#include <utility>
+#elif __clang__
+#include <functional> // std::hash is defined in functional in clang
+#endif
 // third party libraries
 
 // project headers
 
 #define DELETE_COPY_MOVE(class_name)                                                                                   \
-    class_name##(const class_name &) = delete;                                                                         \
-    class_name##(class_name &&) = delete;                                                                              \
+    class_name(const class_name &) = delete;                                                                         \
+    class_name(class_name &&) = delete;                                                                              \
     class_name &operator=(const class_name &) = delete;                                                                \
     class_name &operator=(class_name &&) = delete;
 
 #define DEFAULT_COPY_MOVE(class_name)                                                                                  \
-    class_name##(const class_name &) = default;                                                                        \
-    class_name##(class_name &&) = default;                                                                             \
+    class_name(const class_name &) = default;                                                                        \
+    class_name(class_name &&) = default;                                                                             \
     class_name &operator=(const class_name &) = default;                                                               \
     class_name &operator=(class_name &&) = default;
 
-namespace ant {
+namespace ante {
 
 using u8 = uint8_t;
 using u16 = uint16_t;
 using u32 = uint32_t;
+#ifdef __APPLE__
+// apple define size_t as unsigned long
+using u64 = std::size_t;
+#else
 using u64 = uint64_t;
+#endif
 using i8 = int8_t;
 using i16 = int16_t;
 using i32 = int32_t;
@@ -56,7 +67,7 @@ constexpr u32 make_version(u32 major, u32 minor, u32 patch) {
     return _major | _minor | _patch;
 }
 
-template <class T> void hash_combine(u64 &seed, const T &v) {
+template <typename T> void hash_combine(u64 &seed, const T &v) {
     std::hash<T> hasher{};
     u64 hash = hasher(v);
     hash += 0x9e3779b9 + (seed << 6) + (seed >> 2);
@@ -64,9 +75,9 @@ template <class T> void hash_combine(u64 &seed, const T &v) {
 }
 
 //// require c++20
-// ant::str to_string(std::filesystem::file_time_type const &ftime) {
+// ante::str to_string(std::filesystem::file_time_type const &ftime) {
 //     std::time_t cftime = std::chrono::system_clock::to_time_t(std::chrono::file_clock::to_sys(ftime));
-//     ant::str str = std::asctime(std::localtime(&cftime));
+//     ante::str str = std::asctime(std::localtime(&cftime));
 //     str.pop_back(); // rm the trailing '\n' put by `asctime`
 //     return str;
 // }
@@ -97,11 +108,11 @@ struct blob {
 };
 
 // bytes
-constexpr u64 operator"" _b(u64 value) { return static_cast<u64>(value); }
+constexpr u64 operator"" _b(unsigned long long value) { return static_cast<u64>(value); }
 // kilo bytes
-constexpr u64 operator"" _kb(u64 value) { return static_cast<u64>(value * 1024); }
+constexpr u64 operator"" _kb(unsigned long long value) { return static_cast<u64>(value * 1024); }
 // mega bytse
-constexpr u64 operator"" _mb(u64 value) { return static_cast<u64>(value * 1024 * 1024); }
+constexpr u64 operator"" _mb(unsigned long long value) { return static_cast<u64>(value * 1024 * 1024); }
 
 template <typename T> T align_up(T a, T size) { return ((a + size - 1) & (~(size - 1))); }
-} // namespace ant
+} // namespace ante

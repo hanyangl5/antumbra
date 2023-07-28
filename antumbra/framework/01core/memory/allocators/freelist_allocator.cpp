@@ -2,7 +2,7 @@
 //
 //#include "framework/01core/logging/log.h"
 //
-//namespace ant::memory {
+//namespace ante::memory {
 //
 //freelist_allocator::freelist_allocator(freelist_allocator_mode mode, u64 pool_size,
 //                                       u64 alignment) noexcept{
@@ -44,4 +44,4 @@
 //}
 //bool freelist_allocator::do_is_equal(const std::pmr::memory_resource &other) const noexcept { return this == &other; }
 //
-//} // namespace ant::memory
+//} // namespace ante::memory

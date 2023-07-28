@@ -28,7 +28,7 @@
 
 #include "framework/01core/logging/log.h"
 
-namespace ant::io {
+namespace ante::io {
 
 bool is_directory(const std::filesystem::path &path) { return std::filesystem::is_directory(path); }
 
@@ -52,8 +52,8 @@ void create_path(const std::filesystem::path &root, const std::filesystem::path 
     }
 }
 
-ant::str read_text_file(const std::filesystem::path filename) {
-    ant::vector<ant::str> data;
+ante::str read_text_file(const std::filesystem::path filename) {
+    ante::vector<ante::str> data;
 
     std::ifstream file;
 
@@ -64,11 +64,11 @@ ant::str read_text_file(const std::filesystem::path filename) {
         return {};
     }
 
-    return ant::str{(std::istreambuf_iterator<char>(file)), (std::istreambuf_iterator<char>())};
+    return ante::str{(std::istreambuf_iterator<char>(file)), (std::istreambuf_iterator<char>())};
 }
 
-ant::vector<u8> read_binary_file(const std::filesystem::path &filename, const uint32_t count) {
-    ant::vector<u8> data;
+ante::vector<u8> read_binary_file(const std::filesystem::path &filename, const uint32_t count) {
+    ante::vector<u8> data;
 
     std::ifstream file;
 
@@ -106,7 +106,7 @@ void write_text_file(const std::filesystem::path filename, void *data, u64 size)
     file.close();
 }
 
-void write_binary_file(const ant::vector<u8> &data, const std::filesystem::path &filename, const uint32_t count) {
+void write_binary_file(const ante::vector<u8> &data, const std::filesystem::path &filename, const uint32_t count) {
     std::ofstream file;
 
     file.open(filename, std::ios::out | std::ios::binary | std::ios::trunc);
@@ -125,27 +125,27 @@ void write_binary_file(const ant::vector<u8> &data, const std::filesystem::path 
     file.close();
 }
 
-bool write_json(nlohmann::json &data, const std::filesystem::path &filename) {
-    std::stringstream json;
-    json << data << " ";
+// bool write_json(nlohmann::json &data, const std::filesystem::path &filename) {
+//     std::stringstream json;
+//     json << data << " ";
 
-    if (!nlohmann::json::accept(json.str())) {
-        LOG_ERROR("Invalid JSON string");
-        return false;
-    }
+//     if (!nlohmann::json::accept(json.str())) {
+//         LOG_ERROR("Invalid JSON string");
+//         return false;
+//     }
 
-    std::ofstream out_stream;
-    out_stream.open(filename, std::ios::out | std::ios::trunc);
+//     std::ofstream out_stream;
+//     out_stream.open(filename, std::ios::out | std::ios::trunc);
 
-    if (out_stream.good()) {
-        out_stream << json.str();
-    } else {
-        LOG_ERROR("Could not load JSON file {}", filename.string());
-        return false;
-    }
+//     if (out_stream.good()) {
+//         out_stream << json.str();
+//     } else {
+//         LOG_ERROR("Could not load JSON file {}", filename.string());
+//         return false;
+//     }
 
-    out_stream.close();
-    return true;
-}
+//     out_stream.close();
+//     return true;
+// }
 
-} // namespace ant::io
+} // namespace ante::io
