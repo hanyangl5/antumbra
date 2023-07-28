@@ -1,7 +1,7 @@
 project(ant_third_party)
 
 add_subdirectory(glfw) # CMakeLists of glfw added some useless projects/folders in root directory
-add_subdirectory(json)
+#add_subdirectory(json)
 option(MI_BUILD_TESTS "Build test executables" OFF)
 option(MI_BUILD_SHARED "Build shared library" OFF)
 option(MI_BUILD_OBJECT "" OFF)
@@ -93,7 +93,7 @@ target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC
     spdlog/include
     glm/glm
     glfw/include
-    json/include
+    #json/include
     VulkanMemoryAllocator/include
     tracy/public
     magic_enum/include
@@ -118,7 +118,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     glfw
     spdlog
     flecs_static
-    nlohmann_json
+    #nlohmann_json
     TracyClient
     lua_static
     sol2

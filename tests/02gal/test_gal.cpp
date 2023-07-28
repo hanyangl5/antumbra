@@ -136,7 +136,7 @@ TEST_CASE("test gal swapchain") {
         desc.format = gal_texture_format::R8G8B8A8_UNORM;
         desc.image_count = 3;
         desc.clear_value.value = gal_clear_value::rgb{0.0f, 0.0f, 0.0f, 1.0f};
-#ifdef WIN32
+#ifdef _WIN32
         desc.hwnd_window = ante::get_hwnd_window(window);
 #endif
         gal::gal_error_code result = gal::create_swap_chain(context, &desc, &sc);

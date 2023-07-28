@@ -3,7 +3,7 @@
 #include "framework/01core/logging/log.h"
 #include "framework/01core/utils/utils.h"
 #include <GLFW/glfw3.h>
-#ifdef WIN32
+#ifdef _WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 #endif
@@ -45,7 +45,7 @@ void destroy_window(ant_window window) {
     glfwTerminate();
 }
 
-#ifdef WIN32
+#ifdef _WIN32
 HWND get_hwnd_window(ant_window window) { return glfwGetWin32Window(window.m_window); }
 #endif // WIN32
 

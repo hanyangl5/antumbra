@@ -57,7 +57,7 @@ TEST_CASE("Enum names sequence") {
     }
 }
 TEST_CASE("Enum entries sequence") {
-    constexpr auto color_entries = ante::enum_refl::enum_entries<Color>();
+    // constexpr auto color_entries = ante::enum_refl::enum_entries<Color>();
     // color_entries -> {{Color::RED, "RED"}, {Color::BLUE, "BLUE"}, {Color::GREEN, "GREEN"}}
     // color_entries[0].first -> Color::RED
     // color_entries[0].second -> "RED"

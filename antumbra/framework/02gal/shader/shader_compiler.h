@@ -4,7 +4,7 @@
 #include <filesystem>
 
 // third party libraries
-#ifdef WIN32
+#ifdef _WIN32
 #include <dxcompiler/d3d12shader.h>
 #else
 #include <dxcompiler/WinAdapter.h>

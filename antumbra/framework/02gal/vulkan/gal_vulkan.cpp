@@ -29,7 +29,7 @@
 #include <algorithm>
 #include <optional>
 
-#ifdef WIN32
+#ifdef _WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
 #elif __linux__
 #define VK_USE_PLATFORM_XLIB_KHR
@@ -148,9 +148,9 @@ gal_error_code vk_create_instance(gal_desc *gal_desc, gal_context *context) {
 
     if (gal_desc->b_surface) {
         required_instance_extensions.emplace_back("VK_KHR_surface");
-#ifdef WIN32
+#ifdef _WIN32
         required_instance_extensions.emplace_back("VK_KHR_win32_surface");
-#endif // WIN32
+#endif // _WIN32
     }
 
     u32 available_layer_count = 0;
@@ -1716,7 +1716,7 @@ gal_error_code vk_free_descriptor_set(gal_context context, gal_descriptor_set se
 
     return gal_error_code::SUC;
 }
-
+// FIXME(hyl5): this function is too messy
 gal_error_code vk_update_descriptor_set(gal_context context, gal_descriptor_set_update_desc *update_desc,
                                         gal_descriptor_set set) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
@@ -1776,7 +1776,7 @@ gal_error_code vk_update_descriptor_set(gal_context context, gal_descriptor_set_
                                       descriptor_updates.data());
     return gal_error_code::SUC;
 }
-
+// FIXME(hyl5): this function is too messy
 gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_desc *desc,
                                        gal_rootsignature *root_signature) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
@@ -1785,7 +1785,7 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
         return gal_error_code::ERR;
     }
     // manually zeroing memory for safety
-    std::memset(vk_rs->set_layouts.data(), (int)nullptr, sizeof(VkDescriptorSetLayout) * vk_rs->set_layouts.size());
+    std::memset(vk_rs->set_layouts.data(), 0, sizeof(VkDescriptorSetLayout) * vk_rs->set_layouts.size());
 
     const auto &refl = desc->shader->reflection();
     u32 set_count = static_cast<u32>(refl->sets.size());
@@ -1924,7 +1924,7 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
     //descriptor_update_template_entries.resize(total_binding_count);
     ante::vector<ante::vector<VkDescriptorUpdateTemplateEntry>> descriptor_update_template_entries(&stack_memory);
     descriptor_update_template_entries.resize(refl->sets.size());
-    u32 offsets = 0;
+    //u32 offsets = 0;
 
     //auto get_offset = [](VkDescriptorType type) -> u32 {
     //    return sizeof(VkDescriptorUpdateData);
@@ -1950,8 +1950,8 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
             entry.descriptorCount = resource.array_size;
             entry.dstArrayElement = 0;
             entry.offset = set_binding_offsets[set_order];
-            entry.stride = 0;                          //bindings[i].descriptorCount == 1 ? 0 : bindings[i].binding;
-            offsets += sizeof(VkDescriptorUpdateData); // more memory footprint but more flexible
+            entry.stride = 0; //bindings[i].descriptorCount == 1 ? 0 : bindings[i].binding;
+            //offsets += sizeof(VkDescriptorUpdateData); // more memory footprint but more flexible
             set_binding_offsets[set_order] += sizeof(VkDescriptorUpdateData);
             descriptor_update_template_entries[set_order].push_back(std::move(entry));
         }
