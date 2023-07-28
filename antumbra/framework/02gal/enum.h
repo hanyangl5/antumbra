@@ -794,7 +794,7 @@ enum class gal_descriptor_set_update_freq { NONE, PER_FRAME, PER_BATCH, PER_DRAW
 // bit size can be computed by constexpr expression
 struct gal_descriptor_set_desc {
     gal_rootsignature root_signature;
-    union SetIndex{
+    union {
         u32 index;
         gal_descriptor_set_update_freq freq;
     } set;

@@ -26,6 +26,7 @@
 
 #include "gal_vulkan.h"
 
+#include <algorithm>
 #include <optional>
 
 #ifdef WIN32
@@ -68,6 +69,27 @@
 #define ANT_VK_API_VERSION VK_API_VERSION_1_3
 
 namespace ante::gal {
+
+VkDescriptorSetLayout g_empty_descriptor_set_layout = VK_NULL_HANDLE;
+
+gal_error_code create_empty_descriptor_set_layout(VkDevice device) {
+    VkDescriptorSetLayoutCreateInfo ci{};
+    ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ci.pNext = nullptr;
+    ci.flags = 0;
+    ci.bindingCount = 0;
+    ci.pBindings = nullptr;
+    VkResult result = vkCreateDescriptorSetLayout(device, &ci, nullptr, &g_empty_descriptor_set_layout);
+    if (result != VK_SUCCESS) {
+        return gal_error_code::ERR;
+    }
+    return gal_error_code::SUC;
+}
+
+gal_error_code destroy_empty_descriptor_set_layout(VkDevice device) {
+    vkDestroyDescriptorSetLayout(device, g_empty_descriptor_set_layout, nullptr);
+    return gal_error_code::SUC;
+}
 
 // gal_error_code vk_result_to_gal_error_code(VkResult res) {
 
@@ -448,6 +470,11 @@ gal_error_code vk_create_device(gal_desc *gal_desc, gal_context *context) {
 gal_error_code vk_destroy_device(gal_context *context) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(*context);
 
+    if (g_empty_descriptor_set_layout != VK_NULL_HANDLE) {
+        destroy_empty_descriptor_set_layout(vk_ctx->device);
+        g_empty_descriptor_set_layout = VK_NULL_HANDLE;
+    }
+
     vkDestroyDevice(vk_ctx->device, nullptr);
     return gal_error_code::SUC;
 }
@@ -617,36 +644,37 @@ gal_error_code vk_create_texture(gal_context context, gal_texture_desc *desc, ga
         if (result != VK_SUCCESS || vk_tex->m_image == VK_NULL_HANDLE || vk_tex->m_allocation == VK_NULL_HANDLE) {
             return gal_error_code::ERR;
         }
+
+        VkImageViewCreateInfo image_view_ci{};
+        image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        image_view_ci.pNext = nullptr;
+        image_view_ci.flags = 0;
+        image_view_ci.image = vk_tex->m_image;
+        image_view_ci.viewType = utils_to_vk_image_view_type(desc->dimension);
+        VkFormat format = galtextureformat_to_vkformat(desc->format);
+        image_view_ci.format = format;
+        image_view_ci.components.r = VK_COMPONENT_SWIZZLE_R;
+        image_view_ci.components.g = VK_COMPONENT_SWIZZLE_G;
+        image_view_ci.components.b = VK_COMPONENT_SWIZZLE_B;
+        image_view_ci.components.a = VK_COMPONENT_SWIZZLE_A;
+        image_view_ci.subresourceRange.aspectMask = util_vk_determine_aspect_mask(format, true);
+        // TODO(hyl5): support multiple view
+        image_view_ci.subresourceRange.baseMipLevel = 0;
+        image_view_ci.subresourceRange.levelCount = desc->mip_level;
+        image_view_ci.subresourceRange.baseArrayLayer = 0;
+        image_view_ci.subresourceRange.layerCount = desc->array_size;
+        // create srv
+        VkImageView view;
+        if ((desc->descriptor_types & gal_descriptor_type::TEXTURE) != gal_descriptor_type::UNDEFINED ||
+            (desc->descriptor_types & gal_descriptor_type::RW_TEXTURE) != gal_descriptor_type::UNDEFINED) {
+            result = vkCreateImageView(vk_ctx->device, &image_view_ci, nullptr, &view);
+            if (result != VK_SUCCESS) {
+                return gal_error_code::ERR;
+            }
+            vk_tex->m_view = view;
+        }
     }
 
-    VkImageViewCreateInfo image_view_ci{};
-    image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    image_view_ci.pNext = nullptr;
-    image_view_ci.flags = 0;
-    image_view_ci.image = vk_tex->m_image;
-    image_view_ci.viewType = utils_to_vk_image_view_type(desc->dimension);
-    VkFormat format = galtextureformat_to_vkformat(desc->format);
-    image_view_ci.format = format;
-    image_view_ci.components.r = VK_COMPONENT_SWIZZLE_R;
-    image_view_ci.components.g = VK_COMPONENT_SWIZZLE_G;
-    image_view_ci.components.b = VK_COMPONENT_SWIZZLE_B;
-    image_view_ci.components.a = VK_COMPONENT_SWIZZLE_A;
-    image_view_ci.subresourceRange.aspectMask = util_vk_determine_aspect_mask(format, true);
-    // TODO(hyl5): support multiple view
-    image_view_ci.subresourceRange.baseMipLevel = 0;
-    image_view_ci.subresourceRange.levelCount = desc->mip_level;
-    image_view_ci.subresourceRange.baseArrayLayer = 0;
-    image_view_ci.subresourceRange.layerCount = desc->array_size;
-    // create srv
-    VkImageView view;
-    if ((desc->descriptor_types & gal_descriptor_type::TEXTURE) != gal_descriptor_type::UNDEFINED ||
-        (desc->descriptor_types & gal_descriptor_type::RW_TEXTURE) != gal_descriptor_type::UNDEFINED) {
-        VkResult result = vkCreateImageView(vk_ctx->device, &image_view_ci, nullptr, &view);
-        if (result != VK_SUCCESS) {
-            return gal_error_code::ERR;
-        }
-        vk_tex->m_view = view;
-    }
     // create srv
     //if ((desc->descriptor_types & gal_descriptor_type::TEXTURE) != gal_descriptor_type::UNDEFINED) {
     //    VkResult result = vkCreateImageView(vk_ctx->device, &image_view_ci, nullptr, &vk_tex->srv);
@@ -675,7 +703,9 @@ gal_error_code vk_destroy_texture(gal_context context, gal_texture texture) {
         if ((vk_tex->m_desc.texture_flags & gal_texture_flag::TEXTURE_CREATION_FLAG_IMPORT_BIT) ==
             gal_texture_flag::TEXTURE_CREATION_FLAG_UNFEFINED) {
             vmaDestroyImage(vk_ctx->vma_allocator, vk_tex->m_image, vk_tex->m_allocation);
-            //vkDestroyImageView(vk_ctx->device, vk_tex->image_view, nullptr);
+            if (vk_tex->m_view != VK_NULL_HANDLE) {
+                vkDestroyImageView(vk_ctx->device, vk_tex->m_view, nullptr);
+            }
         }
         ante::memory::afree(vk_tex);
         texture = gal_null;
@@ -1214,6 +1244,22 @@ gal_error_code vk_create_shader_program(gal_context context, gal_shader_program_
     //addShaderDependencies(pShaderProgram, desc);
     vk_sp->m_desc = *desc;
     *shader_program = vk_sp;
+    return gal_error_code::SUC;
+}
+
+gal_error_code vk_destroy_shader_program(gal_context context, gal_shader_program shader_program) {
+    if (shader_program != gal_null) {
+        vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
+        vk_shader_program *vk_sp = reinterpret_cast<vk_shader_program *>(shader_program);
+
+        for (auto &shader : vk_sp->m_shader_modules) {
+            if (shader != VK_NULL_HANDLE) {
+                vkDestroyShaderModule(vk_ctx->device, shader, nullptr);
+            }
+        }
+        ante::memory::afree(vk_sp);
+        shader_program = gal_null;
+    }
     return gal_error_code::SUC;
 }
 
@@ -1793,7 +1839,6 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
         vk_rs->resource_map[resource.name.c_str()] =
             (resource.set << 29) | (resource.reg << 23) |
             (set_binding_offsets[resource.set]++ << 17); // TODO(hyl5): remove hardcoded number
-
     }
     // binding offsets is prefix sum now
 
@@ -1838,22 +1883,34 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
             static_cast<u32>(pool_sizes[set_index_map[set_index]].size());
         vk_rs->descriptor_pool_size[set_index].pool_sizes = vk_pool_sizes;
     }
-    ante::fixed_array<VkDescriptorSetLayout, MAX_DESCRIPTOR_SET_COUNT> layouts;
-    {
-        int i = 0;
-        for (auto &layout : vk_rs->set_layouts) {
-            if (layout != VK_NULL_HANDLE) {
-                layouts[i++] = layout;
+    u32 required_set_count = 0;
+    if (!refl->sets.empty()) {
+        u32 max_set_index =
+            (*std::max_element(refl->sets.begin(), refl->sets.end(),
+                               [](u32 a, u32 b) { return ((a >> 16) & 0x0000ffff) < ((b >> 16) & 0x0000ffff); }) >>
+             16) &
+            0x0000ffff;
+        auto utils_fill_empty_descriptor_sets = [&]() {
+            if (g_empty_descriptor_set_layout == VK_NULL_HANDLE) {
+                create_empty_descriptor_set_layout(vk_ctx->device);
             }
-        }
+
+            for (u32 i = 0; i <= max_set_index; i++) {
+                if (vk_rs->set_layouts[i] == VK_NULL_HANDLE) {
+                    vk_rs->set_layouts[i] = g_empty_descriptor_set_layout;
+                }
+            }
+        };
+        utils_fill_empty_descriptor_sets();
+        required_set_count = max_set_index + 1;
     }
 
     VkPipelineLayoutCreateInfo plci{};
     plci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     plci.pNext = nullptr;
     plci.flags = 0;
-    plci.setLayoutCount = set_count;
-    plci.pSetLayouts = layouts.data();
+    plci.setLayoutCount = required_set_count;
+    plci.pSetLayouts = vk_rs->set_layouts.data();
     plci.pushConstantRangeCount = static_cast<u32>(push_constants.size());
     plci.pPushConstantRanges = push_constants.data();
 
@@ -1881,7 +1938,6 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
     //    //}
     //};
 
-
     set_binding_offsets.fill(0); // reset the arr
     for (auto &resource : refl->m_resources) {
         if (resource.resource_type == ShaderResourceType::RESOURCE) {
@@ -1889,16 +1945,14 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
 
             VkDescriptorUpdateTemplateEntry entry{};
 
-            entry.dstBinding =
-                resource.reg;
-            entry.descriptorType =
-                utils_to_vk_descriptor_type(resource.descriptor_type);
+            entry.dstBinding = resource.reg;
+            entry.descriptorType = utils_to_vk_descriptor_type(resource.descriptor_type);
             entry.descriptorCount = resource.array_size;
             entry.dstArrayElement = 0;
-            entry.offset = set_binding_offsets[set_order]++;
-            entry.stride =0; //bindings[i].descriptorCount == 1 ? 0 : bindings[i].binding;
+            entry.offset = set_binding_offsets[set_order];
+            entry.stride = 0;                          //bindings[i].descriptorCount == 1 ? 0 : bindings[i].binding;
             offsets += sizeof(VkDescriptorUpdateData); // more memory footprint but more flexible
-
+            set_binding_offsets[set_order] += sizeof(VkDescriptorUpdateData);
             descriptor_update_template_entries[set_order].push_back(std::move(entry));
         }
     }
@@ -1912,9 +1966,9 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
         dsut_ci.flags = 0;
         dsut_ci.templateType = VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET;
         dsut_ci.descriptorUpdateEntryCount =
-            (i == 0) ? binding_offsets[i] : (binding_offsets[i] - binding_offsets[i - 1]);
+            static_cast<u32>(descriptor_update_template_entries[set_index_map[set_index]].size());
         dsut_ci.pDescriptorUpdateEntries = descriptor_update_template_entries[set_index_map[set_index]].data();
-           // descriptor_update_template_entries.data() + ((i == 0) ? 0 : binding_offsets[i - 1]);
+        // descriptor_update_template_entries.data() + ((i == 0) ? 0 : binding_offsets[i - 1]);
         dsut_ci.descriptorSetLayout = vk_rs->set_layouts[set_index];
 
         dsut_ci.pipelineBindPoint = utils_to_vk_pipeline_bind_point(desc->type); // ignored by given templateType
@@ -1936,6 +1990,16 @@ gal_error_code vk_destroy_rootsignature(gal_context context, gal_rootsignature r
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     if (root_signature != gal_null) {
         vk_rootsignature *vk_rs = reinterpret_cast<vk_rootsignature *>(root_signature);
+        for (auto &layout : vk_rs->set_layouts) {
+            if (layout != VK_NULL_HANDLE && layout != g_empty_descriptor_set_layout) {
+                vkDestroyDescriptorSetLayout(vk_ctx->device, layout, nullptr);
+            }
+        }
+        for (auto &templ : vk_rs->descriptor_set_update_template) {
+            if (templ != VK_NULL_HANDLE) {
+                vkDestroyDescriptorUpdateTemplate(vk_ctx->device, templ, nullptr);
+            }
+        }
         vkDestroyPipelineLayout(vk_ctx->device, vk_rs->pipeline_layout, nullptr);
         ante::memory::afree(vk_rs);
         root_signature = gal_null;

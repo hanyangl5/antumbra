@@ -266,7 +266,10 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
     REQUIRE(result == gal_error_code::SUC);
     result = gal::destroy_rootsignature(context, rs);
     REQUIRE(result == gal_error_code::SUC);
+    result = gal::destroy_shader_program(context, sp);
+    REQUIRE(result == gal_error_code::SUC);
     sg.release();
+    destroy(context);
 }
 
 TEST_CASE("test pso cache vk") {
@@ -405,7 +408,10 @@ void CS_MAIN(uint3 globalID : SV_DispatchThreadID, uint3 localID : SV_GroupThrea
     REQUIRE(result == gal_error_code::SUC);
     result = gal::destroy_rootsignature(context, rs);
     REQUIRE(result == gal_error_code::SUC);
+    result = gal::destroy_shader_program(context, sp);
+    REQUIRE(result == gal_error_code::SUC);
     sg.release();
+    destroy(context);
 }
 
 TEST_CASE("test dispatch") {}
@@ -462,7 +468,10 @@ TEST_CASE("test compute vk") {
     REQUIRE(result == gal_error_code::SUC);
     result = gal::destroy_rootsignature(context, rs);
     REQUIRE(result == gal_error_code::SUC);
+    result = gal::destroy_shader_program(context, sp);
+    REQUIRE(result == gal_error_code::SUC);
     sg.release();
+    destroy(context);
 }
 
 TEST_CASE("buffer test") {
@@ -588,7 +597,7 @@ TEST_CASE("buffer test") {
 }
 
 TEST_CASE("descriptor set") {
-//    ante::str test_cs = "\
+    //    ante::str test_cs = "\
 //#define UPDATE_FREQ_NONE space0\n\
 //#define UPDATE_FREQ_PER_FRAME space1\n\
 //#define UPDATE_FREQ_PER_BATCH space2\n\
@@ -619,7 +628,9 @@ TEST_CASE("descriptor set") {
 #define UPDATE_FREQ_BINDLESS space4\n\
 #define CBUFFER(NAME, FREQ) cbuffer NAME : register(FREQ)\n\
 #define RES(TYPE, NAME, FREQ) TYPE NAME : register(FREQ)\n\
-RES(SamplerState, spl2, UPDATE_FREQ_NONE);\n\
+RES(SamplerState, spl2, UPDATE_FREQ_BINDLESS);\n\
+RES(SamplerState, spl3, UPDATE_FREQ_BINDLESS);\n\
+RES(SamplerState, spl4, UPDATE_FREQ_BINDLESS);\n\
 RES(SamplerState, spl, UPDATE_FREQ_PER_FRAME);\n\
 RES(Texture2D<float>, tex1, UPDATE_FREQ_PER_FRAME);\n\
 [numthreads(8, 8, 1)]\n\
@@ -675,15 +686,9 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
     result = gal::create_compute_pipeline(context, &pipe_desc, &comp_pipe);
     REQUIRE(result == gal_error_code::SUC);
 
-
-    gal_descriptor_set ds{};
-    gal_descriptor_set_desc ds_desc{};
-    ds_desc.root_signature = rs;
-    ds_desc.set.freq = gal_descriptor_set_update_freq::PER_FRAME;
-
     gal::gal_sampler spl{};
     gal::gal_texture tex{};
-    
+
     gal_texture_desc texture_desc{};
     texture_desc.width = 256;
     texture_desc.height = 256;
@@ -712,28 +717,64 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
     sampler_desc.mip_lod_bias = 0.0f;
     result = gal::create_sampler(context, &sampler_desc, &spl);
 
+    gal_descriptor_set ds{};
+    gal_descriptor_set ds2{};
+    gal_descriptor_set_desc ds_desc{};
+    ds_desc.root_signature = rs;
+    ds_desc.set.freq = gal_descriptor_set_update_freq::PER_FRAME;
+
     result = gal::get_descriptor_set(context, &ds_desc, 1, &ds);
     REQUIRE(result == gal_error_code::SUC);
 
-    gal_descriptor_upate_desc buf_descriptor_update_desc[3];
-    buf_descriptor_update_desc[0].desc.s.sampler = spl;
-    buf_descriptor_update_desc[0].type = gal_descriptor_type::SAMPLER;
-    buf_descriptor_update_desc[0].name = "spl";
-    buf_descriptor_update_desc[1].desc.t.texture = tex;
-    buf_descriptor_update_desc[1].type = gal_descriptor_type::TEXTURE;
-    buf_descriptor_update_desc[1].name = "tex1";
-    
-    gal_descriptor_set_update_desc ds_update_desc{};
-    ds_update_desc.updates = &buf_descriptor_update_desc[0];
-    ds_update_desc.count = 2;
-    result = gal::update_descriptor_set(context, &ds_update_desc, ds);
+    ds_desc.set.freq = gal_descriptor_set_update_freq::BINDLESS;
+    result = gal::get_descriptor_set(context, &ds_desc, 1, &ds2);
+    REQUIRE(result == gal_error_code::SUC);
+    {
+        gal_descriptor_upate_desc buf_descriptor_update_desc[3];
+        buf_descriptor_update_desc[0].desc.s.sampler = spl;
+        buf_descriptor_update_desc[0].type = gal_descriptor_type::SAMPLER;
+        buf_descriptor_update_desc[0].name = "spl";
+        buf_descriptor_update_desc[1].desc.t.texture = tex;
+        buf_descriptor_update_desc[1].type = gal_descriptor_type::TEXTURE;
+        buf_descriptor_update_desc[1].name = "tex1";
 
+        gal_descriptor_set_update_desc ds_update_desc{};
+        ds_update_desc.updates = &buf_descriptor_update_desc[0];
+        ds_update_desc.count = 2;
+        result = gal::update_descriptor_set(context, &ds_update_desc, ds);
+        REQUIRE(result == gal_error_code::SUC);
+    }
+    {
+        gal_descriptor_upate_desc buf_descriptor_update_desc[3];
+        buf_descriptor_update_desc[0].desc.s.sampler = spl;
+        buf_descriptor_update_desc[0].type = gal_descriptor_type::SAMPLER;
+        buf_descriptor_update_desc[0].name = "spl2";
+        buf_descriptor_update_desc[1].desc.s.sampler = spl;
+        buf_descriptor_update_desc[1].type = gal_descriptor_type::SAMPLER;
+        buf_descriptor_update_desc[1].name = "spl3";
+        buf_descriptor_update_desc[2].desc.s.sampler = spl;
+        buf_descriptor_update_desc[2].type = gal_descriptor_type::SAMPLER;
+        buf_descriptor_update_desc[2].name = "spl4";
 
-
+        gal_descriptor_set_update_desc ds_update_desc{};
+        ds_update_desc.updates = &buf_descriptor_update_desc[0];
+        ds_update_desc.count = 3;
+        result = gal::update_descriptor_set(context, &ds_update_desc, ds2);
+    }
+    result = gal::destroy_texture(context, tex);
+    REQUIRE(result == gal_error_code::SUC);
+    result = gal::destroy_sampler(context, spl);
+    REQUIRE(result == gal_error_code::SUC);
+    result = gal::free_descriptor_set(context, ds, true);
+    REQUIRE(result == gal_error_code::SUC);
+    result = gal::free_descriptor_set(context, ds2, true);
     REQUIRE(result == gal_error_code::SUC);
     result = gal::destroy_pipeline(context, comp_pipe);
     REQUIRE(result == gal_error_code::SUC);
     result = gal::destroy_rootsignature(context, rs);
     REQUIRE(result == gal_error_code::SUC);
+    result = gal::destroy_shader_program(context, sp);
+    REQUIRE(result == gal_error_code::SUC);
     sg.release();
+    destroy(context);
 }

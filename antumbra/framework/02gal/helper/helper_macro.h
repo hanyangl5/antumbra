@@ -76,7 +76,9 @@ __GAL_HELPER_MACRO__(gal_error_code, destroy_swap_chain, gal_context context, ga
 //__GAL_HELPER_MACRO__(gal_error_code, create_shader, gal_context context, gal_shader_desc *desc, gal_shader *_shader);
 //__GAL_HELPER_MACRO__(gal_error_code, destroy_shader, gal_context context, gal_shader _shader);
 __GAL_HELPER_MACRO__(gal_error_code, create_shader_program, gal_context context, gal_shader_program_desc *desc, gal_shader_program *shader_program);
-//__GAL_HELPER_MACRO__(gal_error_code, destroy_shader, gal_context context, gal_shader _shader);
+
+__GAL_HELPER_MACRO__(gal_error_code, destroy_shader_program, gal_context context, gal_shader_program shader_program);
+    //__GAL_HELPER_MACRO__(gal_error_code, destroy_shader, gal_context context, gal_shader _shader);
 //gal_error_code vk_create_shader_program(gal_context context, gal_shader_program_desc *desc,
 //                                        gal_shader_program *_shader_program)
 
