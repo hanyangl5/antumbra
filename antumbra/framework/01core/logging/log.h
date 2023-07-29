@@ -7,10 +7,10 @@
 #include "framework/01core/memory/container.h"
 
 namespace ante {
-//inline ante::str HrToString(long hr) {
+//inline std::string HrToString(long hr) {
 //    char s_str[64] = {};
 //    sprintf_s(s_str, "HRESULT of 0x%08X", static_cast<u32>(hr));
-//    return ante::str(s_str);
+//    return std::string(s_str);
 //}
 
 class Log : public Singleton<Log> {
@@ -42,20 +42,23 @@ class Log : public Singleton<Log> {
     //     m_logger->fatal(std::forward<args>(_args)...);
     // }
     void SetLogLevel(loglevel level) noexcept;
-
+    // TODO(hyl5): add function name
+    // void set_pattern() noexcept {
+    //   m_logger->set_pattern("[%H:%M:%S %z] [%^%L%$] [thread %t] %v");
+    // }
   private:
     std::shared_ptr<spdlog::logger> m_logger;
 };
 
-#define LOG_DEBUG(...) ante::Log::get().debug("[" + ante::str(__FUNCTION__) + "] " + __VA_ARGS__);
+#define LOG_DEBUG(...) ante::Log::get().debug(__VA_ARGS__);
 
-#define LOG_INFO(...) ante::Log::get().info("[" + ante::str(__FUNCTION__) + "] " + __VA_ARGS__);
+#define LOG_INFO(...) ante::Log::get().info(__VA_ARGS__);
 
-#define LOG_WARN(...) ante::Log::get().warn("[" + ante::str(__FUNCTION__) + "] " + __VA_ARGS__);
+#define LOG_WARN(...) ante::Log::get().warn(__VA_ARGS__);
 
-#define LOG_ERROR(...) ante::Log::get().error("[" + ante::str(__FUNCTION__) + "] " + __VA_ARGS__);
+#define LOG_ERROR(...) ante::Log::get().error(__VA_ARGS__);
 
-#define LOG_FATAL(...) ante::Log::get().fatal("[" + ante::str(__FUNCTION__) + "] " + __VA_ARGS__);
+#define LOG_FATAL(...) ante::Log::get().fatal(__VA_ARGS__);
 
 //#define CHECK_VK_RESULT(res) ante::Log::get().CheckVulkanResult(res, __FUNCTION__, __LINE__);
 //

@@ -1,7 +1,12 @@
 #pragma once
 
 // standard libraries
+#if defined(__APPLE__)
+#include <boost/container/pmr/memory_resource.hpp>
+#include <boost/container/pmr/monotonic_buffer_resource.hpp>
+#else
 #include <memory_resource>
+#endif
 #include <type_traits>
 // third party libraries
 
@@ -9,6 +14,7 @@
 #include "framework/01core/logging/log.h"
 #include "framework/01core/memory/allocators/allocator2.h"
 #include "framework/01core/memory/container.h"
+#include "framework/01core/memory/pmr.h"
 #include "framework/01core/singleton/public_singleton.h"
 #include "framework/01core/utils/utils.h"
 
@@ -48,8 +54,8 @@ template <typename T> void afree(T *ptr, memory_pool *pool = nullptr) {
         pool->deallocate(ptr, 0);
     }
 }
-
 #define ACQUIRE_STACK_MEMORY_RESOURCE(name, bytes)                                                                     \
     char __stack_memory__[bytes];                                                                                      \
-    std::pmr::monotonic_buffer_resource name((void *)__stack_memory__, bytes);
+    memory::ante_pmr::monotonic_buffer_resource name((void *)__stack_memory__, bytes);
+
 } // namespace ante::memory

@@ -57,6 +57,6 @@ void *linear_allocator::do_allocate(u64 bytes, u64 alignment) {
 }
 void linear_allocator::do_deallocate([[maybe_unused]] void *ptr, [[maybe_unused]] u64 bytes,
                                      [[maybe_unused]] u64 alignment) {}
-bool linear_allocator::do_is_equal(const std::pmr::memory_resource &other) const noexcept { return this == &other; }
+bool linear_allocator::do_is_equal(const ante_pmr::memory_resource &other) const noexcept { return this == &other; }
 
 } // namespace ante::memory

@@ -1,8 +1,11 @@
 #pragma once
 
 // standard libraries
+#if defined(__APPLE__)
+#include <boost/container/pmr/memory_resource.hpp>
+#else
 #include <memory_resource>
-
+#endif
 // third party libraries
 
 // project headers

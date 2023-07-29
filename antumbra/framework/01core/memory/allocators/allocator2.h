@@ -1,6 +1,5 @@
 #pragma once
 
-#include <memory_resource>
 #if 0
 #include <mimalloc-override.h> // redefines malloc etc.
 #include <mimalloc.h>
@@ -15,6 +14,7 @@
 #define aligned_free(ptr) _aligned_free(ptr)
 #else
 // Code for other compilers
+
 inline void *aligned_alloc(size_t alignment, size_t size) {
     void *ptr;
     if (posix_memalign(&ptr, alignment, size) != 0) {
@@ -28,12 +28,12 @@ inline void aligned_free(void *ptr) { free(ptr); }
 #endif
 
 #include "framework/01core/utils/utils.h"
-
+#include "../pmr.h"
 namespace ante::memory {
 
 extern bool b_enable_memory_tracking;
 
-using memory_pool = std::pmr::memory_resource;
+using memory_pool = ante_pmr::memory_resource;
 
 // struct 
 
@@ -45,7 +45,7 @@ class allocator_base : public memory_pool {
   protected:
     //virtual void *do_allocate(u64 bytes, u64 alignment = alignof(std::max_align_t)) = 0;
     //virtual void do_deallocate(void *ptr, u64 bytes, u64 alignment = alignof(std::max_align_t)) = 0;
-    //virtual bool do_is_equal(const std::pmr::memory_resource &other) const noexcept = 0;
+    //virtual bool do_is_equal(const ante_pmr::memory_resource &other) const noexcept = 0;
     //virtual void init() = 0;
     // virtual void reset() = 0;
 

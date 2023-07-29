@@ -259,7 +259,7 @@
 //     ~c_allocator() noexcept;
 //     void *do_allocate(u64 bytes, u64 alignment = alignof(std::max_align_t)) override;
 //     void do_deallocate(void *ptr, u64 bytes, u64 alignment = alignof(std::max_align_t)) override;
-//     bool do_is_equal(const std::pmr::memory_resource &other) const noexcept override;
+//     bool do_is_equal(const ante_pmr::memory_resource &other) const noexcept override;
 //     void reset();
 //     void resize(u64 size, u64 alignment);
 
@@ -324,4 +324,4 @@
 // void *c_allocator::do_allocate(u64 bytes, u64 alignment) { return aligned_alloc(alignment, bytes); }
 
 // void c_allocator::do_deallocate(void *ptr, u64 bytes, u64 alignment) { free(ptr); }
-// bool c_allocator::do_is_equal(const std::pmr::memory_resource &other) const noexcept { return this == &other; }
+// bool c_allocator::do_is_equal(const ante_pmr::memory_resource &other) const noexcept { return this == &other; }

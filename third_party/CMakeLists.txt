@@ -33,7 +33,7 @@ file(COPY tracy/public/TracyClient.cpp DESTINATION ${CMAKE_CURRENT_SOURCE_DIR})
 option(TINYGLTF_BUILD_LOADER_EXAMPLE "" OFF)
 add_subdirectory(tinygltf)
 
-add_library(${PROJECT_NAME} third_party_dummy.cpp TracyClient.cpp)
+add_library(${PROJECT_NAME} third_party_dummy.cpp)
 
 
 # dxc
@@ -114,7 +114,7 @@ endif()
 
 # link libraries
 target_link_libraries(${PROJECT_NAME} PUBLIC
-    mimalloc-static
+    #mimalloc-static
     glfw
     spdlog
     flecs_static
@@ -165,6 +165,12 @@ endif(ANTUMBRA_BUILD_D3D12)
 
 
  
-
-
-
+# boost pmr
+if(APPLE)
+    find_package(Boost REQUIRED COMPONENTS container)
+    if (Boost_FOUND)
+        message("found boost container :${Boost_INCLUDE_DIR}")
+        target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${Boost_INCLUDE_DIR})
+        target_link_libraries (${PROJECT_NAME} PUBLIC  Boost::container)
+    endif()
+endif()

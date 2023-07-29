@@ -17,8 +17,8 @@ gal::gal_context initialize(ante::gal::gal_api api) {
     gal_desc.b_debug_layer = true;
     gal_desc.b_swap_chain = true;
     gal_desc.b_surface = true;
-    gal_desc.b_async_compute = true;
-    gal_desc.b_async_transfer = true;
+    gal_desc.b_async_compute = false;
+    gal_desc.b_async_transfer = false;
     // gal_desc.b_ray_tracing = true;
     //gal_desc.b_mesh_shader = true;
     //gal_desc.b_variable_rate_shading = true;

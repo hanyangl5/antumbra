@@ -32,7 +32,7 @@ void *aaligned_alloc(u64 alignment, u64 size, memory_pool *pool) {
     }
     return ptr;
 }
-//void *ant_calloc(u64 num, u64 size, std::pmr::memory_resource *allocator) {
+//void *ant_calloc(u64 num, u64 size, ante_pmr::memory_resource *allocator) {
 //    if (b_enable_memory_tracking) {
 //        LOG_DEBUG("alloc {} bytes", size * num);
 //    }

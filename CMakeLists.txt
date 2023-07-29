@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.21)
 # Set the project name and language
 project(antumbra)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 include(cmake/Doxygen.cmake)
 
 include(cmake/ProjectOptions.cmake)
@@ -35,4 +37,3 @@ if(DOXYGEN_FOUND)
     )
 endif(DOXYGEN_FOUND)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

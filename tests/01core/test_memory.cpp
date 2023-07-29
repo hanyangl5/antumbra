@@ -1,6 +1,7 @@
 #include "framework/01core/memory/memory.h"
 #include "framework/01core/utils/utils.h"
 #include <catch2/catch_test_macros.hpp>
+#include <cstddef>
 
 #include "framework/01core/memory/allocators/linear_allocator.h"
 #include "framework/01core/memory/allocators/pool_allocator.h"
@@ -22,7 +23,9 @@ TEST_CASE("malloc") {
     ante::memory::afree(pb);
 }
 
-TEST_CASE("memory") { ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 1024); }
+TEST_CASE("memory") {
+    ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 1024);
+}
 
 TEST_CASE("container") {
     ante::str str = "test string";
@@ -56,7 +59,8 @@ TEST_CASE("uniqueptr") {
         LOG_DEBUG("{} {}", pb->a, pc->a);
     }
 
-    { ACQUIRE_STACK_MEMORY_RESOURCE(data, 64);
+    {
+        ACQUIRE_STACK_MEMORY_RESOURCE(data, 64);
         unique_ptr<A> pi = make_unique<A>(&data);
     }
 }

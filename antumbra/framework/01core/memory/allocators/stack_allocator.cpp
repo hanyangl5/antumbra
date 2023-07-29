@@ -154,6 +154,6 @@ void stack_allocator::do_deallocate(void *ptr, [[maybe_unused]] u64 bytes, [[may
         }
     }
 }
-bool stack_allocator::do_is_equal(const std::pmr::memory_resource &other) const noexcept { return this == &other; }
+bool stack_allocator::do_is_equal(const ante_pmr::memory_resource &other) const noexcept { return this == &other; }
 
 } // namespace ante::memory
