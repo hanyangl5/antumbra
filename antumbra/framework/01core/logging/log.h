@@ -2,9 +2,9 @@
 
 #include <spdlog/spdlog.h>
 
+#include "framework/01core/memory/container.h"
 #include "framework/01core/singleton/public_singleton.h"
 #include "framework/01core/utils/utils.h"
-#include "framework/01core/memory/container.h"
 
 namespace ante {
 //inline std::string HrToString(long hr) {
@@ -17,9 +17,8 @@ class Log : public Singleton<Log> {
   public:
     enum class loglevel : u8 { debug, info, warn, error, fatal };
 
-  public:
     Log() noexcept;
-    ~Log() noexcept;
+    ~Log() noexcept override;
 
     DELETE_COPY_MOVE(Log);
 

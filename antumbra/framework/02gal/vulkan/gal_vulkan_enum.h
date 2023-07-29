@@ -1,10 +1,15 @@
 #pragma once
 
-#include "../enum.h"
-#include "../gal.h"
 #include <atomic>
 #include <mutex>
 #include <variant>
+
+#include <vk_mem_alloc.h>
+#include <vulkan/vulkan.h>
+
+#include "../enum.h"
+#include "../gal.h"
+
 
 namespace ante::gal {
 

@@ -359,14 +359,13 @@ struct pipeline_reflection {
     //u32 mVariableCount;
 };
 
-struct pipeline_reflection_vk : public pipeline_reflection {
-    
-};
+struct pipeline_reflection_vk : public pipeline_reflection {};
 
 class shader_compiler;
 
 struct compiled_shader {
     friend class shader_compiler;
+
   public:
     void release();
     const blob *byte_code() const;
@@ -375,11 +374,11 @@ struct compiled_shader {
     const blob *dxc_reflection() const;
     const shader_reflection *reflection() const;
     const char *entry();
+
   private:
     void create_shader_reflection();
     void create_shader_reflection_from_spirv();
 
-  private:
     shader_blob_type m_type;
     // IDxcBlob *
     blob m_byte_code;
@@ -429,10 +428,10 @@ struct compiled_shader_group {
     compiled_shader *comp();
     gal_shader_stage stages();
     pipeline_reflection *reflection();
+
   private:
     void create_pipeline_reflection();
 
-  private:
     // the shader group is created from one shader
     bool m_b_same_root_signature = false;
     gal_shader_stage m_stage_flags = gal_shader_stage::UNDEFINED;
@@ -448,7 +447,7 @@ struct compiled_shader_group {
 class shader_compiler : public Singleton<shader_compiler> {
   public:
     shader_compiler() noexcept;
-    virtual ~shader_compiler() noexcept;
+    ~shader_compiler() noexcept override;
 
     DELETE_COPY_MOVE(shader_compiler)
 

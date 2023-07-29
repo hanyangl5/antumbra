@@ -26,7 +26,7 @@ inline void ant_disable_memory_tracking() { b_enable_memory_tracking = false; }
 void *amalloc(u64 size, memory_pool *pool = nullptr);
 void *aaligned_alloc(u64 alignment, u64 size, memory_pool *pool = nullptr);
 template <typename T = void, typename... Args> T *alloc(Args &&...args, memory_pool *pool = nullptr) {
-    void *memory;
+    void *memory = nullptr;
     if (pool == nullptr) {
         memory = malloc(sizeof(T));
     } else {
@@ -55,7 +55,7 @@ template <typename T> void afree(T *ptr, memory_pool *pool = nullptr) {
     }
 }
 #define ACQUIRE_STACK_MEMORY_RESOURCE(name, bytes)                                                                     \
-    char __stack_memory__[bytes];                                                                                      \
-    memory::ante_pmr::monotonic_buffer_resource name((void *)__stack_memory__, bytes);
+    ante::fixed_array<char, bytes> __stack_memory__;                                                                                      \
+    memory::ante_pmr::monotonic_buffer_resource name(__stack_memory__.data(), bytes);
 
 } // namespace ante::memory

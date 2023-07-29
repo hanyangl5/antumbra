@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include <vulkan/vulkan.h>
+
 #include "../gal.h"
 #include "gal_vulkan_enum.h"
 
@@ -42,7 +44,7 @@ inline void load_gal_vk_functions() {
 inline void offload_gal_vk_functions() {
 #define VK_OFFLOAD_FUNCTION_PTRS
 #include "../helper/helper_macro.h"
-#undef VK_LOAD_FUNCTION_PTRS
+#undef VK_OFFLOAD_FUNCTION_PTRS
 }
 
 constexpr VkDescriptorType utils_to_vk_descriptor_type(gal_descriptor_type type) {

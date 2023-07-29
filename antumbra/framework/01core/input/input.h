@@ -28,9 +28,9 @@ bool create_window(window_desc *desc, ant_window *_window) {
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    _window->m_window = glfwCreateWindow(desc->width, desc->height, desc->name, nullptr, nullptr);
+    _window->m_window = glfwCreateWindow(static_cast<i32>(desc->width), static_cast<i32>(desc->height), desc->name, nullptr, nullptr);
 
-    if (!_window) {
+    if (_window == nullptr) {
         glfwTerminate();
         glfwTerminate();
         LOG_ERROR("failed to init window");

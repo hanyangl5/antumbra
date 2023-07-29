@@ -3,7 +3,7 @@
 namespace ante::memory {
 
 void *amalloc(u64 size, memory_pool *pool) {
-    void *ptr;
+    void *ptr = nullptr;
     if (pool == nullptr) {
         ptr = malloc(size);
     } else {
@@ -17,8 +17,8 @@ void *amalloc(u64 size, memory_pool *pool) {
     }
     return ptr;
 }
-void *aaligned_alloc(u64 alignment, u64 size, memory_pool *pool) { 
-        void *ptr;
+void *aaligned_alloc(u64 alignment, u64 size, memory_pool *pool) {
+    void *ptr = nullptr;
     if (pool == nullptr) {
         ptr = aligned_alloc(alignment, size);
     } else {

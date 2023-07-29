@@ -7,8 +7,8 @@
 #endif
 
 namespace ante::memory {
-#ifndef __ANT_PMR__
-#define __ANT_PMR__
+#ifndef ANT_PMR
+#define ANT_PMR
 #if defined(__APPLE__)
 namespace ante_pmr = boost::container::pmr;
 #else

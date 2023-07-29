@@ -58,11 +58,11 @@ void create_path(const std::filesystem::path &root, const std::filesystem::path 
 
 // bool write_json(nlohmann::json &data, const std::filesystem::path &filename);
 
-ante::str read_text_file(const std::filesystem::path filename);
+ante::str read_text_file(const std::filesystem::path& filename);
 
 ante::vector<u8> read_binary_file(const std::filesystem::path &filename, const uint32_t count = 0);
 
-void write_text_file(const std::filesystem::path filename, void *data, u64 size);
+void write_text_file(const std::filesystem::path& filename, void *data, u64 size);
 
 void write_binary_file(const ante::vector<u8> &data, const std::filesystem::path &filename,
                        const uint32_t count); // TODO(hyl5): what count means

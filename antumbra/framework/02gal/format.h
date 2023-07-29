@@ -686,9 +686,7 @@ constexpr u64 MaxPixelCountOfBlock = 144u;
 constexpr bool gal_tf_is_depth_only(gal_texture_format fmt) {
     switch (fmt) {
     case gal_texture_format::D16_UNORM:
-        return true;
     case gal_texture_format::X8_D24_UNORM:
-        return true;
     case gal_texture_format::D32_SFLOAT:
         return true;
     default:
@@ -1511,8 +1509,9 @@ constexpr u32 gal_tf_num_of_planes(gal_texture_format fmt) {
 }
 
 constexpr u32 gal_tf_plane_width(gal_texture_format fmt, uint32_t plane, uint32_t width) {
-    if (0 == plane)
+    if (0 == plane) {
         return width;
+}
 
     switch (fmt) {
     case gal_texture_format::G8_B8_R8_3PLANE_420_UNORM:

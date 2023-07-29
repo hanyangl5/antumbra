@@ -18,10 +18,12 @@
 #include "file_system.h"
 
 #include <fstream>
+#include <ios>
 #include <iostream>
 #include <istream>
 #include <ostream>
 #include <sstream>
+#include <wtypes.h>
 
 // #define STB_IMAGE_WRITE_IMPLEMENTATION
 // #include <stb_image_write.h>
@@ -33,7 +35,7 @@ namespace ante::io {
 bool is_directory(const std::filesystem::path &path) { return std::filesystem::is_directory(path); }
 
 void create_directory(const std::filesystem::path &path) {
-    if (io::is_directory(path) == false) {
+    if (!io::is_directory(path)) {
         std::filesystem::create_directory(path);
     }
 }
@@ -52,7 +54,7 @@ void create_path(const std::filesystem::path &root, const std::filesystem::path 
     }
 }
 
-ante::str read_text_file(const std::filesystem::path filename) {
+ante::str read_text_file(const std::filesystem::path &filename) {
     ante::vector<ante::str> data;
 
     std::ifstream file;
@@ -87,13 +89,13 @@ ante::vector<u8> read_binary_file(const std::filesystem::path &filename, const u
     }
 
     data.resize(static_cast<size_t>(read_count));
-    file.read(reinterpret_cast<char *>(data.data()), read_count);
+    file.read(reinterpret_cast<char *>(data.data()), static_cast<std::streamsize>(read_count));
     file.close();
 
     return data;
 }
 
-void write_text_file(const std::filesystem::path filename, void *data, u64 size) {
+void write_text_file(const std::filesystem::path &filename, void *data, u64 size) {
     std::ofstream file;
     file.open(filename, std::ios::out | std::ios::trunc);
 
@@ -102,7 +104,7 @@ void write_text_file(const std::filesystem::path filename, void *data, u64 size)
         return;
     }
 
-    file.write(reinterpret_cast<const char *>(data), size);
+    file.write(reinterpret_cast<const char *>(data), static_cast<std::streamsize>(size));
     file.close();
 }
 
@@ -121,7 +123,7 @@ void write_binary_file(const ante::vector<u8> &data, const std::filesystem::path
         write_count = data.size();
     }
 
-    file.write(reinterpret_cast<const char *>(data.data()), write_count);
+    file.write(reinterpret_cast<const char *>(data.data()), static_cast<std::streamsize>(write_count));
     file.close();
 }
 

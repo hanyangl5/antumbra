@@ -45,19 +45,19 @@ Log::~Log() noexcept {
 void Log::SetLogLevel(loglevel level) noexcept {
     switch (level) {
     case ante::Log::loglevel::debug:
-        spdlog::set_level(spdlog::level::debug);
+        m_logger->set_level(spdlog::level::debug);
         break;
     case ante::Log::loglevel::info:
-        spdlog::set_level(spdlog::level::info);
+        m_logger->set_level(spdlog::level::info);
         break;
     case ante::Log::loglevel::warn:
-        spdlog::set_level(spdlog::level::warn);
+        m_logger->set_level(spdlog::level::warn);
         break;
     case ante::Log::loglevel::error:
-        spdlog::set_level(spdlog::level::err);
+        m_logger->set_level(spdlog::level::err);
         break;
     case ante::Log::loglevel::fatal:
-        spdlog::set_level(spdlog::level::critical);
+        m_logger->set_level(spdlog::level::critical);
         break;
     default:
         break;

@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include "framework/01core/memory/container.h"
 #include <variant>
 #ifdef _WIN32
 #include <Windows.h>
@@ -408,7 +409,7 @@ struct gal_rasterizer_state_desc {
 struct gal_vertex_attrib {
     ShaderSemantic mSemantic;
     uint32_t mSemanticNameLength;
-    char mSemanticName[MAX_SEMANTIC_NAME_LENGTH];
+    ante::fixed_array<char, MAX_SEMANTIC_NAME_LENGTH> mSemanticName;
     gal_texture_format mFormat;
     uint32_t mBinding;
     uint32_t mLocation;
@@ -418,8 +419,8 @@ struct gal_vertex_attrib {
 
 struct gal_vertex_layout {
     uint32_t mAttribCount;
-    gal_vertex_attrib mAttribs[MAX_VERTEX_ATTRIBS];
-    uint32_t mStrides[MAX_VERTEX_BINDINGS];
+    ante::fixed_array<gal_vertex_attrib, MAX_VERTEX_ATTRIBS> mAttribs;
+    ante::fixed_array<u32, MAX_VERTEX_BINDINGS> mStrides;
 };
 
 struct gal_read_range {
@@ -659,7 +660,7 @@ struct gal_pipeline_cache_desc {
 // struct to consume descriptor_set
 
 struct gal_rootsignature_desc {
-    gal_pipeline_type type; //  determin the pipeline 
+    gal_pipeline_type type; //  determin the pipeline
     compiled_shader_group *shader;
 };
 
@@ -787,7 +788,7 @@ struct read_range {
     u64 size;
 };
 
-DECLARE_GAL_HANDLE(gal_descriptor_set){ u32 set_index; };
+DECLARE_GAL_HANDLE(gal_descriptor_set) { u32 set_index; };
 
 enum class gal_descriptor_set_update_freq { NONE, PER_FRAME, PER_BATCH, PER_DRAW, BINDLESS };
 

@@ -58,7 +58,7 @@ typedef uint64_t uint64;
 namespace ante {
 
 struct WindowHandle {
-    // TODO: Separate vulkan ext from choosing xlib vs xcb
+    // TODO(hylu): Separate vulkan ext from choosing xlib vs xcb
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
     Display *display;
     Window window;

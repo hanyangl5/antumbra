@@ -18,7 +18,7 @@ inline void read_resource_vec_size(const spirv_cross::Compiler &compiler, const 
 inline void read_resource_array_size(const spirv_cross::Compiler &compiler, const spirv_cross::Resource &resource,
                                      ShaderResource &shader_resource) {
     const auto &spirv_type = compiler.get_type_from_variable(resource.id);
-    shader_resource.array_size = spirv_type.array.size() ? spirv_type.array[0] : 1;
+    shader_resource.array_size = !spirv_type.array.empty() ? spirv_type.array[0] : 1;
 }
 
 inline void read_resource_size(const spirv_cross::Compiler &compiler, const spirv_cross::Resource &resource,
@@ -77,12 +77,12 @@ void compiled_shader::create_shader_reflection() {
 
 const blob *compiled_shader::byte_code() const { return &m_byte_code; }
 
-const shader_reflection *compiled_shader::reflection() const { return m_reflection ? m_reflection : nullptr; }
+const shader_reflection *compiled_shader::reflection() const { return m_reflection != nullptr ? m_reflection : nullptr; }
 
 const char *compiled_shader::entry() { return m_entry; }
 
 void compiled_shader::create_shader_reflection_from_spirv() {
-    spirv_cross::Compiler compiler((u32 *)this->m_byte_code.data(), this->m_byte_code.size() / sizeof(u32));
+    spirv_cross::Compiler compiler(static_cast<u32 *>(this->m_byte_code.data()), this->m_byte_code.size() / sizeof(u32));
 
     auto &spv_entry = compiler.get_entry_point({this->m_entry}, compiler.get_execution_model());
 
@@ -109,7 +109,7 @@ void compiled_shader::create_shader_reflection_from_spirv() {
     //
     //// shader resources
     //count += static_cast<u32>(resources.uniform_buffers.size());   // constant buffers
-    //count += static_cast<u32>(resources.storage_buffers.size());   // uav buffers
+    //count += static_cast<u32>(resourstces.orage_buffers.size());   // uav buffers
     //count += static_cast<u32>(resources.separate_images.size());   // textures
     //count += static_cast<u32>(resources.separate_samplers.size()); // samplers
     //count += static_cast<u32>(resources.storage_images.size());    // uav textures
@@ -158,7 +158,7 @@ void compiled_shader::create_shader_reflection_from_spirv() {
 
         resource.descriptor_type = gal_descriptor_type::PUSH_CONSTANT;
         resource.resource_type = ShaderResourceType::PUSH_CONSTANT;
-        spirv_cross::SPIRType type = compiler.get_type(input.type_id);
+        const spirv_cross::SPIRType& type = compiler.get_type(input.type_id);
         resource.size = static_cast<u32>(compiler.get_declared_struct_size(type));
         resource.name = {input.name.begin(), input.name.end()};
         m_reflection->resources.emplace(std::move(resource.name), std::move(resource));
@@ -252,10 +252,10 @@ void compiled_shader_group::create_pipeline_reflection() {
 
     if (m_b_same_root_signature) {
         // we only need to set from one shader beacuse all shader in one shader group share the same root signature
-        shader_reflection *refl;
-        refl = m_vert ? const_cast<shader_reflection *>(m_vert->reflection()) : nullptr;
+        const shader_reflection *refl = nullptr;
+        refl = m_vert != nullptr ? m_vert->reflection() : nullptr;
         // vert/comp must exist for a shader group
-        refl = m_comp ? const_cast<shader_reflection *>(m_comp->reflection()) : nullptr;
+        refl = m_comp != nullptr ? m_comp->reflection() : nullptr;
 
         //m_pipeline_reflection->m_resources =
         //    ante::vector<std::pair<const char *, ShaderResource>>(refl->resources.begin(), refl->resources.end());
@@ -264,12 +264,12 @@ void compiled_shader_group::create_pipeline_reflection() {
         //               std::back_inserter(m_pipeline_reflection->m_resources), [](const auto &p) { return p.second; });
         //
         m_pipeline_reflection->m_resources.reserve(refl->resources.size());
-        for (auto &[name, res] : refl->resources) {
+        for (const auto &[name, res] : refl->resources) {
             m_pipeline_reflection->m_resources.push_back(res);
             m_pipeline_reflection->m_resources.back().name = name;
         }
 
-        m_pipeline_reflection->sets = std::move((refl->sets));
+        m_pipeline_reflection->sets = refl->sets;
         return;
     }
 
