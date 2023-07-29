@@ -1211,12 +1211,12 @@
 //    //d3d12_context *d3d12_ctx;
 //    return gal_error_code::SUC;
 //}
-//gal_error_code d3d12_create_rootsignature() {
+//gal_error_code d3d12_create_root_signature() {
 //    //d3d12_context *d3d12_ctx;
-//    //d3d12_ctx->device->CreateRootSignature();
+//    //d3d12_ctx->device->Createroot_signature();
 //    return gal_error_code::SUC;
 //}
-//gal_error_code d3d12_destroy_rootsignature() {
+//gal_error_code d3d12_destroy_root_signature() {
 //    //d3d12_context *d3d12_ctx;
 //    return gal_error_code::SUC;
 //}

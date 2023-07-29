@@ -237,10 +237,10 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
     sg.set_from_source(&source, &sg_desc);
 
     // root signature
-    gal::gal_rootsignature rs{};
-    gal::gal_rootsignature_desc rs_desc{};
+    gal::gal_root_signature rs{};
+    gal::gal_root_signature_desc rs_desc{};
     rs_desc.shader = &sg;
-    result = gal::create_rootsignature(context, &rs_desc, &rs);
+    result = gal::create_root_signature(context, &rs_desc, &rs);
     REQUIRE(result == gal_error_code::SUC);
 
     // create shader program
@@ -264,7 +264,7 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
 
     result = gal::destroy_pipeline(context, comp_pipe);
     REQUIRE(result == gal_error_code::SUC);
-    result = gal::destroy_rootsignature(context, rs);
+    result = gal::destroy_root_signature(context, rs);
     REQUIRE(result == gal_error_code::SUC);
     result = gal::destroy_shader_program(context, sp);
     REQUIRE(result == gal_error_code::SUC);
@@ -341,10 +341,10 @@ void CS_MAIN(uint3 globalID : SV_DispatchThreadID, uint3 localID : SV_GroupThrea
     sg.set_from_source(&source, &sg_desc);
 
     // root signature
-    gal::gal_rootsignature rs{};
-    gal::gal_rootsignature_desc rs_desc{};
+    gal::gal_root_signature rs{};
+    gal::gal_root_signature_desc rs_desc{};
     rs_desc.shader = &sg;
-    gal::create_rootsignature(context, &rs_desc, &rs);
+    gal::create_root_signature(context, &rs_desc, &rs);
 
     // create shader program
     gal::gal_shader_program_desc sp_desc{};
@@ -406,7 +406,7 @@ void CS_MAIN(uint3 globalID : SV_DispatchThreadID, uint3 localID : SV_GroupThrea
     REQUIRE(result == gal_error_code::SUC);
     result = gal::destroy_pipeline(context, comp_pipe);
     REQUIRE(result == gal_error_code::SUC);
-    result = gal::destroy_rootsignature(context, rs);
+    result = gal::destroy_root_signature(context, rs);
     REQUIRE(result == gal_error_code::SUC);
     result = gal::destroy_shader_program(context, sp);
     REQUIRE(result == gal_error_code::SUC);
@@ -440,10 +440,10 @@ TEST_CASE("test compute vk") {
     sg.set_from_source(&source, &sg_desc);
 
     // root signature
-    gal::gal_rootsignature rs{};
-    gal::gal_rootsignature_desc rs_desc{};
+    gal::gal_root_signature rs{};
+    gal::gal_root_signature_desc rs_desc{};
     rs_desc.shader = &sg;
-    gal::create_rootsignature(context, &rs_desc, &rs);
+    gal::create_root_signature(context, &rs_desc, &rs);
 
     // create shader program
     gal::gal_shader_program_desc sp_desc{};
@@ -466,7 +466,7 @@ TEST_CASE("test compute vk") {
 
     result = gal::destroy_pipeline(context, comp_pipe);
     REQUIRE(result == gal_error_code::SUC);
-    result = gal::destroy_rootsignature(context, rs);
+    result = gal::destroy_root_signature(context, rs);
     REQUIRE(result == gal_error_code::SUC);
     result = gal::destroy_shader_program(context, sp);
     REQUIRE(result == gal_error_code::SUC);
@@ -660,11 +660,11 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
     sg.set_from_source(&source, &sg_desc);
 
     // root signature
-    gal::gal_rootsignature rs{};
-    gal::gal_rootsignature_desc rs_desc{};
+    gal::gal_root_signature rs{};
+    gal::gal_root_signature_desc rs_desc{};
     rs_desc.shader = &sg;
     rs_desc.type = gal_pipeline_type::COMPUTE;
-    result = gal::create_rootsignature(context, &rs_desc, &rs);
+    result = gal::create_root_signature(context, &rs_desc, &rs);
     REQUIRE(result == gal_error_code::SUC);
 
     // create shader program
@@ -771,7 +771,7 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
     REQUIRE(result == gal_error_code::SUC);
     result = gal::destroy_pipeline(context, comp_pipe);
     REQUIRE(result == gal_error_code::SUC);
-    result = gal::destroy_rootsignature(context, rs);
+    result = gal::destroy_root_signature(context, rs);
     REQUIRE(result == gal_error_code::SUC);
     result = gal::destroy_shader_program(context, sp);
     REQUIRE(result == gal_error_code::SUC);

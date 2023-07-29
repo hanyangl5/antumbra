@@ -27,6 +27,7 @@
 #include "gal_vulkan.h"
 #include "framework/01core/memory/container.h"
 #include "framework/02gal/enum.h"
+#include "framework/02gal/vulkan/gal_vulkan_enum.h"
 #include "vulkan/vulkan_core.h"
 
 #include <algorithm>
@@ -1331,7 +1332,7 @@ gal_error_code vk_create_compute_pipeline(gal_context context, gal_pipeline_desc
 
     vk_shader_program *vk_sp = reinterpret_cast<vk_shader_program *>(comp_desc.shader);
 
-    vk_rootsignature *vk_rs = reinterpret_cast<vk_rootsignature *>(comp_desc.root_signature);
+    vk_root_signature *vk_rs = reinterpret_cast<vk_root_signature *>(comp_desc.root_signature);
 
     VkPipelineShaderStageCreateInfo shader_stage_create_info{};
     shader_stage_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -1637,7 +1638,7 @@ gal_error_code vk_destroy_descriptor_pool(gal_context context, vk_descriptor_poo
 gal_error_code vk_get_descriptor_set(gal_context context, gal_descriptor_set_desc *desc, u32 set_count,
                                      gal_descriptor_set *sets) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_rootsignature *vk_rs = reinterpret_cast<vk_rootsignature *>(desc->root_signature);
+    vk_root_signature *vk_rs = reinterpret_cast<vk_root_signature *>(desc->root_signature);
     //vk_descriptor_set *vk_ds = ante::memory::alloc<ante::gal::vk_descriptor_set>(nullptr);
 
     u32 set_index = desc->set.index;
@@ -1736,7 +1737,7 @@ gal_error_code vk_update_descriptor_set(gal_context context, gal_descriptor_set_
         VkDescriptorUpdateData update_data{};
         gal_descriptor_upate_desc &t_update_data = update_desc->updates[i];
 
-        vk_rootsignature *vk_rs = reinterpret_cast<vk_rootsignature *>(vk_ds->pool->root_signature);
+        vk_root_signature *vk_rs = reinterpret_cast<vk_root_signature *>(vk_ds->pool->root_signature);
         auto iter = vk_rs->resource_map.find(t_update_data.name);
         if (iter == vk_rs->resource_map.end()) {
             return gal_error_code::ERR;
@@ -1778,16 +1779,16 @@ gal_error_code vk_update_descriptor_set(gal_context context, gal_descriptor_set_
     }
 
     vkUpdateDescriptorSetWithTemplate(vk_ctx->device, vk_ds->set,
-                                      reinterpret_cast<vk_rootsignature *>(vk_ds->pool->root_signature)
+                                      reinterpret_cast<vk_root_signature *>(vk_ds->pool->root_signature)
                                           ->descriptor_set_update_template[vk_ds->set_index],
                                       descriptor_updates.data());
     return gal_error_code::SUC;
 }
 // FIXME(hyl5): this function is too messy
-gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_desc *desc,
-                                       gal_rootsignature *root_signature) {
+gal_error_code vk_create_root_signature(gal_context context, gal_root_signature_desc *desc,
+                                        gal_root_signature *root_signature) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_rootsignature *vk_rs = ante::memory::alloc<ante::gal::vk_rootsignature>(nullptr);
+    vk_root_signature *vk_rs = ante::memory::alloc<ante::gal::vk_root_signature>(nullptr);
     if (vk_rs == nullptr) {
         return gal_error_code::ERR;
     }
@@ -1843,9 +1844,12 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
 
     ante::fixed_array<u32, MAX_DESCRIPTOR_SET_COUNT> set_binding_offsets{};
     for (auto &resource : refl->m_resources) {
-        vk_rs->resource_map[resource.name.c_str()] =
-            (resource.set << 29) | (resource.reg << 23) |
-            (set_binding_offsets[resource.set]++ << 17); // TODO(hyl5): remove hardcoded number
+        auto &it = vk_rs->resource_map[resource.name.c_str()];
+        it = (resource.set << 29) | (resource.reg << 23) |
+             (set_binding_offsets[resource.set]++ << 17); // TODO(hyl5): remove hardcoded number
+        if (resource.resource_type == ShaderResourceType::PUSH_CONSTANT) {
+            it |= 1 << 16; // one bit for pushconstant
+        }
     }
     // binding offsets is prefix sum now
 
@@ -1974,7 +1978,7 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
         dsut_ci.templateType = VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET;
         dsut_ci.descriptorUpdateEntryCount =
             static_cast<u32>(descriptor_update_template_entries[set_index_map[set_index]].size());
-        dsut_ci.pDescriptorUpdateEntries = descriptor_update_template_entries[set_index_map[set_index]].data();
+        dsut_ci.descriptorUpdateEntries = descriptor_update_template_entries[set_index_map[set_index]].data();
         // descriptor_update_template_entries.data() + ((i == 0) ? 0 : binding_offsets[i - 1]);
         dsut_ci.descriptorSetLayout = vk_rs->set_layouts[set_index];
 
@@ -1993,10 +1997,10 @@ gal_error_code vk_create_rootsignature(gal_context context, gal_rootsignature_de
 
     return gal_error_code::SUC;
 }
-gal_error_code vk_destroy_rootsignature(gal_context context, gal_rootsignature root_signature) {
+gal_error_code vk_destroy_root_signature(gal_context context, gal_root_signature root_signature) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     if (root_signature != gal_null) {
-        vk_rootsignature *vk_rs = reinterpret_cast<vk_rootsignature *>(root_signature);
+        vk_root_signature *vk_rs = reinterpret_cast<vk_root_signature *>(root_signature);
         for (auto &layout : vk_rs->set_layouts) {
             if (layout != VK_NULL_HANDLE && layout != g_empty_descriptor_set_layout) {
                 vkDestroyDescriptorSetLayout(vk_ctx->device, layout, nullptr);
@@ -2060,6 +2064,24 @@ gal_error_code vk_wait_fences(gal_context context, gal_fence *fences, u32 count)
 
     for (u32 i = 0; i < count; ++i) {
         reinterpret_cast<vk_fence *>(fences[i])->b_submitted = false;
+    }
+    return gal_error_code::SUC;
+}
+
+gal_error_code vk_getFenceStatus(gal_context context, gal_fence fence, gal_fence_status *fence_status) {
+    *fence_status = gal_fence_status::COMPLETE;
+    vk_fence *vk_f = reinterpret_cast<vk_fence *>(fence);
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
+    if (vk_f->b_submitted) {
+        VkResult result = vkGetFenceStatus(vk_ctx->device, vk_f->fence);
+        if (result == VK_SUCCESS) {
+            vkResetFences(vk_ctx->device, 1, &vk_f->fence);
+            vk_f->b_submitted = false;
+        }
+
+        *fence_status = result == VK_SUCCESS ? gal_fence_status::COMPLETE : gal_fence_status::INCOMPLETE;
+    } else {
+        *fence_status = gal_fence_status::NOTSUBMITTED;
     }
     return gal_error_code::SUC;
 }
@@ -2434,7 +2456,18 @@ gal_error_code vk_cmd_bind_descriptor_set() {
     return gal_error_code::SUC;
 }
 
-gal_error_code vk_cmd_bind_push_constant() { return gal_error_code::SUC; }
+gal_error_code vk_cmd_bind_push_constant(gal_command_list command, gal_root_signature root_signature, const char *name,
+                                         void *data, u64 size) {
+    vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
+    vk_root_signature *vk_rs = reinterpret_cast<vk_root_signature *>(root_signature);
+    // cannot find resource or resource is not push constant
+    auto it = vk_rs->resource_map.find(ante::str(name));
+    if (it == vk_rs->resource_map.end() || ((it->second >> 16) & 0x01) == 0) {
+        return gal_error_code::ERR;
+    }
+    vkCmdPushConstants(vk_cmd->m_command, vk_rs->pipeline_layout, VK_SHADER_STAGE_ALL, 0, size, data);
+    return gal_error_code::SUC;
+}
 
 gal_error_code vk_cmd_bind_pipeline(gal_command_list command, gal_pipeline pipeline) {
     vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
@@ -2612,6 +2645,8 @@ gal_error_code vk_cmd_copy_texture_to_buffer(gal_command_list command) {
     return gal_error_code::SUC;
 }
 
+gal_error_code vk_cmd_set_shading_rate() {}
+
 gal_error_code vk_add_queue(gal_context context, gal_queue_desc *desc, gal_queue *queue) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_queue *t_queue = &vk_ctx->queues[utils_to_vk_queue_index(desc->type)];
@@ -2712,7 +2747,129 @@ gal_error_code vk_queue_submit(gal_queue queue, gal_queue_submit_desc *desc) {
     return gal_error_code::SUC;
 }
 
-gal_error_code vk_queue_present() { return gal_error_code::SUC; }
+gal_error_code vk_queue_present(gal_queue pQueue, gal_queue_present_desc *desc) {
+
+
+    uint32_t waitSemaphoreCount = desc->mWaitSemaphoreCount;
+    gal_semaphore **ppWaitSemaphores = desc->ppWaitSemaphores;
+    if (desc->pSwapChain) {
+        gal_swap_chain *pSwapChain = desc->pSwapChain;
+
+        ASSERT(pQueue);
+        if (waitSemaphoreCount > 0) {
+            ASSERT(ppWaitSemaphores);
+        }
+
+        ASSERT(VK_NULL_HANDLE != pQueue->mVulkan.pVkQueue);
+
+        VkSemaphore *wait_semaphores =
+            waitSemaphoreCount ? (VkSemaphore *)alloca(waitSemaphoreCount * sizeof(VkSemaphore)) : NULL;
+        uint32_t waitCount = 0;
+        for (uint32_t i = 0; i < waitSemaphoreCount; ++i) {
+            if (ppWaitSemaphores[i]->mVulkan.mSignaled) {
+                wait_semaphores[waitCount] = ppWaitSemaphores[i]->mVulkan.pVkSemaphore; //-V522
+                ppWaitSemaphores[i]->mVulkan.mSignaled = false;
+                ++waitCount;
+            }
+        }
+
+        uint32_t presentIndex = desc->mIndex;
+
+        DECLARE_ZERO(VkPresentInfoKHR, present_info);
+        present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+        present_info.pNext = NULL;
+        present_info.waitSemaphoreCount = waitCount;
+        present_info.pWaitSemaphores = wait_semaphores;
+        present_info.swapchainCount = 1;
+        present_info.pSwapchains = &(pSwapChain->mVulkan.pSwapChain);
+        present_info.pImageIndices = &(presentIndex);
+        present_info.pResults = NULL;
+
+        // Lightweight lock to make sure multiple threads dont use the same queue simultaneously
+        MutexLock lock(*pQueue->mVulkan.pSubmitMutex);
+        VkResult vk_res = vkQueuePresentKHR(pSwapChain->mVulkan.pPresentQueue ? pSwapChain->mVulkan.pPresentQueue
+                                                                              : pQueue->mVulkan.pVkQueue,
+                                            &present_info);
+
+        if (vk_res == VK_ERROR_DEVICE_LOST) {
+            // Will crash normally on Android.
+#if defined(_WINDOWS)
+            threadSleep(5000); // Wait for a few seconds to allow the driver to come back online before doing a reset.
+            ResetDesc resetDesc;
+            resetDesc.mType = RESET_TYPE_DEVICE_LOST;
+            requestReset(&resetDesc);
+#endif
+        } else if (vk_res == VK_ERROR_OUT_OF_DATE_KHR) {
+            // TODO : Fix bug where we get this error if window is closed before able to present queue.
+        } else if (vk_res != VK_SUCCESS && vk_res != VK_SUBOPTIMAL_KHR) {
+            ASSERT(0);
+        }
+    }
+}
+
+void vk_acquireNextImage(Renderer *pRenderer, SwapChain *pSwapChain, Semaphore *pSignalSemaphore, Fence *pFence,
+                         uint32_t *pImageIndex) {
+    ASSERT(pRenderer);
+    ASSERT(VK_NULL_HANDLE != pRenderer->mVulkan.pVkDevice);
+    ASSERT(pSignalSemaphore || pFence);
+
+#if defined(QUEST_VR)
+    ASSERT(VK_NULL_HANDLE != pSwapChain->mVR.pSwapChain);
+    hook_acquire_next_image(pSwapChain, pImageIndex);
+    return;
+#else
+    ASSERT(VK_NULL_HANDLE != pSwapChain->mVulkan.pSwapChain);
+#endif
+
+    VkResult vk_res = {};
+
+    if (pFence != NULL) {
+        vk_res = vkAcquireNextImageKHR(pRenderer->mVulkan.pVkDevice, pSwapChain->mVulkan.pSwapChain, UINT64_MAX,
+                                       VK_NULL_HANDLE, pFence->mVulkan.pVkFence, pImageIndex);
+
+        // If swapchain is out of date, let caller know by setting image index to -1
+        if (vk_res == VK_ERROR_OUT_OF_DATE_KHR) {
+            *pImageIndex = -1;
+            vkResetFences(pRenderer->mVulkan.pVkDevice, 1, &pFence->mVulkan.pVkFence);
+            pFence->mVulkan.mSubmitted = false;
+            return;
+        }
+
+        pFence->mVulkan.mSubmitted = true;
+    } else {
+        vk_res = vkAcquireNextImageKHR(pRenderer->mVulkan.pVkDevice, pSwapChain->mVulkan.pSwapChain, UINT64_MAX,
+                                       pSignalSemaphore->mVulkan.pVkSemaphore, VK_NULL_HANDLE, pImageIndex); //-V522
+
+        // If swapchain is out of date, let caller know by setting image index to -1
+        if (vk_res == VK_ERROR_OUT_OF_DATE_KHR) {
+            *pImageIndex = -1;
+            pSignalSemaphore->mVulkan.mSignaled = false;
+            return;
+        }
+
+        // Commonly returned immediately following swapchain resize.
+        // Vulkan spec states that this return value constitutes a successful call to vkAcquireNextImageKHR
+        // https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/vkAcquireNextImageKHR.html
+        if (vk_res == VK_SUBOPTIMAL_KHR) {
+            LOGF(LogLevel::eINFO,
+                 "vkAcquireNextImageKHR returned VK_SUBOPTIMAL_KHR. If window was just resized, ignore this message.");
+            pSignalSemaphore->mVulkan.mSignaled = true;
+            return;
+        }
+
+        CHECK_VKRESULT(vk_res);
+        pSignalSemaphore->mVulkan.mSignaled = true;
+    }
+}
+
+gal_error_code vk_wait_queue(gal_queue queue) {
+    vk_queue *vk_q = reinterpret_cast<vk_queue *>(queue);
+    VkResult result = vkQueueWaitIdle(vk_q->queue);
+    if (result != VK_SUCCESS) {
+        return gal_error_code::ERR;
+    }
+    return gal_error_code::SUC;
+}
 
 //gal_error_code vk_create_srvuav(gal_context context, gal_texture texture)
 //gal_error_code vk_create_srvuav(gal_context context, gal_buffer buffer)

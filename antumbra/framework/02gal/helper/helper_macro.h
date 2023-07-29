@@ -104,8 +104,8 @@ __GAL_HELPER_MACRO__(gal_error_code, free_descriptor_set, gal_context context, g
 
 __GAL_HELPER_MACRO__(gal_error_code, update_descriptor_set, gal_context context,
                      gal_descriptor_set_update_desc *update_desc, gal_descriptor_set set);
-    __GAL_HELPER_MACRO__(gal_error_code, create_rootsignature, gal_context context, gal_rootsignature_desc* desc, gal_rootsignature* root_signature);
-__GAL_HELPER_MACRO__(gal_error_code, destroy_rootsignature, gal_context context, gal_rootsignature root_signature);
+    __GAL_HELPER_MACRO__(gal_error_code, create_root_signature, gal_context context, gal_root_signature_desc* desc, gal_root_signature* root_signature);
+__GAL_HELPER_MACRO__(gal_error_code, destroy_root_signature, gal_context context, gal_root_signature root_signature);
 // sync
 __GAL_HELPER_MACRO__(gal_error_code, create_fence, gal_context context, gal_fence* fence);
 __GAL_HELPER_MACRO__(gal_error_code, wait_fences, gal_context context, gal_fence *fences, u32 count);

@@ -27,6 +27,7 @@
 #pragma once
 
 #include "framework/01core/memory/container.h"
+#include "framework/02gal/enum.h"
 #include <variant>
 #ifdef _WIN32
 #include <Windows.h>
@@ -535,7 +536,16 @@ DECLARE_GAL_HANDLE(gal_sampler) {
 
 struct gal_fence_desc {};
 
-DECLARE_GAL_HANDLE(gal_fence){public : };
+DECLARE_GAL_HANDLE(gal_fence) {
+    
+};
+
+enum class gal_fence_status {
+    COMPLETE = 0,
+    INCOMPLETE,
+    NOTSUBMITTED,
+};
+
 DECLARE_GAL_HANDLE(gal_semaphore){};
 
 struct gal_swap_chain_desc {
@@ -581,7 +591,7 @@ DECLARE_GAL_HANDLE(gal_shader_program) {
     //shader::pipeline_reflection *pReflection;
 };
 
-DECLARE_GAL_HANDLE(gal_rootsignature){
+DECLARE_GAL_HANDLE(gal_root_signature){
 
 };
 
@@ -591,15 +601,15 @@ DECLARE_GAL_HANDLE(gal_pipeline_cache){
 
 struct gal_compute_pipeline_desc {
     //gal_shader_program *shader;
-    //gal_rootsignature* root_signature;
+    //gal_root_signature* root_signature;
     gal_shader_program shader;
-    gal_rootsignature root_signature;
+    gal_root_signature root_signature;
 };
 struct gal_raytracing_pipeline_desc {};
 
 struct gal_graphics_pipeline_desc {
     gal_shader_program shader;
-    gal_rootsignature root_signature;
+    gal_root_signature root_signature;
     gal_vertex_layout *pVertexLayout;
     gal_blend_state_desc *pBlendState;
     gal_depth_state_desc *pDepthState;
@@ -640,13 +650,13 @@ struct gal_pipeline_cache_desc {
 
 //struct RaytracingPipelineDesc {
 //    Raytracing *pRaytracing;
-//    gal_rootsignature *pGlobalRootSignature;
+//    gal_root_signature *pGlobalroot_signature;
 //    gal_shader *pRayGenShader;
-//    gal_rootsignature *pRayGenRootSignature;
+//    gal_root_signature *pRayGenroot_signature;
 //    gal_shader **ppMissShaders;
-//    gal_rootsignature **ppMissRootSignatures;
+//    gal_root_signature **ppMissroot_signatures;
 //    RaytracingHitGroup *pHitGroups;
-//    gal_rootsignature *pEmptyRootSignature;
+//    gal_root_signature *pEmptyroot_signature;
 //    u32 mMissShaderCount;
 //    u32 mHitGroupCount;
 //    // #TODO : Remove this after adding shader reflection for raytracing shaders
@@ -659,7 +669,7 @@ struct gal_pipeline_cache_desc {
 
 // struct to consume descriptor_set
 
-struct gal_rootsignature_desc {
+struct gal_root_signature_desc {
     gal_pipeline_type type; //  determin the pipeline
     compiled_shader_group *shader;
 };
@@ -750,40 +760,44 @@ struct gal_queue_submit_desc {
     uint32_t mSignalSemaphoreCount;
     bool mSubmitDone;
 };
-//enum class gal_descriptor_resource_type {
-//    UNDEFINED,
-//    BUFFER,
-//    TEXTURE
-//};
-//struct gal_buffer_srv_desc {
-//    gal_buffer buffer;
-//    u64 offste;
-//    u64 range;
-//};
-//using gal_buffer_uav_desc = gal_buffer_srv_desc;
-//struct gal_texture_srv_desc {};
-//using gal_texture_uav_desc = gal_texture_srv_desc;
-//struct gal_src_descriptor_view_desc {
-//    gal_descriptor_resource_type type;
-//    std::variant<std::monostate, gal_buffer_srv_desc, gal_texture_srv_desc> srv_desc;
-//};
-//
-//struct gal_uav_descriptor_view_desc {
-//    gal_descriptor_resource_type type;
-//    std::variant<std::monostate, gal_texture_uav_desc, gal_texture_uav_desc> srv_desc;
-//};
-//
-//DECLARE_GAL_HANDLE(gal_srv_descriptor_view) {
-//  protected:
-//    gal_src_descriptor_view_desc m_desc;
-//};
-//
-//DECLARE_GAL_HANDLE(gal_uav_descriptor_view) {
-//  protected:
-//    gal_uav_descriptor_view_desc m_desc;
-//};
+struct gal_queue_present_desc {
 
-struct read_range {
+};
+
+    //enum class gal_descriptor_resource_type {
+    //    UNDEFINED,
+    //    BUFFER,
+    //    TEXTURE
+    //};
+    //struct gal_buffer_srv_desc {
+    //    gal_buffer buffer;
+    //    u64 offste;
+    //    u64 range;
+    //};
+    //using gal_buffer_uav_desc = gal_buffer_srv_desc;
+    //struct gal_texture_srv_desc {};
+    //using gal_texture_uav_desc = gal_texture_srv_desc;
+    //struct gal_src_descriptor_view_desc {
+    //    gal_descriptor_resource_type type;
+    //    std::variant<std::monostate, gal_buffer_srv_desc, gal_texture_srv_desc> srv_desc;
+    //};
+    //
+    //struct gal_uav_descriptor_view_desc {
+    //    gal_descriptor_resource_type type;
+    //    std::variant<std::monostate, gal_texture_uav_desc, gal_texture_uav_desc> srv_desc;
+    //};
+    //
+    //DECLARE_GAL_HANDLE(gal_srv_descriptor_view) {
+    //  protected:
+    //    gal_src_descriptor_view_desc m_desc;
+    //};
+    //
+    //DECLARE_GAL_HANDLE(gal_uav_descriptor_view) {
+    //  protected:
+    //    gal_uav_descriptor_view_desc m_desc;
+    //};
+
+    struct read_range {
     u64 offset;
     u64 size;
 };
@@ -794,7 +808,7 @@ enum class gal_descriptor_set_update_freq { NONE, PER_FRAME, PER_BATCH, PER_DRAW
 
 // bit size can be computed by constexpr expression
 struct gal_descriptor_set_desc {
-    gal_rootsignature root_signature;
+    gal_root_signature root_signature;
     union {
         u32 index;
         gal_descriptor_set_update_freq freq;
@@ -829,7 +843,7 @@ struct gal_descriptor_set_update_desc {
 
     gal_descriptor_upate_desc *updates;
     u32 count;
-    /// User can either set name of descriptor or index (index in pRootSignature->pDescriptors array)
+    /// User can either set name of descriptor or index (index in proot_signature->pDescriptors array)
     /// Name of descriptor
     //const char *pName;
     ///// Number of array entries to update (array size of ppTextures/ppBuffers/...)
@@ -837,7 +851,7 @@ struct gal_descriptor_set_update_desc {
     ///// Dst offset into the array descriptor (useful for updating few entries in a large array)
     //// Example: to update 6th entry in a bindless texture descriptor, mArrayOffset will be 6 and mCount will be 1)
     //uint32_t mArrayOffset : 20;
-    //// Index in pRootSignature->pDescriptors array - Cache index using getDescriptorIndexFromName to avoid using string checks at runtime
+    //// Index in proot_signature->pDescriptors array - Cache index using getDescriptorIndexFromName to avoid using string checks at runtime
     //uint32_t mIndex : 10;
     //uint32_t mBindByIndex : 1;
 

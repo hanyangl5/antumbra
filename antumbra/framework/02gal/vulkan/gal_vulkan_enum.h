@@ -112,7 +112,7 @@ DECLARE_VK_HANDLE(shader_program) {
     VkSpecializationInfo *m_specialization_info;
 };
 
-DECLARE_VK_HANDLE(rootsignature) {
+DECLARE_VK_HANDLE(root_signature) {
     VkPipelineLayout pipeline_layout;
     ante::fixed_array<VkDescriptorSetLayout, MAX_DESCRIPTOR_SET_COUNT> set_layouts;
     ante::fixed_array<VkDescriptorUpdateTemplate, MAX_DESCRIPTOR_SET_COUNT> descriptor_set_update_template;
@@ -136,7 +136,7 @@ struct vk_descriptor_pool {
     u32 ref_count = 0;
     // precompute the descriptor set update template when create pipeline layout, require vulkan 1.1
     // https://github.com/SakuraEngine/SakuraEngine/blob/main/modules/runtime/src/cgpu/vulkan/cgpu_vulkan.c
-    gal_rootsignature root_signature;
+    gal_root_signature root_signature;
 };
 
 struct vk_descriptor_pool_desc {
