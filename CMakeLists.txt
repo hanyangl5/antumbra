@@ -16,8 +16,8 @@ set(ANTUMBRA_SRC_DIR antumbra)
 set(ANTUMBRA_THIR_PARTY_DIR ${ANTUMBRA_SRC_DIR}/third_party)
 set(ANTUMBRA_BUILD_VK ON)
 
-if(WIN32)
-    set(ANTUMBRA_BUILD_D3D12 ON)
+if(WIN32 AND MSVC)
+    set(ANTUMBRA_BUILD_D3D12 OFF)
 endif()
 #option(BUILD_WITH_DEBUG_LAYER "enable debug layer(require vulkan sdk installed)" ON) 
 

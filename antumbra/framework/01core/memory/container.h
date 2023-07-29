@@ -41,7 +41,7 @@ template <typename Key, typename Val> using map = memory::ante_pmr::map<Key, Val
 template <typename T> using hash_set = memory::ante_pmr::flat_set<T>;
 template <typename Key, typename Val> using hash_map = memory::ante_pmr::flat_map<Key, Val>;
 #else
-template <typename T> using hash_set = memory::ante_pmr::unorderd_set<T>;
-template <typename Key, typename Val> using hash_map = memory::ante_pmr::unorderd_map<Key, Val>;
+template <typename T> using hash_set = memory::ante_pmr::unordered_set<T>;
+template <typename Key, typename Val> using hash_map = memory::ante_pmr::unordered_map<Key, Val>;
 #endif
 } // namespace ante
