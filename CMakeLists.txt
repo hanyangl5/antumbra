@@ -27,6 +27,7 @@ endif()
 add_subdirectory(third_party)
 add_subdirectory(antumbra)
 add_subdirectory(tests)
+add_subdirectory(samples)
 
 find_package(Doxygen)
 

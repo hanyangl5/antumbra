@@ -761,7 +761,10 @@ struct gal_queue_submit_desc {
     bool mSubmitDone;
 };
 struct gal_queue_present_desc {
-
+    gal_swap_chain pSwapChain;
+    gal_semaphore *ppWaitSemaphores;
+    u32 mWaitSemaphoreCount;
+    bool mSubmitDone;
 };
 
     //enum class gal_descriptor_resource_type {

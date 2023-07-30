@@ -1,11 +1,21 @@
+// this header can only included by gal_vulkan 
 #pragma once
 
 #include <atomic>
 #include <mutex>
 #include <variant>
 
-#include <vk_mem_alloc.h>
+#ifdef _WIN32
+#define VK_USE_PLATFORM_WIN32_KHR
+#elif __linux__
+#define VK_USE_PLATFORM_XLIB_KHR
+#elif __APPLE__
+#define VK_USE_PLATFORM_MACOS_MVK
+#endif
 #include <vulkan/vulkan.h>
+
+#include <vk_mem_alloc.h>
+
 
 #include "../enum.h"
 #include "../gal.h"
@@ -91,6 +101,7 @@ DECLARE_VK_HANDLE(semaphore) {
 };
 DECLARE_VK_HANDLE(swap_chain) {
     ante::fixed_array<gal_render_target, MAX_SWAPCHAIN_IMAGES> &get_render_targets() { return m_render_targets; }
+    u32 image_index;
     VkSwapchainKHR m_swap_chain = VK_NULL_HANDLE;
     VkSurfaceKHR m_surface = VK_NULL_HANDLE;
     VkSurfaceFormatKHR optimal_surface_format{};

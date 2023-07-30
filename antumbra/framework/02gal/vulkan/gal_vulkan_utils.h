@@ -26,8 +26,6 @@
 
 #pragma once
 
-#include <vulkan/vulkan.h>
-
 #include "../gal.h"
 #include "gal_vulkan_enum.h"
 

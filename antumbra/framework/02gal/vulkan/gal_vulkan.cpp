@@ -33,14 +33,6 @@
 #include <algorithm>
 #include <optional>
 
-#ifdef _WIN32
-#define VK_USE_PLATFORM_WIN32_KHR
-#elif __linux__
-#define VK_USE_PLATFORM_XLIB_KHR
-#elif __APPLE__
-#define VK_USE_PLATFORM_MACOS_MVK
-#endif
-#include <vulkan/vulkan.h>
 #define VMA_RECORDING_ENABLED 1
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
@@ -954,7 +946,7 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
 #elif defined(VK_USE_PLATFORM_IOS_MVK)
     // Add IOS support here
 #elif defined(VK_USE_PLATFORM_MACOS_MVK)
-    // Add MacOS support here
+    // Add macOS support here
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
     VkAndroidSurfaceCreateInfoKHR add_info{};
     add_info.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
@@ -1978,7 +1970,7 @@ gal_error_code vk_create_root_signature(gal_context context, gal_root_signature_
         dsut_ci.templateType = VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET;
         dsut_ci.descriptorUpdateEntryCount =
             static_cast<u32>(descriptor_update_template_entries[set_index_map[set_index]].size());
-        dsut_ci.descriptorUpdateEntries = descriptor_update_template_entries[set_index_map[set_index]].data();
+        dsut_ci.pDescriptorUpdateEntries = descriptor_update_template_entries[set_index_map[set_index]].data();
         // descriptor_update_template_entries.data() + ((i == 0) ? 0 : binding_offsets[i - 1]);
         dsut_ci.descriptorSetLayout = vk_rs->set_layouts[set_index];
 
@@ -2645,7 +2637,7 @@ gal_error_code vk_cmd_copy_texture_to_buffer(gal_command_list command) {
     return gal_error_code::SUC;
 }
 
-gal_error_code vk_cmd_set_shading_rate() {}
+gal_error_code vk_cmd_set_shading_rate() { return gal_error_code::SUC; }
 
 gal_error_code vk_add_queue(gal_context context, gal_queue_desc *desc, gal_queue *queue) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
@@ -2747,119 +2739,106 @@ gal_error_code vk_queue_submit(gal_queue queue, gal_queue_submit_desc *desc) {
     return gal_error_code::SUC;
 }
 
-gal_error_code vk_queue_present(gal_queue pQueue, gal_queue_present_desc *desc) {
+gal_error_code vk_queue_present(gal_queue queue, gal_queue_present_desc *desc) {
 
-
+    vk_queue *vk_q = reinterpret_cast<vk_queue *>(queue);
+    vk_swap_chain *vk_sc = reinterpret_cast<vk_swap_chain *>(desc->pSwapChain);
     uint32_t waitSemaphoreCount = desc->mWaitSemaphoreCount;
-    gal_semaphore **ppWaitSemaphores = desc->ppWaitSemaphores;
-    if (desc->pSwapChain) {
-        gal_swap_chain *pSwapChain = desc->pSwapChain;
+    gal_semaphore *ppWaitSemaphores = desc->ppWaitSemaphores;
+    if (desc->pSwapChain == nullptr) {
+        return gal_error_code::ERR;
+    }
+    ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 128);
+    ante::vector<VkSemaphore> wait_semaphores(&stack_memory);
+    wait_semaphores.resize(waitSemaphoreCount);
+    uint32_t waitCount = 0;
 
-        ASSERT(pQueue);
-        if (waitSemaphoreCount > 0) {
-            ASSERT(ppWaitSemaphores);
-        }
-
-        ASSERT(VK_NULL_HANDLE != pQueue->mVulkan.pVkQueue);
-
-        VkSemaphore *wait_semaphores =
-            waitSemaphoreCount ? (VkSemaphore *)alloca(waitSemaphoreCount * sizeof(VkSemaphore)) : NULL;
-        uint32_t waitCount = 0;
-        for (uint32_t i = 0; i < waitSemaphoreCount; ++i) {
-            if (ppWaitSemaphores[i]->mVulkan.mSignaled) {
-                wait_semaphores[waitCount] = ppWaitSemaphores[i]->mVulkan.pVkSemaphore; //-V522
-                ppWaitSemaphores[i]->mVulkan.mSignaled = false;
-                ++waitCount;
-            }
-        }
-
-        uint32_t presentIndex = desc->mIndex;
-
-        DECLARE_ZERO(VkPresentInfoKHR, present_info);
-        present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-        present_info.pNext = NULL;
-        present_info.waitSemaphoreCount = waitCount;
-        present_info.pWaitSemaphores = wait_semaphores;
-        present_info.swapchainCount = 1;
-        present_info.pSwapchains = &(pSwapChain->mVulkan.pSwapChain);
-        present_info.pImageIndices = &(presentIndex);
-        present_info.pResults = NULL;
-
-        // Lightweight lock to make sure multiple threads dont use the same queue simultaneously
-        MutexLock lock(*pQueue->mVulkan.pSubmitMutex);
-        VkResult vk_res = vkQueuePresentKHR(pSwapChain->mVulkan.pPresentQueue ? pSwapChain->mVulkan.pPresentQueue
-                                                                              : pQueue->mVulkan.pVkQueue,
-                                            &present_info);
-
-        if (vk_res == VK_ERROR_DEVICE_LOST) {
-            // Will crash normally on Android.
-#if defined(_WINDOWS)
-            threadSleep(5000); // Wait for a few seconds to allow the driver to come back online before doing a reset.
-            ResetDesc resetDesc;
-            resetDesc.mType = RESET_TYPE_DEVICE_LOST;
-            requestReset(&resetDesc);
-#endif
-        } else if (vk_res == VK_ERROR_OUT_OF_DATE_KHR) {
-            // TODO : Fix bug where we get this error if window is closed before able to present queue.
-        } else if (vk_res != VK_SUCCESS && vk_res != VK_SUBOPTIMAL_KHR) {
-            ASSERT(0);
+    for (uint32_t i = 0; i < waitSemaphoreCount; ++i) {
+        vk_semaphore *vk_s = reinterpret_cast<vk_semaphore *>(ppWaitSemaphores[i]);
+        if (vk_s->b_signaled) {
+            wait_semaphores[waitCount] = vk_s->semaphore; //-V522
+            vk_s->b_signaled = false;
+            ++waitCount;
         }
     }
+
+    VkPresentInfoKHR present_info{};
+    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    present_info.pNext = nullptr;
+    present_info.waitSemaphoreCount = waitCount;
+    present_info.pWaitSemaphores = wait_semaphores.data();
+    present_info.swapchainCount = 1;
+    present_info.pSwapchains = &vk_sc->m_swap_chain;
+    present_info.pImageIndices = &vk_sc->image_index;
+    present_info.pResults = nullptr;
+
+    // Lightweight lock to make sure multiple threads dont use the same queue simultaneously
+    // MutexLock lock(*queue->mVulkan.pSubmitMutex);
+    VkResult vk_res = vkQueuePresentKHR(vk_q->queue, &present_info);
+
+    if (vk_res == VK_ERROR_DEVICE_LOST) {
+        return gal_error_code::ERR;
+        // Will crash normally on Android.
+    }
+    if (vk_res == VK_ERROR_OUT_OF_DATE_KHR) {
+        return gal_error_code::ERR;
+        // TODO(hylu): Fix bug where we get this error if window is closed before able to present queue.
+    }
+    if (vk_res != VK_SUCCESS && vk_res != VK_SUBOPTIMAL_KHR) {
+        return gal_error_code::ERR;
+    }
+    return gal_error_code::SUC;
 }
 
-void vk_acquireNextImage(Renderer *pRenderer, SwapChain *pSwapChain, Semaphore *pSignalSemaphore, Fence *pFence,
-                         uint32_t *pImageIndex) {
-    ASSERT(pRenderer);
-    ASSERT(VK_NULL_HANDLE != pRenderer->mVulkan.pVkDevice);
-    ASSERT(pSignalSemaphore || pFence);
+gal_error_code vk_acquireNextImage(gal_context context, gal_swap_chain pSwapChain, gal_semaphore pSignalSemaphore,
+                                   gal_fence pFence, uint32_t *pImageIndex) {
 
-#if defined(QUEST_VR)
-    ASSERT(VK_NULL_HANDLE != pSwapChain->mVR.pSwapChain);
-    hook_acquire_next_image(pSwapChain, pImageIndex);
-    return;
-#else
-    ASSERT(VK_NULL_HANDLE != pSwapChain->mVulkan.pSwapChain);
-#endif
-
+    vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
+    vk_swap_chain *vk_sc = reinterpret_cast<vk_swap_chain *>(pSwapChain);
+    vk_semaphore *vk_s = reinterpret_cast<vk_semaphore *>(pSignalSemaphore);
+    vk_fence *vk_f = reinterpret_cast<vk_fence *>(pFence);
     VkResult vk_res = {};
 
-    if (pFence != NULL) {
-        vk_res = vkAcquireNextImageKHR(pRenderer->mVulkan.pVkDevice, pSwapChain->mVulkan.pSwapChain, UINT64_MAX,
-                                       VK_NULL_HANDLE, pFence->mVulkan.pVkFence, pImageIndex);
+    if (pFence != nullptr) {
+        vk_res = vkAcquireNextImageKHR(vk_ctx->device, vk_sc->m_swap_chain, UINT64_MAX, VK_NULL_HANDLE, vk_f->fence,
+                                       pImageIndex);
 
         // If swapchain is out of date, let caller know by setting image index to -1
         if (vk_res == VK_ERROR_OUT_OF_DATE_KHR) {
             *pImageIndex = -1;
-            vkResetFences(pRenderer->mVulkan.pVkDevice, 1, &pFence->mVulkan.pVkFence);
-            pFence->mVulkan.mSubmitted = false;
-            return;
+            vkResetFences(vk_ctx->device, 1, &vk_f->fence);
+            vk_f->b_submitted = false;
+            return gal_error_code::SUC;
         }
 
-        pFence->mVulkan.mSubmitted = true;
+        vk_f->b_submitted = true;
     } else {
-        vk_res = vkAcquireNextImageKHR(pRenderer->mVulkan.pVkDevice, pSwapChain->mVulkan.pSwapChain, UINT64_MAX,
-                                       pSignalSemaphore->mVulkan.pVkSemaphore, VK_NULL_HANDLE, pImageIndex); //-V522
+        vk_res = vkAcquireNextImageKHR(vk_ctx->device, vk_sc->m_swap_chain, UINT64_MAX, vk_s->semaphore, VK_NULL_HANDLE,
+                                       pImageIndex); //-V522
 
         // If swapchain is out of date, let caller know by setting image index to -1
         if (vk_res == VK_ERROR_OUT_OF_DATE_KHR) {
             *pImageIndex = -1;
-            pSignalSemaphore->mVulkan.mSignaled = false;
-            return;
+            vk_s->b_signaled = false;
+            return gal_error_code::SUC;
         }
 
         // Commonly returned immediately following swapchain resize.
         // Vulkan spec states that this return value constitutes a successful call to vkAcquireNextImageKHR
         // https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/vkAcquireNextImageKHR.html
         if (vk_res == VK_SUBOPTIMAL_KHR) {
-            LOGF(LogLevel::eINFO,
-                 "vkAcquireNextImageKHR returned VK_SUBOPTIMAL_KHR. If window was just resized, ignore this message.");
-            pSignalSemaphore->mVulkan.mSignaled = true;
-            return;
+            // LOGF(LogLevel::eINFO,
+            //      "vkAcquireNextImageKHR returned VK_SUBOPTIMAL_KHR. If window was just resized, ignore this message.");
+            vk_s->b_signaled = true;
+            return gal_error_code::SUC;
         }
 
-        CHECK_VKRESULT(vk_res);
-        pSignalSemaphore->mVulkan.mSignaled = true;
+        if (vk_res != VK_SUCCESS) {
+            return gal_error_code::ERR;
+        }
+        vk_s->b_signaled = true;
     }
+    return gal_error_code::SUC;
 }
 
 gal_error_code vk_wait_queue(gal_queue queue) {
