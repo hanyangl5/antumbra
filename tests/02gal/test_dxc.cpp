@@ -43,7 +43,7 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
     tex2[thread_id.xy] = color;\n\
 }";
 
-TEST_CASE("compile single shader ") {
+TEST_CASE("compile single shader") {
     using namespace ante::gal;
     shader_compiler sc;
     shader_source_blob source;

@@ -1,15 +1,19 @@
-#include <cassert>
-#include <framework/02gal/gal.h>
-#include <iostream>
+#include <framework/01core/input/input.h>
 
 using namespace ante;
 
 int main() {
-    ante::gal::gal_context context{};
-    auto err = gal::init_gal(ante::gal::gal_api::VULKAN, &context);
-    assert(err == gal::gal_error_code::SUC);
+    ante_window window{};
+    window_desc desc{};
+    desc.width = 1024;
+    desc.height = 720;
+    desc.name = "01hellowindow";
+    desc.b_vsync = false;
+    create_window(&desc, &window);
 
-    err = gal::destroy_gal(context);
-    assert(err == ante::gal::gal_error_code::SUC);
-    context = gal::gal_null;
+    while (window_pool_events(&window)) {
+        ;
+    }
+
+    return 0;
 }

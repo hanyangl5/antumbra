@@ -37,6 +37,7 @@ Checks: "-*,
         -readability-non-const-parameter,
         -cppcoreguidelines-pro-type-member-init,
         -modernize-use-nodiscard,
+        -llvm-include-order,
 "
 WarningsAsErrors: ''
 HeaderFilterRegex: ''

@@ -120,7 +120,7 @@ TEST_CASE("test gal render target") {
 
 TEST_CASE("test gal swapchain") {
     auto swap_chain_creation = [](gal::gal_api api) {
-        ante::ant_window window;
+        ante::ante_window window;
         ante::window_desc window_desc{};
         window_desc.b_vsync = true;
         window_desc.name = "test swapchain";
@@ -146,7 +146,7 @@ TEST_CASE("test gal swapchain") {
         REQUIRE(result == gal::gal_error_code::SUC);
         destroy(context);
 
-        ante::destroy_window(window);
+        ante::destroy_window(&window);
     };
     swap_chain_creation(gal::gal_api::VULKAN);
     //sampler_creation(gal::RenderApi::d3d12);
