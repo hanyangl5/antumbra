@@ -6,7 +6,7 @@
 // third party libraries
 #ifdef _WIN32
 #include <dxcompiler/d3d12shader.h>
-#else
+#else 
 #include <dxcompiler/WinAdapter.h>
 #endif
 #include <dxcompiler/dxcapi.h>

@@ -202,7 +202,7 @@ compiled_shader *shader_compiler::compile(shader_source_blob *blob, shader_compi
     const wchar_t *tp = utils_to_hlsl_target_profile(desc->target_profile);
     args.push_back(tp);
 
-    args.push_back(DXC_ARG_WARNINGS_ARE_ERRORS); // warning are errors
+    //args.push_back(DXC_ARG_WARNINGS_ARE_ERRORS); // warning are errors
     args.push_back(DXC_ARG_ALL_RESOURCES_BOUND);
 
     for (auto &d : desc->defines) {
@@ -278,7 +278,16 @@ compiled_shader *shader_compiler::compile(shader_source_blob *blob, shader_compi
     if (SUCCEEDED(compile_result->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errors), nullptr)) && errors != nullptr &&
         errors->GetStringLength() != 0) {
         LOG_ERROR("Warnings and Errors: {}", errors->GetStringPointer());
+        // dxc don't have official dxil signing library for macos
+#if defined(__APPLE__)
+        const char* dxil_sign_warning = "warning: DXIL signing library (dxil.dll,libdxil.so) not found.  Resulting "
+                                        "DXIL will not be signed for use in release environments.";
+        if (strncmp(dxil_sign_warning, errors->GetStringPointer(), 130) == 0 && errors->GetStringLength()==133) {
+            LOG_INFO("ignored, dxc warn only");
+        }
+#else
         return nullptr;
+#endif
     }
 
     if (FAILED(compile_result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&byte_code), nullptr)) || byte_code == nullptr) {
