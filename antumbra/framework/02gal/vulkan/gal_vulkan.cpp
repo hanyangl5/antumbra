@@ -24,14 +24,11 @@
  * under the License.
 */
 
-#include "gal_vulkan.h"
-#include "framework/01core/memory/container.h"
-#include "framework/02gal/enum.h"
-#include "framework/02gal/vulkan/gal_vulkan_enum.h"
-#include "vulkan/vulkan_core.h"
-
 #include <algorithm>
 #include <optional>
+
+#include <vulkan/vulkan.h>
+
 
 #define VMA_RECORDING_ENABLED 1
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
@@ -55,11 +52,16 @@
 #endif // NDEBUG
 #include <vk_mem_alloc.h>
 
+
+#include "framework/01core/memory/container.h"
+#include "framework/01core/input/input.h"
 #include "framework/01core/io/file_system.h"
 #include "framework/01core/logging/log.h"
 #include "framework/01core/math/math.h"
 #include "framework/01core/memory/memory.h"
 #include "framework/02gal/shader/shader_compiler.h"
+#include "../enum.h"
+#include "gal_vulkan.h"
 #include "gal_vulkan_enum.h"
 #include "gal_vulkan_utils.h"
 #define ANT_VK_API_VERSION VK_API_VERSION_1_3
@@ -909,7 +911,13 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
     }
 
     VkResult result = VK_SUCCESS;
-    ;
+    if (glfwCreateWindowSurface(vk_ctx->instance,desc->window->m_window, nullptr, &vk_sc->m_surface) != VK_SUCCESS) {
+        return gal_error_code::ERR;
+    }
+
+    #if  0
+
+
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
     VkWin32SurfaceCreateInfoKHR add_info{};
     add_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
@@ -921,6 +929,7 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
     if (result != VK_SUCCESS || vk_sc->m_surface == VK_NULL_HANDLE) {
         return gal_error_code::ERR;
     }
+
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
     VkXlibSurfaceCreateInfoKHR add_info{};
     add_info.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
@@ -972,6 +981,7 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
 #else
 #error PLATFORM NOT SUPPORTED
 #endif
+    #endif
 
     ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 256);
 
@@ -2457,7 +2467,7 @@ gal_error_code vk_cmd_bind_push_constant(gal_command_list command, gal_root_sign
     if (it == vk_rs->resource_map.end() || ((it->second >> 16) & 0x01) == 0) {
         return gal_error_code::ERR;
     }
-    vkCmdPushConstants(vk_cmd->m_command, vk_rs->pipeline_layout, VK_SHADER_STAGE_ALL, 0, size, data);
+    vkCmdPushConstants(vk_cmd->m_command, vk_rs->pipeline_layout, VK_SHADER_STAGE_ALL, 0, static_cast<u32>(size), data);
     return gal_error_code::SUC;
 }
 
@@ -2805,7 +2815,7 @@ gal_error_code vk_acquireNextImage(gal_context context, gal_swap_chain pSwapChai
 
         // If swapchain is out of date, let caller know by setting image index to -1
         if (vk_res == VK_ERROR_OUT_OF_DATE_KHR) {
-            *pImageIndex = -1;
+            *pImageIndex = 0xffffffff;
             vkResetFences(vk_ctx->device, 1, &vk_f->fence);
             vk_f->b_submitted = false;
             return gal_error_code::SUC;
@@ -2818,7 +2828,7 @@ gal_error_code vk_acquireNextImage(gal_context context, gal_swap_chain pSwapChai
 
         // If swapchain is out of date, let caller know by setting image index to -1
         if (vk_res == VK_ERROR_OUT_OF_DATE_KHR) {
-            *pImageIndex = -1;
+            *pImageIndex = 0xffffffff;
             vk_s->b_signaled = false;
             return gal_error_code::SUC;
         }

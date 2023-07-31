@@ -36,6 +36,9 @@
 #include "framework/01core/memory/memory.h"
 #include "framework/01core/platform/platform.h"
 #include "framework/01core/utils/utils.h"
+namespace ante {
+struct ante_window;
+}
 namespace ante::gal {
 struct compiled_shader_group;
 
@@ -550,10 +553,11 @@ DECLARE_GAL_HANDLE(gal_semaphore){};
 
 struct gal_swap_chain_desc {
     gal_clear_value clear_value;
-#ifdef WIN32
-    HWND hwnd_window;
-#endif
-    WindowHandle mWindowHandle;
+//#ifdef WIN32
+//    HWND hwnd_window;
+//#endif
+    ante_window* window;
+    //WindowHandle mWindowHandle;
     bool b_present;
     u32 image_count;
     u32 width;
