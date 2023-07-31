@@ -2283,7 +2283,7 @@ gal_error_code vk_cmd_end(gal_command_list command) {
 }
 gal_error_code vk_cmd_set_render_target() { return gal_error_code::SUC; }
 gal_error_code vk_cmd_set_viewport(gal_command_list command, float x, float y, float width, float height,
-                                   float minDepth, float maxDepth) {
+                                   float min_depth, float max_depth) {
     vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
 
     VkViewport viewport{};
@@ -2291,13 +2291,13 @@ gal_error_code vk_cmd_set_viewport(gal_command_list command, float x, float y, f
     viewport.y = y + height;
     viewport.width = width;
     viewport.height = -height;
-    viewport.minDepth = minDepth;
-    viewport.maxDepth = maxDepth;
+    viewport.minDepth = min_depth;
+    viewport.maxDepth = max_depth;
     vkCmdSetViewport(vk_cmd->m_command, 0, 1, &viewport);
     return gal_error_code::SUC;
 }
 
-gal_error_code vk_cmdSetScissor(gal_command_list command, i32 x, i32 y, u32 width, u32 height) {
+gal_error_code vk_cmd_set_scissor(gal_command_list command, i32 x, i32 y, u32 width, u32 height) {
     vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
 
     VkRect2D rect{};
@@ -2309,7 +2309,7 @@ gal_error_code vk_cmdSetScissor(gal_command_list command, i32 x, i32 y, u32 widt
     return gal_error_code::SUC;
 }
 
-gal_error_code vk_cmdSetStencilReferenceValue(gal_command_list command, u32 val) {
+gal_error_code vk_cmd_set_stencil_reference_value(gal_command_list command, u32 val) {
     vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
 
     vkCmdSetStencilReference(vk_cmd->m_command, VK_STENCIL_FRONT_AND_BACK, val);
@@ -2684,7 +2684,7 @@ gal_error_code vk_queue_submit(gal_queue queue, gal_queue_submit_desc *desc) {
 
     u32 cmdCount = desc->cmd_count;
     gal_command_list *ppCmds = desc->cmds;
-    gal_fence pFence = desc->pSignalFence;
+    gal_fence fence = desc->pSignalFence;
     u32 waitSemaphoreCount = desc->mWaitSemaphoreCount;
     gal_semaphore *ppWaitSemaphores = desc->ppWaitSemaphores;
     u32 signalSemaphoreCount = desc->mSignalSemaphoreCount;
@@ -2739,12 +2739,12 @@ gal_error_code vk_queue_submit(gal_queue queue, gal_queue_submit_desc *desc) {
     // the same queue for all three operations
     //std::lock_guard<std::mutex>(vk_q->submit_mutex)
     VkResult result = vkQueueSubmit(vk_q->queue, 1, &submit_info,
-                                    pFence != nullptr ? reinterpret_cast<vk_fence *>(pFence)->fence : VK_NULL_HANDLE);
+                                    fence != nullptr ? reinterpret_cast<vk_fence *>(fence)->fence : VK_NULL_HANDLE);
     if (result != VK_SUCCESS) {
         return gal_error_code::ERR;
     }
-    if (pFence != nullptr) {
-        reinterpret_cast<vk_fence *>(pFence)->b_submitted = true;
+    if (fence != nullptr) {
+        reinterpret_cast<vk_fence *>(fence)->b_submitted = true;
     }
     return gal_error_code::SUC;
 }
@@ -2752,10 +2752,10 @@ gal_error_code vk_queue_submit(gal_queue queue, gal_queue_submit_desc *desc) {
 gal_error_code vk_queue_present(gal_queue queue, gal_queue_present_desc *desc) {
 
     vk_queue *vk_q = reinterpret_cast<vk_queue *>(queue);
-    vk_swap_chain *vk_sc = reinterpret_cast<vk_swap_chain *>(desc->pSwapChain);
+    vk_swap_chain *vk_sc = reinterpret_cast<vk_swap_chain *>(desc->swap_chain);
     uint32_t waitSemaphoreCount = desc->mWaitSemaphoreCount;
     gal_semaphore *ppWaitSemaphores = desc->ppWaitSemaphores;
-    if (desc->pSwapChain == nullptr) {
+    if (desc->swap_chain == nullptr) {
         return gal_error_code::ERR;
     }
     ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 128);
@@ -2800,22 +2800,22 @@ gal_error_code vk_queue_present(gal_queue queue, gal_queue_present_desc *desc) {
     return gal_error_code::SUC;
 }
 
-gal_error_code vk_acquireNextImage(gal_context context, gal_swap_chain pSwapChain, gal_semaphore pSignalSemaphore,
-                                   gal_fence pFence, uint32_t *pImageIndex) {
+gal_error_code vk_acquire_next_image(gal_context context, gal_swap_chain swap_chain, gal_semaphore signal_semaphore,
+                                   gal_fence fence, uint32_t *image_index) {
 
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
-    vk_swap_chain *vk_sc = reinterpret_cast<vk_swap_chain *>(pSwapChain);
-    vk_semaphore *vk_s = reinterpret_cast<vk_semaphore *>(pSignalSemaphore);
-    vk_fence *vk_f = reinterpret_cast<vk_fence *>(pFence);
+    vk_swap_chain *vk_sc = reinterpret_cast<vk_swap_chain *>(swap_chain);
+    vk_semaphore *vk_s = reinterpret_cast<vk_semaphore *>(signal_semaphore);
+    vk_fence *vk_f = reinterpret_cast<vk_fence *>(fence);
     VkResult vk_res = {};
 
-    if (pFence != nullptr) {
+    if (fence != nullptr) {
         vk_res = vkAcquireNextImageKHR(vk_ctx->device, vk_sc->m_swap_chain, UINT64_MAX, VK_NULL_HANDLE, vk_f->fence,
-                                       pImageIndex);
+                                       image_index);
 
         // If swapchain is out of date, let caller know by setting image index to -1
         if (vk_res == VK_ERROR_OUT_OF_DATE_KHR) {
-            *pImageIndex = 0xffffffff;
+            *image_index = 0xffffffff;
             vkResetFences(vk_ctx->device, 1, &vk_f->fence);
             vk_f->b_submitted = false;
             return gal_error_code::SUC;
@@ -2824,11 +2824,11 @@ gal_error_code vk_acquireNextImage(gal_context context, gal_swap_chain pSwapChai
         vk_f->b_submitted = true;
     } else {
         vk_res = vkAcquireNextImageKHR(vk_ctx->device, vk_sc->m_swap_chain, UINT64_MAX, vk_s->semaphore, VK_NULL_HANDLE,
-                                       pImageIndex); //-V522
+                                       image_index); //-V522
 
         // If swapchain is out of date, let caller know by setting image index to -1
         if (vk_res == VK_ERROR_OUT_OF_DATE_KHR) {
-            *pImageIndex = 0xffffffff;
+            *image_index = 0xffffffff;
             vk_s->b_signaled = false;
             return gal_error_code::SUC;
         }

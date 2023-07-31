@@ -90,8 +90,8 @@ __GAL_HELPER_MACRO__(gal_error_code, destroy_pipeline_cache, gal_context context
 __GAL_HELPER_MACRO__(gal_error_code, get_pipeline_cache_data, gal_context context, gal_pipeline_cache _pipeline_cache, u64 *size, void *_data);
 __GAL_HELPER_MACRO__(gal_error_code, create_compute_pipeline, gal_context context, gal_pipeline_desc *desc,
                      gal_pipeline *pipeline);
-//__GAL_HELPER_MACRO__(gal_error_code, create_graphics_pipeline, gal_context context, gal_graphics_pipeline_desc *desc,
-//                     gal_pipeline *pipeline);
+__GAL_HELPER_MACRO__(gal_error_code, create_graphics_pipeline, gal_context context, gal_pipeline_desc *desc,
+                     gal_pipeline *pipeline);
 // inline raytracing?
 //__GAL_HELPER_MACRO__(gal_error_code, create_raytracing_pipeline, gal_context context,
 //                     gal_raytracing_pipeline_desc *desc, gal_pipeline *pipeline);
@@ -154,7 +154,15 @@ __GAL_HELPER_MACRO__(gal_error_code, cmd_upload_texture, gal_command_list comman
 __GAL_HELPER_MACRO__(gal_error_code, cmd_update_subresources, gal_command_list command, gal_texture dst, gal_buffer src, u32 subresource_count, gal_texture_subresource_desc *descs);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_copy_texture_to_buffer, gal_command_list command);
 
+__GAL_HELPER_MACRO__(gal_error_code, cmd_set_viewport, gal_command_list command, float x, float y, float width,
+                     float height, float min_depth, float max_depth);
+__GAL_HELPER_MACRO__(gal_error_code cmd_set_scissor, gal_command_list command, i32 x, i32 y, u32 width, u32 height);
+__GAL_HELPER_MACRO__(gal_error_code, cmd_set_stencil_reference_value, gal_command_list command, u32 val);
 __GAL_HELPER_MACRO__(gal_error_code, queue_submit, gal_queue queue, gal_queue_submit_desc *desc);
+__GAL_HELPER_MACRO__(gal_error_code, queue_present, gal_queue queue, gal_queue_present_desc *desc);
+
+__GAL_HELPER_MACRO__(gal_error_code, acquire_next_image, gal_context context, gal_swap_chain pSwapChain,
+                     gal_semaphore pSignalSemaphore, gal_fence pFence, uint32_t *pImageIndex);
 
 #ifdef __GAL_HELPER_MACRO__
 #undef __GAL_HELPER_MACRO__
