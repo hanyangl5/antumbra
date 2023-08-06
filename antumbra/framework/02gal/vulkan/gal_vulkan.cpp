@@ -2282,8 +2282,8 @@ gal_error_code vk_cmd_end(gal_command_list command) {
     return gal_error_code::SUC;
 }
 gal_error_code vk_cmd_set_render_target() { return gal_error_code::SUC; }
-gal_error_code vk_cmd_set_viewport(gal_command_list command, float x, float y, float width, float height,
-                                   float min_depth, float max_depth) {
+gal_error_code vk_cmd_set_viewport(gal_command_list command, f32 x, f32 y, f32 width, f32 height,
+                                   f32 min_depth, f32 max_depth) {
     vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
 
     VkViewport viewport{};
@@ -2685,10 +2685,8 @@ gal_error_code vk_queue_submit(gal_queue queue, gal_queue_submit_desc *desc) {
     u32 cmdCount = desc->cmd_count;
     gal_command_list *ppCmds = desc->cmds;
     gal_fence fence = desc->pSignalFence;
-    u32 waitSemaphoreCount = desc->mWaitSemaphoreCount;
-    gal_semaphore *ppWaitSemaphores = desc->ppWaitSemaphores;
-    u32 signalSemaphoreCount = desc->mSignalSemaphoreCount;
-    gal_semaphore *ppSignalSemaphores = desc->ppSignalSemaphores;
+    u32 wait_semaphore_count = desc->wait_semaphore_count;
+    u32 signal_semaphore_count = desc->signal_semaphore_count;
 
     // some parameter check
     // ...
@@ -2702,8 +2700,8 @@ gal_error_code vk_queue_submit(gal_queue queue, gal_queue_submit_desc *desc) {
 
     ante::vector<VkSemaphore> wait_semaphores(&stack_emmory);
     ante::vector<VkPipelineStageFlags> wait_masks(&stack_emmory);
-    for (u32 i = 0; i < waitSemaphoreCount; ++i) {
-        vk_semaphore *vk_s = reinterpret_cast<vk_semaphore *>(ppWaitSemaphores[i]);
+    for (u32 i = 0; i < wait_semaphore_count; ++i) {
+        vk_semaphore *vk_s = reinterpret_cast<vk_semaphore *>(desc->wait_semaphores[i]);
         if (vk_s->b_signaled) {
             wait_semaphores.push_back(vk_s->semaphore);
             wait_masks.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
@@ -2712,10 +2710,10 @@ gal_error_code vk_queue_submit(gal_queue queue, gal_queue_submit_desc *desc) {
     }
 
     ante::vector<VkSemaphore> signal_semaphores(&stack_emmory);
-    for (u32 i = 0; i < signalSemaphoreCount; ++i) {
-        vk_semaphore *vk_s = reinterpret_cast<vk_semaphore *>(ppSignalSemaphores[i]);
+    for (u32 i = 0; i < signal_semaphore_count; ++i) {
+        vk_semaphore *vk_s = reinterpret_cast<vk_semaphore *>(desc->signal_semaphores[i]);
         if (vk_s->b_signaled) {
-            signal_semaphores.push_back(reinterpret_cast<vk_semaphore *>(ppSignalSemaphores[i])->semaphore);
+            signal_semaphores.push_back(reinterpret_cast<vk_semaphore *>(desc->signal_semaphores[i])->semaphore);
             vk_s->b_signaled = true;
         }
     }
@@ -2753,18 +2751,17 @@ gal_error_code vk_queue_present(gal_queue queue, gal_queue_present_desc *desc) {
 
     vk_queue *vk_q = reinterpret_cast<vk_queue *>(queue);
     vk_swap_chain *vk_sc = reinterpret_cast<vk_swap_chain *>(desc->swap_chain);
-    uint32_t waitSemaphoreCount = desc->mWaitSemaphoreCount;
-    gal_semaphore *ppWaitSemaphores = desc->ppWaitSemaphores;
+    uint32_t wait_semaphore_count = desc->wait_semaphore_count;
     if (desc->swap_chain == nullptr) {
         return gal_error_code::ERR;
     }
     ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 128);
     ante::vector<VkSemaphore> wait_semaphores(&stack_memory);
-    wait_semaphores.resize(waitSemaphoreCount);
+    wait_semaphores.resize(wait_semaphore_count);
     uint32_t waitCount = 0;
 
-    for (uint32_t i = 0; i < waitSemaphoreCount; ++i) {
-        vk_semaphore *vk_s = reinterpret_cast<vk_semaphore *>(ppWaitSemaphores[i]);
+    for (uint32_t i = 0; i < wait_semaphore_count; ++i) {
+        vk_semaphore *vk_s = reinterpret_cast<vk_semaphore *>(desc->wait_semaphores[i]);
         if (vk_s->b_signaled) {
             wait_semaphores[waitCount] = vk_s->semaphore; //-V522
             vk_s->b_signaled = false;

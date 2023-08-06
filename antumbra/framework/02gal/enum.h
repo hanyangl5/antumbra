@@ -215,8 +215,8 @@ enum class gal_shader_stage {
     COMP = 0X00000020,
     RAYTRACING = 0X00000040,
     ALL_GRAPHICS =
-        ((uint32_t)gal_shader_stage::VERT | (uint32_t)gal_shader_stage::TESC | (uint32_t)gal_shader_stage::TESE |
-         (uint32_t)gal_shader_stage::GEOM | (uint32_t)gal_shader_stage::FRAG),
+        ((u32)gal_shader_stage::VERT | (u32)gal_shader_stage::TESC | (u32)gal_shader_stage::TESE |
+         (u32)gal_shader_stage::GEOM | (u32)gal_shader_stage::FRAG),
     HULL = gal_shader_stage::TESC,
     DOMN = gal_shader_stage::TESE,
 };
@@ -402,7 +402,7 @@ struct gal_depth_state_desc {
 struct gal_rasterizer_state_desc {
     gal_cull_mode mCullMode;
     int32_t mDepthBias;
-    float mSlopeScaledDepthBias;
+    f32 mSlopeScaledDepthBias;
     gal_polygon_fill_mode mFillMode;
     gal_front_face mFrontFace;
     bool mMultiSample;
@@ -412,17 +412,17 @@ struct gal_rasterizer_state_desc {
 
 struct gal_vertex_attrib {
     ShaderSemantic mSemantic;
-    uint32_t mSemanticNameLength;
+    u32 mSemanticNameLength;
     ante::fixed_array<char, MAX_SEMANTIC_NAME_LENGTH> mSemanticName;
     gal_texture_format mFormat;
-    uint32_t mBinding;
-    uint32_t mLocation;
-    uint32_t mOffset;
+    u32 mBinding;
+    u32 mLocation;
+    u32 mOffset;
     VertexAttribRate mRate;
 };
 
 struct gal_vertex_layout {
-    uint32_t mAttribCount;
+    u32 mAttribCount;
     ante::fixed_array<gal_vertex_attrib, MAX_VERTEX_ATTRIBS> mAttribs;
     ante::fixed_array<u32, MAX_VERTEX_BINDINGS> mStrides;
 };
@@ -434,14 +434,14 @@ struct gal_read_range {
 
 struct gal_clear_value {
     struct rgb {
-        float r;
-        float g;
-        float b;
-        float a;
+        f32 r;
+        f32 g;
+        f32 b;
+        f32 a;
     };
     struct ds {
-        float depth;
-        uint32_t stencil;
+        f32 depth;
+        u32 stencil;
     };
     std::variant<std::monostate, rgb, ds> value;
 };
@@ -591,7 +591,7 @@ DECLARE_GAL_HANDLE(gal_shader_program) {
     gal_shader_program_desc m_desc;
     u32 m_stage_count;
     //ShaderStage mStages : 31;
-    //uint32_t mNumThreadsPerGroup[3];
+    //u32 mNumThreadsPerGroup[3];
     //shader::pipeline_reflection *pReflection;
 };
 
@@ -619,9 +619,9 @@ struct gal_graphics_pipeline_desc {
     gal_depth_state_desc *pDepthState;
     gal_rasterizer_state_desc *pRasterizerState;
     gal_texture_format *pColorFormats;
-    uint32_t mRenderTargetCount;
+    u32 mRenderTargetCount;
     gal_texture_sample_count mSampleCount;
-    uint32_t mSampleQuality;
+    u32 mSampleQuality;
     gal_texture_format mDepthStencilFormat;
     PrimitiveTopology mPrimitiveTopo;
     bool mSupportIndirectCommandBuffer;
@@ -757,18 +757,19 @@ struct gal_texture_subresource_desc {
 struct gal_queue_submit_desc {
     gal_command_list *cmds;
     gal_fence pSignalFence;
-    gal_semaphore *ppWaitSemaphores;
-    gal_semaphore *ppSignalSemaphores;
-    uint32_t cmd_count;
-    uint32_t mWaitSemaphoreCount;
-    uint32_t mSignalSemaphoreCount;
+    gal_semaphore *wait_semaphores;
+    gal_semaphore *signal_semaphores;
+    u32 cmd_count;
+    u32 wait_semaphore_count;
+    u32 signal_semaphore_count;
     bool mSubmitDone;
 };
+
 struct gal_queue_present_desc {
-    gal_swap_chain pSwapChain;
-    gal_semaphore *ppWaitSemaphores;
-    u32 mWaitSemaphoreCount;
-    bool mSubmitDone;
+    gal_swap_chain swap_chain;
+    gal_semaphore *wait_semaphores;
+    u32 wait_semaphore_count;
+    bool b_submit_done;
 };
 
     //enum class gal_descriptor_resource_type {
@@ -854,13 +855,13 @@ struct gal_descriptor_set_update_desc {
     /// Name of descriptor
     //const char *pName;
     ///// Number of array entries to update (array size of ppTextures/ppBuffers/...)
-    //uint32_t mCount : 31;
+    //u32 mCount : 31;
     ///// Dst offset into the array descriptor (useful for updating few entries in a large array)
     //// Example: to update 6th entry in a bindless texture descriptor, mArrayOffset will be 6 and mCount will be 1)
-    //uint32_t mArrayOffset : 20;
+    //u32 mArrayOffset : 20;
     //// Index in proot_signature->pDescriptors array - Cache index using getDescriptorIndexFromName to avoid using string checks at runtime
-    //uint32_t mIndex : 10;
-    //uint32_t mBindByIndex : 1;
+    //u32 mIndex : 10;
+    //u32 mBindByIndex : 1;
 
     //// Range to bind (buffer offset, size)
     //DescriptorDataRange *pRanges;
@@ -878,7 +879,7 @@ struct gal_descriptor_set_update_desc {
     //    struct {
     //        // Bind MTLIndirectCommandBuffer along with the MTLBuffer
     //        const char *pICBName;
-    //        uint32_t mICBIndex;
+    //        u32 mICBIndex;
     //        bool mBindICB;
     //    };
     //};

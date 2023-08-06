@@ -154,9 +154,8 @@ __GAL_HELPER_MACRO__(gal_error_code, cmd_upload_texture, gal_command_list comman
 __GAL_HELPER_MACRO__(gal_error_code, cmd_update_subresources, gal_command_list command, gal_texture dst, gal_buffer src, u32 subresource_count, gal_texture_subresource_desc *descs);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_copy_texture_to_buffer, gal_command_list command);
 
-__GAL_HELPER_MACRO__(gal_error_code, cmd_set_viewport, gal_command_list command, float x, float y, float width,
-                     float height, float min_depth, float max_depth);
-__GAL_HELPER_MACRO__(gal_error_code cmd_set_scissor, gal_command_list command, i32 x, i32 y, u32 width, u32 height);
+__GAL_HELPER_MACRO__(gal_error_code, cmd_set_viewport, gal_command_list command, f32 x, f32 y, f32 width, f32 height, f32 min_depth, f32 max_depth);
+__GAL_HELPER_MACRO__(gal_error_code, cmd_set_scissor, gal_command_list command, i32 x, i32 y, u32 width, u32 height);
 __GAL_HELPER_MACRO__(gal_error_code, cmd_set_stencil_reference_value, gal_command_list command, u32 val);
 __GAL_HELPER_MACRO__(gal_error_code, queue_submit, gal_queue queue, gal_queue_submit_desc *desc);
 __GAL_HELPER_MACRO__(gal_error_code, queue_present, gal_queue queue, gal_queue_present_desc *desc);
