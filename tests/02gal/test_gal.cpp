@@ -606,8 +606,8 @@ TEST_CASE("buffer test") {
         gal_queue_submit_desc submit_desc{};
         submit_desc.cmds = &cmd;
         submit_desc.cmd_count = 1;
-        submit_desc.mSignalSemaphoreCount = 0;
-        submit_desc.mWaitSemaphoreCount = 0;
+        submit_desc.signal_semaphore_count = 0;
+        submit_desc.wait_semaphore_count = 0;
         submit_desc.pSignalFence = fence;
         result = gal::queue_submit(gfx_queue, &submit_desc);
         REQUIRE(result == gal::gal_error_code::SUC);
