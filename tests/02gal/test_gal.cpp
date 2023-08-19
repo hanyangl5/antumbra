@@ -1,5 +1,6 @@
-#include <catch2/benchmark/catch_benchmark.hpp>
-#include <catch2/catch_test_macros.hpp>
+
+//#include <catch2/catch_test_macros.hpp>
+#include <doctest.h>
 
 #include "framework/01core/input/input.h"
 #include "framework/01core/logging/log.h"

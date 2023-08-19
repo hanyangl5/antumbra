@@ -1,4 +1,5 @@
-#include <catch2/catch_test_macros.hpp>
+//#include <catch2/catch_test_macros.hpp>
+#include <doctest.h>
 #include "framework/01core/logging/log.h"
 
 TEST_CASE("log") {

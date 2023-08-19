@@ -1,4 +1,5 @@
 #include "gal.h"
+#include "config.hpp"
 
 #define DEFINE_GAL_FUNCTION(name) gal_pfn_##name name;
 
@@ -19,16 +20,19 @@ extern gal_error_code d3d12_init_gal(gal_context *context);
         break;
     case ante::gal::gal_api::D3D12:
 #ifdef _WIN32
-        //return d3d12_init_gal(context);
+#if __ANTUMBRA_BUILD_D3D12__
+        return d3d12_init_gal(context);
+#endif
+        return gal_error_code::ERR;
+    
 #else
         return gal_error_code::ERR;
 #endif
-        break;
-    default:
-        break;
-    }
+default:
+    break;
+}
 
-    return gal_error_code::SUC;
+return gal_error_code::SUC;
 }
 
 #define GAL_FUNCTION_DEFINATION

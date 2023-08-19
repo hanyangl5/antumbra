@@ -2539,14 +2539,14 @@ gal_error_code vk_cmd_draw_indexed_instanced(gal_command_list command, u32 index
 //    return gal_error_code::SUC;
 //}
 
-gal_error_code vk_cmd_draw_mesh_task(gal_command_list command) {
-    //vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
-    if (command != nullptr) {
-        return gal_error_code::ERR;
-    }
-    // vkCmdDrawMeshTasksEXT
-    return gal_error_code::SUC;
-}
+// gal_error_code vk_cmd_draw_mesh_task(gal_command_list command) {
+//     //vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
+//     if (command != nullptr) {
+//         return gal_error_code::ERR;
+//     }
+//     // vkCmdDrawMeshTasksEXT
+//     return gal_error_code::SUC;
+// }
 gal_error_code vk_cmd_copy_texture(gal_command_list command) {
     //vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
     if (command != nullptr) {

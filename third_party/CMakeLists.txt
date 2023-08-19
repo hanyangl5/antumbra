@@ -18,7 +18,8 @@ option(SPIRV_CROSS_ENABLE_C_API "Enable C API wrapper support in static library.
 option(SPIRV_CROSS_ENABLE_UTIL "Enable util module support." OFF)
 
 add_subdirectory(SPIRV-Cross)
-add_subdirectory(Catch2)
+#add_subdirectory(Catch2)
+add_subdirectory(doctest)
 option(FLECS_SHARED "Build static flecs lib" OFF)
 add_subdirectory(flecs)
 include(lua.cmake)
@@ -101,7 +102,7 @@ endif()
 if(ANTUMBRA_BUILD_D3D12)
     add_subdirectory(D3D12MemoryAllocator)
     option(BUILD_TESTING "Build testing" OFF)
-    add_subdirectory(DirectXTK12)
+    #add_subdirectory(DirectXTK12)
 endif()
 
 # add include dirs
@@ -110,6 +111,7 @@ target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC
     glm/glm
     glfw/include
     #json/include
+    #doctest/doctest
     VulkanMemoryAllocator/include
     tracy/public
     magic_enum/include
@@ -134,6 +136,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     glfw
     spdlog
     flecs_static
+    #doctest_with_main
     #nlohmann_json
     TracyClient
     lua_static
@@ -146,22 +149,26 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 if(ANTUMBRA_BUILD_D3D12)
     target_link_libraries(${PROJECT_NAME} PUBLIC
         D3D12MemoryAllocator
-        DirectXTK12
+        #DirectXTK12
     )
 endif()
 
 set_property(TARGET
     ${PROJECT_NAME}
     spdlog
-    Catch2
-    Catch2WithMain
+
+    # Catch2
+    # Catch2WithMain
+    doctest_with_main
     glfw
     mimalloc-static
     flecs_static
-    #spirv-cross
+
+    # spirv-cross
     # spirv-cross-c
     # spirv-cross-c
     spirv-cross-core
+
     # spirv-cross-cpp
     # spirv-cross-glsl
     # spirv-cross-hlsl
@@ -169,13 +176,14 @@ set_property(TARGET
     # spirv-cross-reflect
     # spirv-cross-util
     TracyClient
+
     # Jolt
     tinygltf
     lua_static
     PROPERTY FOLDER "third_party")
 
 if(ANTUMBRA_BUILD_D3D12)
-    set_property(TARGET D3D12MemoryAllocator DirectXTK12
+    set_property(TARGET D3D12MemoryAllocator
         PROPERTY FOLDER "third_party")
 endif(ANTUMBRA_BUILD_D3D12)
 

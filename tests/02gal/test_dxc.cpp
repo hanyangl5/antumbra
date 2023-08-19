@@ -1,7 +1,8 @@
 #include "framework/01core/io/file_system.h"
 #include "framework/01core/memory/memory.h"
 #include "framework/02gal/shader/shader_compiler.h"
-#include <catch2/catch_test_macros.hpp>
+//#include <catch2/catch_test_macros.hpp>
+#include <doctest.h>
 
 #include <iostream>
 

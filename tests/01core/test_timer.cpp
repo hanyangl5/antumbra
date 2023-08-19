@@ -1,6 +1,7 @@
 // #include "framework/01core/timer/timer.h"
 
-// #include <catch2/catch_test_macros.hpp>
+// //#include <catch2/catch_test_macros.hpp>
+#include <doctest.h>
 
 // #include <iostream>
 

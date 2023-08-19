@@ -123,12 +123,12 @@ configure_compile_options_no_werror(${PROJECT_NAME})
 # include directories
 target_include_directories(${PROJECT_NAME} PRIVATE
     framework)
-    
+
 target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
-    ../third_party/Catch2)
+    ${CMAKE_SOURCE_DIR}/third_party/doctest/doctest)
 
 # link libraries
 target_link_libraries(${PROJECT_NAME} PUBLIC
-    Catch2WithMain
+    doctest_with_main
     framework
 )
