@@ -155,13 +155,13 @@ enum class gal_texture_dimension {
 
 enum class gal_texture_sample_count {
     UNDEFINED,
-    SAMPLE_COUNT_1,
-    SAMPLE_COUNT_2,
-    SAMPLE_COUNT_4,
-    SAMPLE_COUNT_8,
-    SAMPLE_COUNT_16,
-    SAMPLE_COUNT_32,
-    SAMPLE_COUNT_64,
+    SAMPLE_COUNT_1 = 1,
+    SAMPLE_COUNT_2 = 2,
+    SAMPLE_COUNT_4 = 4,
+    SAMPLE_COUNT_8 = 8,
+    SAMPLE_COUNT_16 = 16,
+    SAMPLE_COUNT_32 = 32,
+    SAMPLE_COUNT_64 = 64,
 };
 
 enum class gal_sampler_filter_mode {
@@ -324,7 +324,8 @@ enum class gal_memory_flag {
     CPU_UPLOAD = 1 << 1,    // cpu upload memory
     GPU_DOWNLOAD = 1 << 2,  // gpu download
 };
-MAKE_ENUM_FLAG(u32, gal_memory_flag);
+
+//MAKE_ENUM_FLAG(u32, gal_memory_flag);
 
 enum class gal_buffer_flag {
     /// Default flag (Buffer will use aliased memory, buffer will not be cpu accessible until mapBuffer is called)

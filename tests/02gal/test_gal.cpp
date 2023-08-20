@@ -8,7 +8,6 @@
 #include "framework/02gal/gal.h"
 #include "framework/02gal/shader/shader_compiler.h"
 
-
 using namespace ante;
 
 gal::gal_context initialize(ante::gal::gal_api api) {
@@ -46,17 +45,16 @@ void destroy(gal::gal_context &context) {
     //ante::memory::destroy_memory_system();
 };
 
-
 using namespace ante;
 using namespace ante::gal;
-TEST_CASE("test context initialization") {
+TEST_CASE("test gal context initialization") {
     auto context_initialization = [](gal::gal_api api) {
         gal::gal_context context = initialize(api);
         destroy(context);
     };
 
     context_initialization(gal::gal_api::VULKAN);
-    //context_initialization(gal::RenderApi::d3d12);
+    context_initialization(gal::gal_api::D3D12);
 }
 
 TEST_CASE("test gal buffer") {
@@ -69,7 +67,7 @@ TEST_CASE("test gal buffer") {
         desc.descriptor_types = gal::gal_descriptor_type::CONSTANT_BUFFER | gal::gal_descriptor_type::RW_BUFFER |
                                 gal::gal_descriptor_type::INDIRECT_ARGUMENT;
         desc.memory_flags =
-            gal_memory_flag::GPU_DEDICATED | gal_memory_flag::GPU_DOWNLOAD | gal_memory_flag::CPU_UPLOAD;
+            gal_memory_flag::GPU_DEDICATED;
 
         desc.flags = gal::gal_buffer_flag::OWN_MEMORY;
         gal::gal_buffer buffer{};
@@ -80,7 +78,7 @@ TEST_CASE("test gal buffer") {
         destroy(context);
     };
     buffer_creation(gal::gal_api::VULKAN);
-    //buffer_creation(gal::RenderApi::d3d12);
+    buffer_creation(gal::gal_api::D3D12);
 }
 
 TEST_CASE("test gal texture") {
@@ -107,7 +105,8 @@ TEST_CASE("test gal texture") {
         destroy(context);
     };
     texture_creation(gal::gal_api::VULKAN);
-    //buffer_creation(gal::RenderApi::d3d12);
+    texture_creation(gal::gal_api::VULKAN);
+    (gal::gal_api::D3D12);
 }
 
 TEST_CASE("test gal sampler") {
@@ -134,7 +133,7 @@ TEST_CASE("test gal sampler") {
         destroy(context);
     };
     sampler_creation(gal::gal_api::VULKAN);
-    //sampler_creation(gal::RenderApi::d3d12);
+    sampler_creation(gal::gal_api::D3D12);
 }
 
 TEST_CASE("test gal render target") {
@@ -160,7 +159,7 @@ TEST_CASE("test gal render target") {
         destroy(context);
     };
     render_target_creation(gal::gal_api::VULKAN);
-    //sampler_creation(gal::RenderApi::d3d12);
+    render_target_creation(gal::gal_api::D3D12);
 }
 
 TEST_CASE("test gal swapchain") {
@@ -182,9 +181,9 @@ TEST_CASE("test gal swapchain") {
         desc.format = gal_texture_format::R8G8B8A8_UNORM;
         desc.image_count = 3;
         desc.clear_value.value = gal_clear_value::rgb{0.0f, 0.0f, 0.0f, 1.0f};
-//#ifdef _WIN32
-//        desc.hwnd_window = ante::get_hwnd_window(window);
-//#endif
+        //#ifdef _WIN32
+        //        desc.hwnd_window = ante::get_hwnd_window(window);
+        //#endif
         desc.window = &window;
         gal::gal_error_code result = gal::create_swap_chain(context, &desc, &sc);
         REQUIRE(result == gal::gal_error_code::SUC);
@@ -195,7 +194,7 @@ TEST_CASE("test gal swapchain") {
         ante::destroy_window(&window);
     };
     swap_chain_creation(gal::gal_api::VULKAN);
-    //sampler_creation(gal::RenderApi::d3d12);
+    swap_chain_creation(gal::gal_api::D3D12);
 }
 
 TEST_CASE("test gal command pool") {
@@ -230,9 +229,10 @@ TEST_CASE("test gal command pool") {
         destroy(context);
     };
     command_test(gal_api::VULKAN);
+    command_test(gal_api::D3D12);
 }
 
-TEST_CASE("test compute pipeline creation vk") {
+TEST_CASE("test gal compute pipeline creation vk") {
     ante::str test_cs = "\
 #define UPDATE_FREQ_NONE space0\n\
 #define UPDATE_FREQ_PER_FRAME space1\n\
@@ -319,7 +319,7 @@ void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) \n\
     destroy(context);
 }
 
-TEST_CASE("test pso cache vk") {
+TEST_CASE("test gal pso cache vk") {
     ante::str teststr = "\n\
         // shader from GPUOpen/Cauldron src/DX12/shaders/TAASharpenerCS.hlsl\n\
         Texture2D<float4> TAABuffer;\n\
@@ -461,9 +461,9 @@ void CS_MAIN(uint3 globalID : SV_DispatchThreadID, uint3 localID : SV_GroupThrea
     destroy(context);
 }
 
-TEST_CASE("test dispatch") {}
+TEST_CASE("test gal dispatch") {}
 
-TEST_CASE("test compute vk") {
+TEST_CASE("test gal compute vk") {
     ante::str test_cs = " [numthreads(8, 8, 1)] void CS_MAIN(uint3 thread_id: SV_DispatchThreadID) {}";
 
     using namespace ante::gal;
@@ -521,7 +521,7 @@ TEST_CASE("test compute vk") {
     destroy(context);
 }
 
-TEST_CASE("buffer test") {
+TEST_CASE("test gal buffer upload") {
     auto command_test = [](gal::gal_api api) {
         ante::gal::gal_command_pool cmd_pool{};
         gal::gal_context context = initialize(api);
@@ -643,7 +643,7 @@ TEST_CASE("buffer test") {
     command_test(gal_api::VULKAN);
 }
 
-TEST_CASE("descriptor set") {
+TEST_CASE("test descriptor update") {
     //    ante::str test_cs = "\
 //#define UPDATE_FREQ_NONE space0\n\
 //#define UPDATE_FREQ_PER_FRAME space1\n\

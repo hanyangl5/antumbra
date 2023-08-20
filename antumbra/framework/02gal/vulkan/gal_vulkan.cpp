@@ -29,7 +29,6 @@
 
 #include <vulkan/vulkan.h>
 
-
 #define VMA_RECORDING_ENABLED 1
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
@@ -52,15 +51,14 @@
 #endif // NDEBUG
 #include <vk_mem_alloc.h>
 
-
-#include "framework/01core/memory/container.h"
+#include "../enum.h"
 #include "framework/01core/input/input.h"
 #include "framework/01core/io/file_system.h"
 #include "framework/01core/logging/log.h"
 #include "framework/01core/math/math.h"
+#include "framework/01core/memory/container.h"
 #include "framework/01core/memory/memory.h"
 #include "framework/02gal/shader/shader_compiler.h"
-#include "../enum.h"
 #include "gal_vulkan.h"
 #include "gal_vulkan_enum.h"
 #include "gal_vulkan_utils.h"
@@ -520,17 +518,17 @@ gal_error_code vk_create_buffer(gal_context context, gal_buffer_desc *desc, gal_
     if (desc->memory_flags == gal_memory_flag::UNDEFINED) {
         return gal_error_code::ERR;
     }
-    if ((desc->memory_flags & gal_memory_flag::GPU_DEDICATED) != gal_memory_flag::UNDEFINED) {
+    if (desc->memory_flags == gal_memory_flag::GPU_DEDICATED) {
         alloc_info.requiredFlags |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         alloc_info.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_GPU_ONLY;
         buffer_create_info.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT; //
     }
-    if ((desc->memory_flags & gal_memory_flag::CPU_UPLOAD) != gal_memory_flag::UNDEFINED) {
+    if (desc->memory_flags == gal_memory_flag::CPU_UPLOAD) {
         alloc_info.requiredFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
         alloc_info.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_CPU_TO_GPU;
         buffer_create_info.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT; // stage buffer upload
     }
-    if ((desc->memory_flags & gal_memory_flag::GPU_DOWNLOAD) != gal_memory_flag::UNDEFINED) {
+    if (desc->memory_flags == gal_memory_flag::GPU_DOWNLOAD) {
         alloc_info.requiredFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
         alloc_info.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_GPU_TO_CPU;
         buffer_create_info.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT; // stage buffer download
@@ -620,15 +618,15 @@ gal_error_code vk_create_texture(gal_context context, gal_texture_desc *desc, ga
     }
     VmaAllocationCreateInfo allocation_create_info{};
 
-    if ((desc->memory_flags & gal_memory_flag::GPU_DEDICATED) != gal_memory_flag::UNDEFINED) {
+    if (desc->memory_flags == gal_memory_flag::GPU_DEDICATED) {
         allocation_create_info.requiredFlags |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         allocation_create_info.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_GPU_ONLY;
     }
-    if ((desc->memory_flags & gal_memory_flag::CPU_UPLOAD) != gal_memory_flag::UNDEFINED) {
+    if (desc->memory_flags == gal_memory_flag::CPU_UPLOAD) {
         allocation_create_info.requiredFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
         allocation_create_info.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_CPU_TO_GPU;
     }
-    if ((desc->memory_flags & gal_memory_flag::GPU_DOWNLOAD) != gal_memory_flag::UNDEFINED) {
+    if (desc->memory_flags == gal_memory_flag::GPU_DOWNLOAD) {
         allocation_create_info.requiredFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
         allocation_create_info.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_GPU_TO_CPU;
     }
@@ -911,12 +909,11 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
     }
 
     VkResult result = VK_SUCCESS;
-    if (glfwCreateWindowSurface(vk_ctx->instance,desc->window->m_window, nullptr, &vk_sc->m_surface) != VK_SUCCESS) {
+    if (glfwCreateWindowSurface(vk_ctx->instance, desc->window->m_window, nullptr, &vk_sc->m_surface) != VK_SUCCESS) {
         return gal_error_code::ERR;
     }
 
-    #if  0
-
+#if 0
 
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
     VkWin32SurfaceCreateInfoKHR add_info{};
@@ -981,7 +978,7 @@ gal_error_code vk_create_swap_chain(gal_context context, gal_swap_chain_desc *de
 #else
 #error PLATFORM NOT SUPPORTED
 #endif
-    #endif
+#endif
 
     ACQUIRE_STACK_MEMORY_RESOURCE(stack_memory, 256);
 
@@ -2221,9 +2218,8 @@ gal_error_code vk_free_command_list(gal_context context, gal_command_list comman
 gal_error_code vk_mapbuffer(gal_context context, gal_buffer buffer, read_range *range) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_buffer *vk_buf = reinterpret_cast<vk_buffer *>(buffer);
-    if (((buffer->m_gal_buffer_desc.memory_flags & gal_memory_flag::CPU_UPLOAD) == gal_memory_flag::UNDEFINED &&
-         (buffer->m_gal_buffer_desc.memory_flags & gal_memory_flag::GPU_DOWNLOAD) == gal_memory_flag::UNDEFINED) ||
-        (buffer->m_gal_buffer_desc.memory_flags & gal_memory_flag::GPU_DEDICATED) == gal_memory_flag::GPU_DEDICATED) {
+    if (buffer->m_gal_buffer_desc.memory_flags != gal_memory_flag::CPU_UPLOAD &&
+        buffer->m_gal_buffer_desc.memory_flags != gal_memory_flag::GPU_DOWNLOAD) {
         return gal_error_code::ERR;
     }
 
@@ -2241,9 +2237,8 @@ gal_error_code vk_mapbuffer(gal_context context, gal_buffer buffer, read_range *
 gal_error_code vk_unmapbuffer(gal_context context, gal_buffer buffer) {
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_buffer *vk_buf = reinterpret_cast<vk_buffer *>(buffer);
-    if (((buffer->m_gal_buffer_desc.memory_flags & gal_memory_flag::CPU_UPLOAD) == gal_memory_flag::UNDEFINED &&
-         (buffer->m_gal_buffer_desc.memory_flags & gal_memory_flag::GPU_DOWNLOAD) == gal_memory_flag::UNDEFINED) ||
-        (buffer->m_gal_buffer_desc.memory_flags & gal_memory_flag::GPU_DEDICATED) == gal_memory_flag::GPU_DEDICATED) {
+    if (buffer->m_gal_buffer_desc.memory_flags != gal_memory_flag::CPU_UPLOAD &&
+        buffer->m_gal_buffer_desc.memory_flags != gal_memory_flag::GPU_DOWNLOAD) {
         return gal_error_code::ERR;
     }
     vmaUnmapMemory(vk_ctx->vma_allocator, vk_buf->m_allocation);
@@ -2282,8 +2277,8 @@ gal_error_code vk_cmd_end(gal_command_list command) {
     return gal_error_code::SUC;
 }
 gal_error_code vk_cmd_set_render_target() { return gal_error_code::SUC; }
-gal_error_code vk_cmd_set_viewport(gal_command_list command, f32 x, f32 y, f32 width, f32 height,
-                                   f32 min_depth, f32 max_depth) {
+gal_error_code vk_cmd_set_viewport(gal_command_list command, f32 x, f32 y, f32 width, f32 height, f32 min_depth,
+                                   f32 max_depth) {
     vk_command_list *vk_cmd = reinterpret_cast<vk_command_list *>(command);
 
     VkViewport viewport{};
@@ -2798,7 +2793,7 @@ gal_error_code vk_queue_present(gal_queue queue, gal_queue_present_desc *desc) {
 }
 
 gal_error_code vk_acquire_next_image(gal_context context, gal_swap_chain swap_chain, gal_semaphore signal_semaphore,
-                                   gal_fence fence, uint32_t *image_index) {
+                                     gal_fence fence, uint32_t *image_index) {
 
     vk_context *vk_ctx = reinterpret_cast<vk_context *>(context);
     vk_swap_chain *vk_sc = reinterpret_cast<vk_swap_chain *>(swap_chain);

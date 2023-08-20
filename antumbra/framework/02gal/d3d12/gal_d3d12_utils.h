@@ -78,7 +78,7 @@ constexpr D3D12_RESOURCE_FLAGS util_to_dx12_resource_flags(gal_buffer_desc *desc
     if ((desc->descriptor_types & gal_descriptor_type::DEPTH_STENCIL_RT) != gal_descriptor_type::UNDEFINED) {
         flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
     }
-    if ((desc->memory_flags & gal_memory_flag::GPU_DOWNLOAD) != gal_memory_flag::UNDEFINED) {
+    if (desc->memory_flags == gal_memory_flag::GPU_DOWNLOAD) {
         flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
     }
     return flags;
@@ -638,6 +638,25 @@ constexpr DXGI_FORMAT dxgiformat_to_typeless(DXGI_FORMAT fmt) {
         return DXGI_FORMAT_UNKNOWN;
     }
     return DXGI_FORMAT_UNKNOWN;
+}
+
+D3D12_RESOURCE_DIMENSION utils_to_d3d12_resource_dimension(gal::gal_texture_dimension dimension) {
+    switch (dimension) {
+    case ante::gal::gal_texture_dimension::_1D:
+    case ante::gal::gal_texture_dimension::_1D_ARRAY:
+        return D3D12_RESOURCE_DIMENSION_TEXTURE1D;
+    case ante::gal::gal_texture_dimension::_2D:
+    case ante::gal::gal_texture_dimension::_2D_MS:
+    case ante::gal::gal_texture_dimension::_2D_ARRAY:
+    case ante::gal::gal_texture_dimension::_2D_MS_ARRAY:
+        return D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    case ante::gal::gal_texture_dimension::_3D:
+        return D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+    case ante::gal::gal_texture_dimension::CUBE:
+        return D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    default:
+        return D3D12_RESOURCE_DIMENSION_UNKNOWN;
+    }
 }
 
 }

@@ -26,14 +26,28 @@ DECLARE_D3D12_HANDLE(context) {
     ID3D12CommandQueue *transfer_queue = nullptr;
 };
 
+using dx_descriptor_id = i32;
+
 DECLARE_D3D12_HANDLE(buffer) {
     ID3D12Resource *buffer = nullptr;
     D3D12MA::Allocation *allocation = nullptr;
+    D3D12_GPU_VIRTUAL_ADDRESS mDxGpuAddress;
+    /// Descriptor handle of the CBV in a CPU visible descriptor heap (applicable to BUFFER_USAGE_UNIFORM)
+    dx_descriptor_id mDescriptors;
+    /// Offset from mDxDescriptors for srv descriptor handle
+    u8 mSrvDescriptorOffset;
+    /// Offset from mDxDescriptors for uav descriptor handle
+    u8 mUavDescriptorOffset;
 };
 
+
 DECLARE_D3D12_HANDLE(texture) {
+    /// Native handle of the underlying resource
     ID3D12Resource *texture = nullptr;
     D3D12MA::Allocation *allocation = nullptr;
+    dx_descriptor_id mDescriptors;
+    u32 mHandleCount : 24;
+    u32 mUavStartIndex;
 };
 
 DECLARE_D3D12_HANDLE(sampler) {

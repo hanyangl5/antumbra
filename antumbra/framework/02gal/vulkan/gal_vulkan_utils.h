@@ -126,9 +126,10 @@ constexpr VkImageViewType utils_to_vk_image_view_type(gal_texture_dimension dime
     case ante::gal::gal_texture_dimension::CUBE_ARRAY:
         return VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
     case ante::gal::gal_texture_dimension::_2D_MS_ARRAY:
+        return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
     case ante::gal::gal_texture_dimension::_2D_MS:
+        return VK_IMAGE_VIEW_TYPE_2D;
         // TODO(hyl5): how ms map to vk?
-        return VK_IMAGE_VIEW_TYPE_MAX_ENUM;
     default:
         return VK_IMAGE_VIEW_TYPE_MAX_ENUM;
     }
@@ -163,9 +164,9 @@ constexpr VkSampleCountFlagBits utils_to_vk_sample_count_flags(gal_texture_sampl
 
 constexpr VkImageUsageFlags utils_to_vk_image_usage(gal_descriptor_type types, gal_memory_flag memory_flag) {
     VkImageUsageFlags flags = 0;
-    if ((memory_flag & gal_memory_flag::CPU_UPLOAD) != gal_memory_flag::UNDEFINED) {
+    if (memory_flag == gal_memory_flag::CPU_UPLOAD) {
         flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    } else if ((memory_flag & gal_memory_flag::GPU_DOWNLOAD) != gal_memory_flag::UNDEFINED) {
+    } else if (memory_flag == gal_memory_flag::GPU_DOWNLOAD) {
         flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     }
     if ((types & gal_descriptor_type::COLOR_RT) != gal_descriptor_type::UNDEFINED) {

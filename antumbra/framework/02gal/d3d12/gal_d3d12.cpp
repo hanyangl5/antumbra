@@ -1,3 +1,29 @@
+/*
+ * Code adapted from ConfettiFX The-Forge
+ * 
+ * Copyright (c) 2017-2022 The Forge Interactive Inc.
+ *
+ * This file is part of The-Forge
+ * (see https://github.com/ConfettiFX/The-Forge).
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+*/
+
 #include "gal_d3d12.h"
 
 #include <D3D12MemAlloc.h>
@@ -10,21 +36,22 @@
 #include "gal_d3d12_utils.h"
 
 #define ANT_DX12_API_VERSION D3D_FEATURE_LEVEL_12_1
-
+#define D3D12_DESCRIPTOR_ID_NONE ((int32_t)-1)
 namespace ante::gal {
 
 gal_error_code d3d12_init_gal(gal_context *context) {
-    *context = reinterpret_cast<gal_context>(new d3d12_context);
-    load_gal_d3d12_functions();
-    if (*context == gal_null) {
+    d3d12_context *d3d12_ctx = ante::memory::alloc<d3d12_context>(nullptr);
+    if (d3d12_ctx == gal_null) {
         return gal_error_code::ERR;
     }
+    load_gal_d3d12_functions();
+    *context = d3d12_ctx;
     return gal_error_code::SUC;
 }
 gal_error_code d3d12_destroy_gal(gal_context context) {
     if (context != gal_null) {
         d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(context);
-        delete d3d12_ctx;
+        ante::memory::afree(d3d12_ctx);
         context = gal_null;
         offload_gal_d3d12_functions();
     }
@@ -366,12 +393,271 @@ gal_error_code d3d12_destroy_buffer([[maybe_unused]] gal_context context, gal_bu
 
 gal_error_code d3d12_create_texture(gal_context context, gal_texture_desc *desc, gal_texture *texture) {
     // TODO(hyl5): finish this
-    if (context)
-        return gal_error_code::SUC;
-    else if (texture)
-        return gal_error_code::SUC;
-    else if (desc)
-        return gal_error_code::SUC;
+    if (desc->sample_count > gal::gal_texture_sample_count::SAMPLE_COUNT_1 && desc->mip_level > 1) {
+        return gal_error_code::ERR;
+    }
+    d3d12_context *d3d12_ctx = reinterpret_cast<d3d12_context *>(context);
+    d3d12_texture *d3d12_tex = ante::memory::alloc<ante::gal::d3d12_texture>(nullptr);
+    if (d3d12_tex == nullptr) {
+        return gal_error_code::ERR;
+    }
+
+    //allocate new texture
+    d3d12_tex->mDescriptors = D3D12_DESCRIPTOR_ID_NONE;
+
+    if (desc->native_handle) {
+        //d3d12_tex->mOwnsImage = false;
+        d3d12_tex->texture = (ID3D12Resource *)desc->native_handle;
+    } else {
+        //d3d12_tex->mOwnsImage = true;
+    }
+
+    //add to gpu
+    D3D12_RESOURCE_DESC texture_desc = {};
+    
+    DXGI_FORMAT dxFormat = galtextureformat_to_dxgiformat(desc->format);
+
+    gal_descriptor_type descriptors = desc->descriptor_types;
+
+    if (dxFormat == DXGI_FORMAT_UNKNOWN) {
+        return gal_error_code::ERR;
+    }
+
+    if (nullptr == d3d12_tex->texture) {
+
+        D3D12_RESOURCE_DIMENSION res_dim = utils_to_d3d12_resource_dimension(desc->dimension);
+
+        texture_desc.Dimension = res_dim;
+        //On PC, If Alignment is set to 0, the runtime will use 4MB for MSAA textures and 64KB for everything else.
+        //On XBox, We have to explicitlly assign D3D12_DEFAULT_MSAA_RESOURCE_PLACEMENT_ALIGNMENT if MSAA is used
+       texture_desc.Alignment = (UINT)desc->sample_count > 1 ? D3D12_DEFAULT_MSAA_RESOURCE_PLACEMENT_ALIGNMENT : 0;
+       texture_desc.Width = desc->width;
+       texture_desc.Height = desc->height;
+       texture_desc.DepthOrArraySize = (UINT16)(desc->array_size != 1 ? desc->array_size : desc->depth);
+       texture_desc.MipLevels = (UINT16)desc->mip_level;
+       texture_desc.Format = dxgiformat_to_typeless(dxFormat);
+       texture_desc.SampleDesc.Count = (UINT)desc->sample_count;
+       texture_desc.SampleDesc.Quality = (UINT)desc->texture_sample_quality;
+       texture_desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+       texture_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+        // VRS enforces the format
+        //if (desc->initial_state == RESOURCE_STATE_SHADING_RATE_SOURCE) {
+        //   texture_desc.Format = dxFormat;
+        //}
+
+       D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS data;
+       data.Format = texture_desc.Format;
+       data.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
+       data.SampleCount = texture_desc.SampleDesc.Count;
+       d3d12_ctx->device->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &data, sizeof(data));
+       while (data.NumQualityLevels == 0 && data.SampleCount > 0) {
+            LOG_WARN("Sample Count {} not supported. Trying a lower sample count {}", data.SampleCount,
+                     data.SampleCount / 2);
+            data.SampleCount = texture_desc.SampleDesc.Count / 2;
+            d3d12_ctx->device->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &data, sizeof(data));
+       }
+        texture_desc.SampleDesc.Count = data.SampleCount;
+
+        gal_resource_state actualStartState = desc->initial_state;
+
+        // Decide UAV flags
+        if ((descriptors & gal_descriptor_type::RW_TEXTURE)!=gal_descriptor_type::UNDEFINED) {
+           texture_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+        }
+
+        // Decide render target flags
+        if ((desc->initial_state & gal_resource_state::RENDER_TARGET) != gal_resource_state::UNDEFINIED) {
+           texture_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+           actualStartState = gal_resource_state::RENDER_TARGET;
+        } else if ((desc->initial_state & gal_resource_state::DEPTH_WRITE) != gal_resource_state::UNDEFINIED) {
+           texture_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+           actualStartState = gal_resource_state::DEPTH_WRITE;
+        }
+
+        //if (desc->mFlags & TEXTURE_CREATION_FLAG_ALLOW_DISPLAY_TARGET) {
+        //    actualStartState = RESOURCE_STATE_PRESENT;
+        //}
+
+        //D3D12_CLEAR_VALUE clearValue{};
+        //clearValue.Format = dxFormat;
+        //if (texture_desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) {
+        //    clearValue.DepthStencil.Depth = desc->mClearValue.depth;
+        //    clearValue.DepthStencil.Stencil = (UINT8)desc->mClearValue.stencil;
+        //} else {
+        //    clearValue.Color[0] = desc->mClearValue.r;
+        //    clearValue.Color[1] = desc->mClearValue.g;
+        //    clearValue.Color[2] = desc->mClearValue.b;
+        //    clearValue.Color[3] = desc->mClearValue.a;
+        //}
+
+        //D3D12_CLEAR_VALUE *pClearValue = NULL;
+        D3D12_RESOURCE_STATES res_states = util_to_dx12_resource_state(actualStartState);
+
+        //if ((texture_desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) ||
+        //    (texture_desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)) {
+        //    pClearValue = &clearValue;
+        //}
+
+        D3D12MA::ALLOCATION_DESC alloc_desc = {};
+        alloc_desc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+        if ((desc->texture_flags & gal_texture_flag::TEXTURE_CREATION_FLAG_OWN_MEMORY_BIT) !=
+            gal_texture_flag::TEXTURE_CREATION_FLAG_UNFEFINED) {
+            alloc_desc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
+        }
+
+            HRESULT res = d3d12_ctx->d3dma_allocator->CreateResource(
+                &alloc_desc, &texture_desc, res_states, nullptr , &d3d12_tex->allocation,
+                IID_PPV_ARGS(&d3d12_tex->texture));
+        if (FAILED(res)) {
+            return gal_error_code::ERR;
+        }
+    } else {
+        // use imported texture desc
+        texture_desc = d3d12_tex->texture->GetDesc();
+        dxFormat =texture_desc.Format;
+    }
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+    D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+
+    switch (texture_desc.Dimension) {
+    case D3D12_RESOURCE_DIMENSION_TEXTURE1D: {
+        if (texture_desc.DepthOrArraySize > 1) {
+            srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1DARRAY;
+            uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE1DARRAY;
+            // SRV
+            srvDesc.Texture1DArray.ArraySize =texture_desc.DepthOrArraySize;
+            srvDesc.Texture1DArray.FirstArraySlice = 0;
+            srvDesc.Texture1DArray.MipLevels =texture_desc.MipLevels;
+            srvDesc.Texture1DArray.MostDetailedMip = 0;
+            // UAV
+            uavDesc.Texture1DArray.ArraySize =texture_desc.DepthOrArraySize;
+            uavDesc.Texture1DArray.FirstArraySlice = 0;
+            uavDesc.Texture1DArray.MipSlice = 0;
+        } else {
+            srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1D;
+            uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE1D;
+            // SRV
+            srvDesc.Texture1D.MipLevels =texture_desc.MipLevels;
+            srvDesc.Texture1D.MostDetailedMip = 0;
+            // UAV
+            uavDesc.Texture1D.MipSlice = 0;
+        }
+        break;
+    }
+    case D3D12_RESOURCE_DIMENSION_TEXTURE2D: {
+        if (gal_descriptor_type::UNDEFINED!= (descriptors & gal_descriptor_type::TEXTURE_CUBE)) {
+            if (desc->array_size != 6) {
+                return gal_error_code::GAL_ERRORCODE_INVALID_PARAMETER;
+            }
+            if (texture_desc.DepthOrArraySize > 6) {
+                srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
+                // SRV
+                srvDesc.TextureCubeArray.First2DArrayFace = 0;
+                srvDesc.TextureCubeArray.MipLevels =texture_desc.MipLevels;
+                srvDesc.TextureCubeArray.MostDetailedMip = 0;
+                srvDesc.TextureCubeArray.NumCubes =texture_desc.DepthOrArraySize / 6;
+            } else {
+                srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+                // SRV
+                srvDesc.TextureCube.MipLevels =texture_desc.MipLevels;
+                srvDesc.TextureCube.MostDetailedMip = 0;
+            }
+
+            // UAV
+            uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+            uavDesc.Texture2DArray.ArraySize =texture_desc.DepthOrArraySize;
+            uavDesc.Texture2DArray.FirstArraySlice = 0;
+            uavDesc.Texture2DArray.MipSlice = 0;
+            uavDesc.Texture2DArray.PlaneSlice = 0;
+        } else {
+            if (texture_desc.DepthOrArraySize > 1) {
+                if (texture_desc.SampleDesc.Count > static_cast<u32>(gal::gal_texture_sample_count::SAMPLE_COUNT_1)) {
+                    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMSARRAY;
+                    // Cannot create a multisampled uav
+                    // SRV
+                    srvDesc.Texture2DMSArray.ArraySize =texture_desc.DepthOrArraySize;
+                    srvDesc.Texture2DMSArray.FirstArraySlice = 0;
+                    // No UAV
+                } else {
+                    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+                    uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+                    // SRV
+                    srvDesc.Texture2DArray.ArraySize =texture_desc.DepthOrArraySize;
+                    srvDesc.Texture2DArray.FirstArraySlice = 0;
+                    srvDesc.Texture2DArray.MipLevels =texture_desc.MipLevels;
+                    srvDesc.Texture2DArray.MostDetailedMip = 0;
+                    srvDesc.Texture2DArray.PlaneSlice = 0;
+                    // UAV
+                    uavDesc.Texture2DArray.ArraySize =texture_desc.DepthOrArraySize;
+                    uavDesc.Texture2DArray.FirstArraySlice = 0;
+                    uavDesc.Texture2DArray.MipSlice = 0;
+                    uavDesc.Texture2DArray.PlaneSlice = 0;
+                }
+            } else {
+                if (texture_desc.SampleDesc.Count > static_cast<u32>(desc->sample_count)) {
+                    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMS;
+                    // Cannot create a multisampled uav
+                } else {
+                    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+                    uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+                    // SRV
+                    srvDesc.Texture2D.MipLevels =texture_desc.MipLevels;
+                    srvDesc.Texture2D.MostDetailedMip = 0;
+                    srvDesc.Texture2D.PlaneSlice = 0;
+                    // UAV
+                    uavDesc.Texture2D.MipSlice = 0;
+                    uavDesc.Texture2D.PlaneSlice = 0;
+                }
+            }
+        }
+        break;
+    }
+    case D3D12_RESOURCE_DIMENSION_TEXTURE3D: {
+        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+        uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
+        // SRV
+        srvDesc.Texture3D.MipLevels =texture_desc.MipLevels;
+        srvDesc.Texture3D.MostDetailedMip = 0;
+        // UAV
+        uavDesc.Texture3D.MipSlice = 0;
+        uavDesc.Texture3D.FirstWSlice = 0;
+        uavDesc.Texture3D.WSize =texture_desc.DepthOrArraySize;
+        break;
+    }
+    default:
+        break;
+    }
+
+    DescriptorHeap *pHeap = pRenderer->mD3D12.pCPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV];
+    uint32_t handleCount = (descriptors & DESCRIPTOR_TYPE_TEXTURE) ? 1 : 0;
+    handleCount += (descriptors & DESCRIPTOR_TYPE_RW_TEXTURE) ? desc->mMipLevels : 0;
+    d3d12_tex->mD3D12.mDescriptors = consume_descriptor_handles(pHeap, handleCount);
+
+    if (descriptors & DESCRIPTOR_TYPE_TEXTURE) {
+        ASSERT(srvDesc.ViewDimension != D3D12_SRV_DIMENSION_UNKNOWN);
+
+        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        srvDesc.Format = util_to_dx12_srv_format(dxFormat);
+        add_srv(pRenderer, d3d12_tex->mD3D12.pDxResource, &srvDesc, &d3d12_tex->mD3D12.mDescriptors);
+        ++d3d12_tex->mD3D12.mUavStartIndex;
+    }
+
+    if (descriptors & DESCRIPTOR_TYPE_RW_TEXTURE) {
+        uavDesc.Format = util_to_dx12_uav_format(dxFormat);
+        for (uint32_t i = 0; i < desc->mMipLevels; ++i) {
+            DxDescriptorID handle = d3d12_tex->mD3D12.mDescriptors + i + d3d12_tex->mD3D12.mUavStartIndex;
+
+            uavDesc.Texture1DArray.MipSlice = i;
+            if (texture_desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D)
+                uavDesc.Texture3D.WSize =texture_desc.DepthOrArraySize / (UINT)pow(2.0, int(i));
+            add_uav(pRenderer, d3d12_tex->mD3D12.pDxResource, NULL, &uavDesc, &handle);
+        }
+    }
+
+    d3d12_tex->m_desc = *desc;
+    *texture = d3d12_tex;
     return gal_error_code::SUC;
 }
 
@@ -397,7 +683,6 @@ gal_error_code d3d12_create_sampler(gal_context context, gal_sampler_desc *sampl
     //d3d12_buffer *d3d12_spl = reinterpret_cast<d3d12_buffer *>(*sampler);
     //// d3d12_context *d3d12_ctx;
     //d3d12_ctx->device->CreateSampler();
-    return gal_error_code::SUC;
 }
 gal_error_code d3d12_destroy_sampler(gal_context context, gal_sampler sampler) {
     //d3d12_context *d3d12_ctx;
@@ -417,39 +702,39 @@ gal_error_code d3d12_create_swap_chain(gal_context context, gal_swap_chain_desc 
     //d3d12_context *d3d12_ctx;
     //d3d12_ctx->factory->CreateSwapChain();
     //
-    //	SwapChain* pSwapChain = (SwapChain*)tf_calloc(1, sizeof(SwapChain) + pDesc->mImageCount * sizeof(RenderTarget*));
+    //	SwapChain* pSwapChain = (SwapChain*)tf_calloc(1, sizeof(SwapChain) + desc->mImageCount * sizeof(RenderTarget*));
     //	ASSERT(pSwapChain);
     //	pSwapChain->ppRenderTargets = (RenderTarget**)(pSwapChain + 1);
     //	ASSERT(pSwapChain->ppRenderTargets);
     //
-    //	pSwapChain->mD3D12.mDxSyncInterval = pDesc->mEnableVsync ? 1 : 0;
+    //	pSwapChain->mD3D12.mDxSyncInterval = desc->mEnableVsync ? 1 : 0;
     //
     //	DXGI_SWAP_CHAIN_DESC1 desc = {};
-    //	desc.Width = pDesc->mWidth;
-    //	desc.Height = pDesc->mHeight;
-    //	desc.Format = util_to_dx12_swap_chain_format(pDesc->mColorFormat);
-    //	desc.Stereo = false;
-    //	desc.SampleDesc.Count = 1;    // If multisampling is needed, we'll resolve it later
-    //	desc.SampleDesc.Quality = 0;
-    //	desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    //	desc.BufferCount = pDesc->mImageCount;
-    //	desc.Scaling = DXGI_SCALING_STRETCH;
-    //	desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-    //	desc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
-    //	desc.Flags = 0;
+    //	texture_desc.Width = desc->mWidth;
+    //	texture_desc.Height = desc->mHeight;
+    //	texture_desc.Format = util_to_dx12_swap_chain_format(desc->mColorFormat);
+    //	texture_desc.Stereo = false;
+    //	texture_desc.SampleDesc.Count = 1;    // If multisampling is needed, we'll resolve it later
+    //	texture_desc.SampleDesc.Quality = 0;
+    //	texture_desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    //	texture_desc.BufferCount = desc->mImageCount;
+    //	texture_desc.Scaling = DXGI_SCALING_STRETCH;
+    //	texture_desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+    //	texture_desc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
+    //	texture_desc.Flags = 0;
     //
     //	BOOL allowTearing = FALSE;
     //	pRenderer->mD3D12.pDXGIFactory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing));
-    //	desc.Flags |= allowTearing ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
+    //	texture_desc.Flags |= allowTearing ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
     //
-    //	pSwapChain->mD3D12.mFlags |= (!pDesc->mEnableVsync && allowTearing) ? DXGI_PRESENT_ALLOW_TEARING : 0;
+    //	pSwapChain->mD3D12.mFlags |= (!desc->mEnableVsync && allowTearing) ? DXGI_PRESENT_ALLOW_TEARING : 0;
     //
     //	IDXGISwapChain1* swap_chain;
     //
-    //	HWND hwnd = (HWND)pDesc->mWindowHandle.window;
+    //	HWND hwnd = (HWND)desc->mWindowHandle.window;
     //
     //	(pRenderer->mD3D12.pDXGIFactory->CreateSwapChainForHwnd(
-    //		pDesc->ppPresentQueues[0]->mD3D12.pDxQueue, hwnd, &desc, NULL, NULL, &swap_chain));
+    //		desc->ppPresentQueues[0]->mD3D12.pDxQueue, hwnd, &desc, NULL, NULL, &swap_chain));
     //
     //	CHECK_HRESULT(pRenderer->mD3D12.pDXGIFactory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER));
     //
@@ -457,33 +742,33 @@ gal_error_code d3d12_create_swap_chain(gal_context context, gal_swap_chain_desc 
     //	swap_chain->Release();
     //
     //
-    //	ID3D12Resource** buffers = (ID3D12Resource**)alloca(pDesc->mImageCount * sizeof(ID3D12Resource*));
+    //	ID3D12Resource** buffers = (ID3D12Resource**)alloca(desc->mImageCount * sizeof(ID3D12Resource*));
     //
     //	// Create rendertargets from swap_chain
-    //	for (uint32_t i = 0; i < pDesc->mImageCount; ++i)
+    //	for (uint32_t i = 0; i < desc->mImageCount; ++i)
     //	{
     //		(pSwapChain->mD3D12.pDxSwapChain->GetBuffer(i, IID_ARGS(&buffers[i])));
     //	}
     //
     //
     //	RenderTargetDesc descColor = {};
-    //	descColor.mWidth = pDesc->mWidth;
-    //	descColor.mHeight = pDesc->mHeight;
+    //	descColor.mWidth = desc->mWidth;
+    //	descColor.mHeight = desc->mHeight;
     //	descColor.mDepth = 1;
     //	descColor.mArraySize = 1;
-    //	descColor.mFormat = pDesc->mColorFormat;
-    //	descColor.mClearValue = pDesc->mColorClearValue;
+    //	descColor.mFormat = desc->mColorFormat;
+    //	descColor.mClearValue = desc->mColorClearValue;
     //	descColor.mSampleCount = SAMPLE_COUNT_1;
     //	descColor.mSampleQuality = 0;
     //	descColor.pNativeHandle = NULL;
     //	descColor.mFlags = TEXTURE_CREATION_FLAG_ALLOW_DISPLAY_TARGET;
-    //	descColor.mStartState = RESOURCE_STATE_PRESENT;
+    //	descColor.initial_state = RESOURCE_STATE_PRESENT;
     //#if defined(XBOX)
     //	descColor.mFlags |= TEXTURE_CREATION_FLAG_OWN_MEMORY_BIT;
-    //	pSwapChain->mD3D12.pPresentQueue = pDesc->mPresentQueueCount ? pDesc->ppPresentQueues[0] : NULL;
+    //	pSwapChain->mD3D12.pPresentQueue = desc->mPresentQueueCount ? desc->ppPresentQueues[0] : NULL;
     //#endif
     //
-    //	for (uint32_t i = 0; i < pDesc->mImageCount; ++i)
+    //	for (uint32_t i = 0; i < desc->mImageCount; ++i)
     //	{
     //#if !defined(XBOX)
     //		descColor.pNativeHandle = (void*)buffers[i];
@@ -837,7 +1122,7 @@ gal_error_code d3d12_cmd_set_scissor(gal_command_list command, i32 x, i32 y, u32
 gal_error_code d3d12_cmd_set_stencil_reference_value(gal_command_list command, u32 val) { return gal_error_code::SUC; }
 
 gal_error_code d3d12_acquire_next_image(gal_context context, gal_swap_chain swap_chain, gal_semaphore signal_semaphore,
-                                     gal_fence fence, uint32_t *image_index) {
+                                        gal_fence fence, uint32_t *image_index) {
     return gal_error_code::SUC;
 }
 
