@@ -160,8 +160,8 @@ __GAL_HELPER_MACRO__(gal_error_code, cmd_set_stencil_reference_value, gal_comman
 __GAL_HELPER_MACRO__(gal_error_code, queue_submit, gal_queue queue, gal_queue_submit_desc *desc);
 __GAL_HELPER_MACRO__(gal_error_code, queue_present, gal_queue queue, gal_queue_present_desc *desc);
 
-__GAL_HELPER_MACRO__(gal_error_code, acquire_next_image, gal_context context, gal_swap_chain pSwapChain,
-                     gal_semaphore pSignalSemaphore, gal_fence pFence, uint32_t *pImageIndex);
+__GAL_HELPER_MACRO__(gal_error_code, acquire_next_image, gal_context context, gal_swap_chain swap_chain,
+                     gal_semaphore signal_semaphore, gal_fence fence, uint32_t *image_index);
 
 #ifdef __GAL_HELPER_MACRO__
 #undef __GAL_HELPER_MACRO__
