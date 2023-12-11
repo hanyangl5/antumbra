@@ -16,12 +16,6 @@ This project includes the following third-party code libraries
 - nlohmann/json
 	url: https://github.com/nlohmann/json
     license: The MIT License (MIT), https://github.com/nlohmann/json/blob/develop/LICENSE.MIT
-- SanderMertens/flecs
-	url: https://github.com/SanderMertens/flecs
-    license: The MIT License, https://github.com/SanderMertens/flecs/blob/master/LICENSE
-- catchorg/Catch2
-	url: https://github.com/catchorg/Catch2
-    license: Boost Software License 1.0, https://github.com/catchorg/Catch2/blob/devel/LICENSE.txt
 - g-truc/glm
 	url: https://github.com/g-truc/glm
     license: The Happy Bunny License, https://github.com/g-truc/glm/blob/master/copying.txt
@@ -44,27 +38,15 @@ This project includes the following third-party code libraries
 - GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator
 	url: https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator
 
-- wolfpld/tracy
-	url: https://github.com/wolfpld/tracy
-
 - Vulkan-KhronosGroup/Vulkan-Headers
 	url: https://github.com/KhronosGroup/Vulkan-Headers
 
 - glfw/glfw
 	url: https://github.com/glfw/glfw
-- ThePhD/sol2
-	url: https://github.com/ThePhD/sol2
 
-- syoyo/tinygltf
-	url: https://github.com/syoyo/tinygltf
-
-- walterschell/Lua
-	url: https://github.com/walterschell/Lua
-- lua/lua
-	url: https://github.com/lua/lua
 - ConfettiFX/The-Forge-Forge
     license: Apache License 2.0, https://github.com/ConfettiFX/The-Forge/blob/master/LICENSE
     (modification files are under 
-    antumbra\framework\02gal\enum.h, 
-    antumbra\framework\02gal\vulkan\gal_vulkan_utils.h
-    antumbra\framework\02gal\vulkan\gal_vulkan.cpp)
+    antumbra\framework\gal\enum.h, 
+    antumbra\framework\gal\vulkan\gal_vulkan_utils.h
+    antumbra\framework\gal\vulkan\gal_vulkan.cpp)

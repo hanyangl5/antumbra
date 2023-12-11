@@ -1,9 +1,10 @@
 #include <cassert>
-#include <framework/01core/input/input.h>
-#include <framework/01core/math/math.h>
-#include <framework/01core/memory/smart_ptr.h>
-#include <framework/02gal/gal.h>
-#include <framework/02gal/shader/shader_compiler.h>
+#include <memory>
+#include <framework/utils/helper.h>
+#include <framework/utils/input/input.h>
+#include <framework/utils/math/math.h>
+#include <framework/gal/gal.h>
+#include <framework/gal/shader/shader_compiler.h>
 using namespace ante;
 
 constexpr void CHECK_ERR_CODE(gal::gal_error_code err) {
@@ -16,7 +17,7 @@ class HelloTriangle {
   public:
     DELETE_COPY_MOVE(HelloTriangle)
     HelloTriangle() {
-        window = ante::memory::make_unique<ante_window>(nullptr);
+        window = std::make_unique<ante_window>();
         window_desc desc{};
         desc.width = width;
         desc.height = height;
@@ -222,7 +223,7 @@ class HelloTriangle {
     bool b_first_frame = true;
     static constexpr u32 width = 1280;
     static constexpr u32 height = 720;
-    ante::memory::unique_ptr<ante_window> window;
+    std::unique_ptr<ante_window> window;
     gal::gal_context context;
     gal::gal_queue queue;
     gal::gal_swap_chain swap_chain;
@@ -248,8 +249,8 @@ class HelloTriangle {
 };
 
 int main() {
-    auto app = ante::memory::make_unique<HelloTriangle>(nullptr);
-    app->InitResources();
-    app->Run();
+    auto app = std::make_unique<HelloTriangle>();
+    // app->InitResources();
+    // app->Run();
     return 0;
 }

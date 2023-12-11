@@ -5,7 +5,7 @@ add_subdirectory(glfw) # CMakeLists of glfw added some useless projects/folders 
 option(MI_BUILD_TESTS "Build test executables" OFF)
 option(MI_BUILD_SHARED "Build shared library" OFF)
 option(MI_BUILD_OBJECT "" OFF)
-add_subdirectory(mimalloc)
+
 add_subdirectory(spdlog)
 option(SPIRV_CROSS_CLI "Build the CLI binary. Requires SPIRV_CROSS_STATIC." OFF)
 option(SPIRV_CROSS_ENABLE_TESTS "Enable SPIRV-Cross tests." OFF)
@@ -18,21 +18,7 @@ option(SPIRV_CROSS_ENABLE_C_API "Enable C API wrapper support in static library.
 option(SPIRV_CROSS_ENABLE_UTIL "Enable util module support." OFF)
 
 add_subdirectory(SPIRV-Cross)
-#add_subdirectory(Catch2)
 add_subdirectory(doctest)
-option(FLECS_SHARED "Build static flecs lib" OFF)
-add_subdirectory(flecs)
-include(lua.cmake)
-add_subdirectory(sol2)
-option(TRACY_ENABLE "" ON)
-option(TRACY_ONDEMAND "" ON)
-add_subdirectory(tracy)
-# copy TracyClient.cpp
-message("copy TracyClient.cpp")
-file(COPY tracy/public/TracyClient.cpp DESTINATION ${CMAKE_CURRENT_SOURCE_DIR})
-#add_subdirectory(JoltPhysics/Build)
-option(TINYGLTF_BUILD_LOADER_EXAMPLE "" OFF)
-add_subdirectory(tinygltf)
 
 add_library(${PROJECT_NAME} third_party_dummy.cpp)
 
@@ -113,12 +99,7 @@ target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC
     #json/include
     #doctest/doctest
     VulkanMemoryAllocator/include
-    tracy/public
-    magic_enum/include
-    sol2/include
-    mimalloc/include
     SPIRV-Cross/
-    #JoltPhysics/ # this will include some useless folder
     lua
 )
 
@@ -135,14 +116,9 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     #mimalloc-static
     glfw
     spdlog
-    flecs_static
     #doctest_with_main
     #nlohmann_json
-    TracyClient
-    lua_static
-    sol2
     #Jolt
-    tinygltf
     spirv-cross-core
 )
 
@@ -161,8 +137,6 @@ set_property(TARGET
     # Catch2WithMain
     doctest_with_main
     glfw
-    mimalloc-static
-    flecs_static
 
     # spirv-cross
     # spirv-cross-c
@@ -175,11 +149,8 @@ set_property(TARGET
     # spirv-cross-msl
     # spirv-cross-reflect
     # spirv-cross-util
-    TracyClient
 
     # Jolt
-    tinygltf
-    lua_static
     PROPERTY FOLDER "third_party")
 
 if(ANTUMBRA_BUILD_D3D12)

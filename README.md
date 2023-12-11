@@ -1,8 +1,8 @@
 # Antumbra
 
-Antumbra is my hobby project for graphics programming.
+(WIP)
 
-<!-- [![standard-readme compliant](https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square)](https://github.com/RichardLitt/standard-readme) -->
+Low level gpu compute framework API.
 
 ## Table of Contents
 
@@ -10,38 +10,37 @@ Antumbra is my hobby project for graphics programming.
   - [Table of Contents](#table-of-contents)
   - [Feature List](#feature-list)
   - [API Support](#api-support)
+  - [Prerequisites](#prerequisites)
   - [Build From Source](#build-from-source)
   - [Contributing](#contributing)
-    - [Contributors](#contributors)
   - [License](#license)
 
 ## Feature List
 
 ## API Support
 
-<!-- Metal for macOS and iOS
-Vulkan 1.3 for Windows, Linux, macOS
-DirectX12 for Windows -->
+<!-- Metal for macOS and iOS -->
+Vulkan 1.3 on Windows<!-- , Linux, macOS -->
+DirectX12 on Windows
 
 ## Prerequisites
 
-<!-- - 64-bit processor and operating system
+- 64-bit operating system
 - C++17 capable compiler
 - CMake 3.21(or later)
-- boost::container is required for Apple Clang on macOS
-- Vulkan SDK 1.3 for debuging
-- latest Windows SDK for DirectX12 -->
+- Vulkan SDK 1.3
+- latest Windows SDK
 
 ## Build From Source
 
-<!-- - Clone the project and its submodules.
+- Clone the project and its submodules.
 `git clone https://github.com/hanyangl5/antumbra.git --recursive`
 - Generate project using cmake
 `cmake . -B build -G <generator>`
 
-antumbra has been tested configured successfully with Ninja/Unix Makefiles/Visual Studio/Xcode
+antumbra has been tested configured successfully with Ninja/Visual Studio under windows
 
-- Compile and run tests or samples. -->
+- Compile and run tests or samples.
 
 ## Contributing
 
